@@ -1,6 +1,6 @@
 """policy-ai: financing policy and credit risk model (services/policy-ai/CLAUDE.md).
 
-POST /policy/decide runs the YAML rule set and the PD model; no LLM is ever called on this path.
+POST /policy/decide runs the YAML rule set and the PD model (app/model.py); no LLM is called on this path.
 GET /policy/rules returns the active rule set for the dashboard.
 """
 
@@ -23,7 +23,7 @@ def health() -> dict:
         "status": "ok",
         "service": "policy-ai",
         "policy_version": active_rules().version,
-        "model_version": model.MODEL_VERSION,
+        "model_version": model.active().version,
     }
 
 

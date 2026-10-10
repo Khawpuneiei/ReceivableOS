@@ -212,7 +212,8 @@ def train(data: Path, out: Path, version_date: date, cfg: dict | None = None, n:
     def report(p: np.ndarray) -> dict:
         return {part: metrics.report(y[masks[part]], p[masks[part]], bins) for part in ("validation", "test")}
 
-    card = fit_scorecard(x[masks["train"]], y[masks["train"]], cfg, f"credit-lr-{version_date}.1", medians)
+    versions = {kind: f"credit-{kind}-{version_date}.{cfg['revision']}" for kind in ("lr", "lgbm")}
+    card = fit_scorecard(x[masks["train"]], y[masks["train"]], cfg, versions["lr"], medians)
     lr_pd = scorecard_pd(card, x)
 
     booster = fit_lightgbm(x, y, masks, cfg)
@@ -228,7 +229,6 @@ def train(data: Path, out: Path, version_date: date, cfg: dict | None = None, n:
 
     models = {"lr": report(lr_pd), "lgbm": report(lgbm_pd)}
     selected = select(models)
-    versions = {"lr": card["version"], "lgbm": f"credit-lgbm-{version_date}.1"}
     synth_cfg = synth.load_config()
     provenance = {
         "data": str(data.name),

@@ -12,7 +12,7 @@ import pytest
 from factories import BUYER, INVOICE, SUPPLIER, happy_body
 from fastapi.testclient import TestClient
 
-from app import decision
+from app import decision, model
 from app.decision import decide, load_default_mandate
 from app.main import app
 from app.schemas import PolicyRequestExt
@@ -43,7 +43,9 @@ def test_happy_path():
     )
     assert resp["risk_score"] == resp["pd"] < 0.00347
     assert resp["fee_amount"] == "5347.86" and resp["tenor_days"] == 34 and resp["as_of_date"] == "2026-10-12"
-    assert resp["model_version"] == "scorecard-fallback" and resp["policy_version"] == "credit-policy-v0.1"
+    assert resp["model_version"] == model.active().version and resp["policy_version"] == "credit-policy-v0.1"
+    assert resp["model_version"].startswith(("credit-lr-", "credit-lgbm-"))  # the trained model is served
+    assert {"MODEL.PD"} <= _codes(resp) and len(resp["top_features"]) == 3
     assert resp["decision_id"].startswith("dec_") and resp["decision_hash"].startswith("0x")
     assert "TERMS.MANDATE_CAP" in _codes(resp)
     assert "MANDATE.DEFAULT:skip(request-mandate)" in resp["rule_trace"]
@@ -137,7 +139,8 @@ def test_reject_has_zero_terms_and_a_hard_or_ko_reason():
     assert resp["risk_score"] > 0  # still reported
 
 
-def test_review_keeps_the_terms_that_would_apply():
+def test_review_keeps_the_terms_that_would_apply(monkeypatch):
+    monkeypatch.setattr(model, "_ACTIVE", model.PLACEHOLDER)  # numbers sized on the placeholder PD
     body = happy_body()
     body["buyer_profile"]["buyer_confirmed"] = False
     resp = _post(body)
@@ -193,7 +196,7 @@ def test_health_reports_versions():
         "status": "ok",
         "service": "policy-ai",
         "policy_version": "credit-policy-v0.1",
-        "model_version": "scorecard-fallback",
+        "model_version": model.active().version,
     }
 
 

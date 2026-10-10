@@ -21,6 +21,12 @@ from shared.schemas import Decision
 RULES = active_rules()
 
 
+@pytest.fixture(autouse=True)
+def _placeholder_pd(monkeypatch):
+    """These rule tests were sized on the placeholder PD; the trained model is covered in test_model.py."""
+    monkeypatch.setattr(model, "_ACTIVE", model.PLACEHOLDER)
+
+
 def _evaluate(body: dict, rules=None):
     ctx, results = evaluate(ctx_for(body, rules))
     return ctx, {r.id: r for r in results}
@@ -35,7 +41,7 @@ def _codes(ctx) -> list[str]:
 
 
 def _fixed_pd(monkeypatch, pd: float) -> None:
-    monkeypatch.setattr(model, "predict_pd", lambda buyer, tenor_days: pd)
+    monkeypatch.setattr(model, "predict", lambda ctx: model.Prediction(pd, "fixed-test-pd"))
 
 
 # --- The shared demo (brief 6.2 worked example) ---

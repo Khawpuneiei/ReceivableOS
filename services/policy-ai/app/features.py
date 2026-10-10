@@ -4,6 +4,8 @@ Every feature is known at decision time (no leakage). Missing profile values are
 of the buyer's tier, taken from the training split and stored with the model; a buyer with no tier is
 scored with the medians of the model's `missing_tier`. With `medians=None` (training, first pass) a
 missing value comes back as NaN so the trainer can compute those medians.
+`buyer_tier_x_tenor_30d` (tier rank x tenor / 30) lets the PD rise with tenor faster for weaker buyers,
+as the generator's labelling model does; without it the scorecard underprices tier-A invoices.
 Pure Python on purpose: serving must not need numpy.
 """
 
@@ -36,6 +38,7 @@ FEATURES = (
     "amount_to_buyer_limit",
     "ocr_confidence",
     "fraud_score",
+    "buyer_tier_x_tenor_30d",
     *(f"sector_{s}" for s in SECTORS),
 )
 
@@ -69,6 +72,7 @@ MONOTONE = {
     "amount_to_buyer_limit": 1,
     "ocr_confidence": -1,
     "fraud_score": 1,
+    "buyer_tier_x_tenor_30d": 1,
     **{f"sector_{s}": 0 for s in SECTORS},
 }
 
@@ -127,9 +131,14 @@ def build_features(
         "amount_to_buyer_limit": amount / limit if limit else None,
         "ocr_confidence": float(_get(invoice, "confidence")),
         "fraud_score": float(_get(invoice, "fraud_score")),
+        "buyer_tier_x_tenor_30d": None,  # filled in below from the (possibly imputed) tier
         **{f"sector_{s}": 1.0 if buyer.sector == s else 0.0 for s in SECTORS},
     }
+    if raw["buyer_tier_ord"] is not None:
+        raw["buyer_tier_x_tenor_30d"] = raw["buyer_tier_ord"] * raw["tenor_days"] / 30
     imputed = frozenset(name for name, value in raw.items() if value is None)
+    if buyer.credit_tier is MISSING:
+        imputed |= {"buyer_tier_ord", "buyer_tier_x_tenor_30d"}  # scored with the missing tier
     tier_medians = medians["tiers"][tier] if medians and tier is not None else {}
     values = {
         name: (raw[name] if raw[name] is not None else float(tier_medians.get(name, math.nan)))

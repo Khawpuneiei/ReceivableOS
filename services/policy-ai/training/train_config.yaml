@@ -5,6 +5,7 @@ split:                                       # time split by monthly cohort
   train: [1, 16]
   validation: [17, 20]
   test: [21, 24]
+revision: 2               # model versions are credit-<lr|lgbm>-<date>.<revision>; 2 = 200k rows + tier x tenor
 missing_tier: C            # a buyer with no tier or rating is scored with tier C's medians (as REVIEW.THIN_PROFILE prices it)
 ece_bins: 10
 targets: {auc_min: 0.75, ece_max: 0.03}

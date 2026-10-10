@@ -10,6 +10,12 @@ from app.engine import merge_outcome, run_pre_terms
 from shared.schemas import Decision
 
 
+@pytest.fixture(autouse=True)
+def _placeholder_pd(monkeypatch):
+    """These rule tests were sized on the placeholder PD; the trained model is covered in test_model.py."""
+    monkeypatch.setattr(model, "_ACTIVE", model.PLACEHOLDER)
+
+
 def _run(body: dict, rules=None) -> dict:
     _, results = run_pre_terms(ctx_for(body, rules))
     return {r.id: r for r in results}
@@ -20,7 +26,7 @@ def _hit_ids(body: dict, rules=None) -> set[str]:
 
 
 def _fixed_pd(monkeypatch, pd: float) -> None:
-    monkeypatch.setattr(model, "predict_pd", lambda buyer, tenor_days: pd)
+    monkeypatch.setattr(model, "predict", lambda ctx: model.Prediction(pd, "fixed-test-pd"))
 
 
 # --- Placeholder PD ---
@@ -28,28 +34,28 @@ def _fixed_pd(monkeypatch, pd: float) -> None:
 
 def test_placeholder_pd_reproduces_the_demo_numbers():
     happy = ctx_for(happy_body())
-    pd = model.predict_pd(happy.buyer, happy.tenor_days)
+    pd = model.PLACEHOLDER.predict(happy).pd
     assert pd == pytest.approx(0.0029, abs=0.00005)
     assert pd < 0.00347  # keeps the demo fee at 0.009 per 30 days
 
     body = happy_body()
     body["buyer_profile"]["buyer_confirmed"] = False  # variant V3
     v3 = ctx_for(body)
-    assert 0.0036 < model.predict_pd(v3.buyer, v3.tenor_days) <= 0.0058  # fee 0.012
-    assert model.MODEL_VERSION == "scorecard-fallback"
+    assert 0.0036 < model.PLACEHOLDER.predict(v3).pd <= 0.0058  # fee 0.012
+    assert model.PLACEHOLDER.version == "placeholder-fallback"
 
 
 def test_placeholder_pd_imputes_missing_inputs():
     body = happy_body()
     body["buyer_profile"] = {}
     ctx = ctx_for(body)
-    pd = model.predict_pd(ctx.buyer, ctx.tenor_days)
+    pd = model.PLACEHOLDER.predict(ctx).pd
     assert 0.0029 < pd < 0.15  # scored as an unconfirmed tier C buyer, never an error
 
 
 def test_happy_path_has_no_hits_and_carries_pd():
     ctx, results = run_pre_terms(ctx_for(happy_body()))
-    assert ctx.pd == Decimal(str(model.predict_pd(ctx.buyer, ctx.tenor_days)))
+    assert ctx.pd == Decimal(str(model.PLACEHOLDER.predict(ctx).pd))
     assert [r.trace for r in results if r.status != "pass"] == ["REVIEW.LARGE_TICKET:skip(disabled)"]
     assert merge_outcome(results) == Decision.approve
 

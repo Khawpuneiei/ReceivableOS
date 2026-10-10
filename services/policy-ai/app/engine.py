@@ -9,7 +9,7 @@ Hit messages are built from the YAML message plus numbers, dates and YAML-listed
 echo free text from the invoice or the profiles, because the wallet scans reasons for injection and the
 UI renders them.
 
-Stages: hard rules, pre-model knock-outs, PD (placeholder model), PD gates, pre-terms review triggers, then
+Stages: hard rules, pre-model knock-outs, PD (app/model.py), PD gates, pre-terms review triggers, then
 haircuts, terms and pricing, and the rules that need them (KO.NO_HEADROOM, KO.PRICING, REVIEW.CONCENTRATION,
 REVIEW.MANDATE_APR).
 """
@@ -45,6 +45,7 @@ class Ctx:
     mandate: Mandate | None = None
     portfolio: Portfolio | None = None
     pd: Decimal | None = None  # set once the model has run
+    prediction: model.Prediction | None = None  # PD, model version and top drivers
     terms: Terms | None = None  # set by the terms stage (None when the buyer tier has no base advance)
     price: Price | None = None
 
@@ -421,7 +422,8 @@ def run_pre_model(ctx: Ctx) -> list[RuleResult]:
 def run_pre_terms(ctx: Ctx) -> tuple[Ctx, list[RuleResult]]:
     """Section 6.1 steps 2-6: hard rules, knock-outs, PD, PD gates, review triggers. Returns ctx with PD."""
     results = run_pre_model(ctx)
-    ctx = replace(ctx, pd=Decimal(str(model.predict_pd(ctx.buyer, ctx.tenor_days))))
+    prediction = model.predict(ctx)
+    ctx = replace(ctx, pd=Decimal(str(prediction.pd)), prediction=prediction)
     results += run_stage(ctx, ctx.rules.pd_gates) + run_stage(ctx, ctx.rules.review_triggers)
     return ctx, results
 
