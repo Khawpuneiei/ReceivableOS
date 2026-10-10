@@ -362,15 +362,17 @@ class LedgerAdapter(Protocol):
   mock hashes are prefixed `mock:`; the response's `chain` field says which. Never present a mock hash as on-chain.
 - **MockLedger**: in-memory (or sqlite) state mirroring all five contracts with the same revert strings;
   `tx_hash = "mock:0x" + sha256(prev + canonical payload)`.
-- **FiscoLedger**, in this order, time-box each to about an hour:
+- **FiscoLedger**, try the access paths in this order:
   1. FISCO BCOS **python-sdk** (3.x via its `bcos3sdk` client; needs the native `bcos-c-sdk` library for your OS and
      the SDK certs from `nodes/127.0.0.1/sdk/`).
   2. **WeBASE-Front** REST API next to the node (deploy and send over HTTP; also gives a block browser for the UI).
   3. FISCO **console** for deploy and screenshots; SDK or WeBASE only for calls.
   Local chain: `bash build_chain.sh -l 127.0.0.1:4 -p 30300,20200` (Air, 4 nodes), `bash nodes/127.0.0.1/start_all.sh`.
-  **If FISCO isn't producing receipts by Sat 11 Oct 12:00, keep building on mock and come back to FISCO after the
-  first end-to-end run;** real hashes are required, so the chain must work by Sun morning. For the submission,
-  save the receipt JSON of every demo tx (`eval/demo_tx_hashes.md` → P's `docs/submission/tx-evidence.md`).
+  **Timeline (scope doc):** the 12 Oct 12:00 MVP freeze and demo run on the mock ledger. Real FISCO BCOS tx hashes
+  are **mandatory for the submission** (a mock-only entry doesn't count) and land **13–15 Oct**: node up, all five
+  contracts deployed, TX‑1…TX‑5 plus the two revert txs with receipts. Starting the node before the freeze is
+  welcome but never blocks the mock build. If FISCO is still not producing receipts on 14 Oct, tell P that day.
+  Save the receipt JSON of every demo tx (`eval/demo_tx_hashes.md` → P's `docs/submission/tx-evidence.md`).
 
 ### 5.8 Audit log (`app/audit/log.py`)
 
@@ -665,7 +667,11 @@ money config is THB with 2 decimals.**
 
 ---
 
-## 10. If P chooses Base Sepolia instead of FISCO BCOS
+## 10. Base Sepolia: optional bonus deploy (18–20 Oct), or the fallback chain
+
+FISCO BCOS stays the primary chain. Deploying the same contracts to Base Sepolia is an **optional extra for the
+0–5 on-chain bonus points**, done only after the FISCO hashes and the 16–17 Oct documents are in, and never at the
+expense of them. The same table is the fallback if P ever switches chains.
 
 The contracts are plain EVM (solc 0.8.11), so they deploy unchanged; only the ledger backend and token change.
 
@@ -703,22 +709,31 @@ Plus (aligned with architecture Part 8):
 
 ---
 
-## 12. Build plan (Fri 10 Oct → Sun 12 Oct, Bangkok)
+## 12. Build plan (Fri 10 Oct → Mon 20 Oct, Bangkok)
 
 | When | Step | Done when | Scope checkpoint |
 |---|---|---|---|
 | **Fri 10 Oct, afternoon** | S1 models, settings, money helper, mandate + payee config; keep stub green | models parse the 6.1/6.2 examples | |
-| Fri evening | S2 contracts `MockStable`, `ReceivableRegistry` + Foundry tests; start the FISCO 4-node chain in parallel | `forge test` green for both | stubs + contracts compile (22:00) |
+| Fri evening | S2 contracts `MockStable`, `ReceivableRegistry` + Foundry tests; try `build_chain.sh` in parallel if time allows | `forge test` green for both | stubs + contracts compile (22:00) |
 | Fri night | S3 mock ledger (all five contracts' rules) + lifecycle + idempotency + `register/approve/execute/settle` on mock | happy path on mock | |
 | **Sat 11 Oct, morning** | S4 `FinancingVault`, `PolicyGuard`, `AgentWallet` + Foundry test for every revert | `forge test` green | wallet executes one tx on chain or mock (12:00) |
-| Sat, by 12:00 | S5 deploy to FISCO + `ledger/fisco.py` (**time-box**) | first FISCO tx hash, or stay on mock until Sun AM | |
 | Sat afternoon | S6 guard L0–L4 with codes; confirm/pause/mandate endpoints; audit log | one pytest per code | |
 | Sat, by 18:00 | S7 integrate with the orchestrator / `run_demo.py` | happy path end to end | first end-to-end run |
 | Sat evening | S8 **demo data**: `seed_demo.py` (accounts, payees, mandate, lender deposits), `fixtures/` incl. attack transactions; send to P for recheck | P has the files | |
 | Sat, by 23:00 | S9 L2 injection scan + canary; `DEMO_MODE` bypass; eval runner over the 51 seed cases | table printed, ASR 0% | attack cases wired |
-| **Sun 12 Oct, by 10:00** | S10 full FISCO run: TX‑1…TX‑5 + revert hashes into `eval/demo_tx_hashes.md` with receipts; eval numbers into `docs/03` | P has the hash list | eval numbers computed |
-| Sun, by 12:00 | S11 freeze: READMEs, contracts README with screenshots, demo script twice from a fresh clone | — | **code freeze** |
-| Sun afternoon | support P with tx evidence and the security slide | — | |
+| **Sun 12 Oct, by 10:00** | S10 full mock run of the demo script incl. the two `DEMO_MODE` reverts; eval numbers into `docs/03` | demo runs twice clean on mock | eval numbers computed |
+| Sun, by 12:00 | S11 freeze: READMEs, demo script twice from a fresh clone on mock | — | **MVP code freeze** (`v0.1-freeze`) |
+| Sun afternoon | send P the security self-assessment inputs (below) | P has them | |
+| **Mon 13 – Wed 15 Oct** | S5 **FISCO BCOS (mandatory)**: 4-node chain, deploy all five contracts, `ledger/fisco.py`, setup script; full run TX‑1…TX‑5 + the two revert txs + audit anchor, receipts into `eval/demo_tx_hashes.md` | P has the real hash list by **15 Oct** | **real tx hashes** |
+| Thu 16 – Fri 17 Oct | `contracts/README.md` with addresses and console / python-sdk screenshots; final eval numbers; hardening fixes P approves | docs final | final documents |
+| Sat 18 Oct | support P's early full upload; optional Base Sepolia deploy (section 10) | upload done | early upload |
+| by Mon 20 Oct 22:59 | fixes from the upload review only | — | **final submission** |
+
+**Security self-assessment (submission item).** P writes `pitch/security-self-assessment.md` from the mapping in
+`docs/01-architecture.md` section 2.1. Your sources: **permission tiers** = section 5.1 (keys, holders, what each can
+call) plus the role checks in 5.6; **controls** = the layer table in 5.4 and the eval funnel in 7.4; **known risks** =
+the risk-oracle key sharing the wallet process (5.1), detector recall below 100% (7.4), mock keys in files rather than
+an HSM, single approver. Keep those sections current so P can lift them as is.
 
 Optional agent loop (7.3) only if S1–S10 are done. If late, drop in this order: agent loop → HMAC signatures →
 fee split at draw (pay the full advance) → audit anchoring (anchor once by hand). Never drop L3, the on-chain guard,

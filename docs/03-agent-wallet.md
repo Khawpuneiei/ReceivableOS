@@ -100,12 +100,18 @@ block_reason, audit_ref`. Mock hashes are prefixed `mock:` so nobody mistakes th
 Settled (via the coordinator): tTHB as default token (P may still switch to mock USDC); `blocked`/`failed` statuses are
 in `shared/schemas.py`; demo caps THB 1,500,000 per transaction and 3,000,000 daily, human review at or above
 837,500, all THB with 2 decimals; `POST /wallet/confirm/{tx_id}` for human approval; readable revert strings;
-freeze Sun 12 Oct 12:00; mandate fields `max_ltv`, `max_apr`, `max_predicted_default`, `human_review_above`,
+MVP freeze Sun 12 Oct 12:00 on the mock ledger; real FISCO BCOS hashes (mandatory for the submission) land
+13–15 Oct, final documents 16–17 Oct, early upload 18 Oct, final submission 20 Oct 22:59; Base Sepolia deploy of
+the same contracts is an optional extra for the on-chain bonus points; mandate fields `max_ltv`, `max_apr`, `max_predicted_default`, `human_review_above`,
 `max_amount_per_tx`, `daily_cap` (policy-ai's shape); `risk_score` is the buyer PD; registry dedupes on the keyed
 `invoice_fingerprint` from OCR.
 
 Still open for P: final tTHB vs USDC; who holds the approver key (default: the Finance teammate); whether to move the
-risk-oracle key out of the wallet process before freeze.
+risk-oracle key out of the wallet process before freeze; whether to spend 18–20 Oct on the Base Sepolia bonus deploy.
+
+Security self-assessment: the permission tiers come from CLAUDE.md section 5.1 (plus role checks in 5.6), the
+controls from 5.4 and the eval funnel, and the known risks from the note in section 3 above plus detector recall,
+file-based keys and a single approver. Mapping in `docs/01-architecture.md` section 2.1.
 
 ## 8. Status (engineer updates)
 
@@ -113,7 +119,7 @@ risk-oracle key out of the wallet process before freeze.
 |---|---|
 | Contracts + Foundry tests | _not started_ |
 | Mock ledger + endpoints | _not started_ |
-| FISCO chain + deploy | _not started_ |
+| FISCO chain + deploy (due 15 Oct) | _not started_ |
 | Guard L0–L4 | _not started_ |
 | Eval: ASR / catch rate / scanner recall | _— / — / —_ |
 | Demo tx hashes (TX‑1…TX‑5, 2 reverts, anchor) | _0 / 8_ |
