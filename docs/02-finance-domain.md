@@ -118,7 +118,7 @@ How the policy output fields map to finance terms:
 | `advance_rate` | % of face value advanced | decimal, 0–1 (0.80 = 80%) |
 | `limit` | max amount advanced for this invoice (and the seller's remaining facility) | THB |
 | `fee_rate` | discount fee per **30 days** on the advance | decimal (0.009 = 0.90% per 30 d) |
-| `risk_score` | combined fraud + credit risk, higher = riskier | 0–1 |
+| `risk_score` | calibrated probability of buyer default (PD) over the tenor, compared directly with the mandate's `max_predicted_default` 0.05; fraud risk is reported separately as the OCR output's `fraud_score` | 0–1, higher = riskier |
 | `reasons` | human-readable drivers ("buyer confirmed", "PO matches", "invoice hash seen before") | list of strings |
 
 Rules of thumb a financier uses (est., typical market practice, to set policy thresholds):
@@ -250,7 +250,7 @@ Money fields are **decimal strings** (project convention), rates are decimal num
   "advance_rate": 0.70,
   "limit": "524300.00",
   "fee_rate": 0.009,
-  "risk_score": 0.18,
+  "risk_score": 0.003,
   "reasons": [
     "Predicted buyer default over tenor 0.3% (below 5% mandate cap)",
     "Buyer confirmed invoice",
