@@ -46,7 +46,7 @@ review_triggers:                       # outcome: review
   # (pending_approval), and a policy review here would block that demo path. P decides; flip `enabled` to switch.
   - {id: REVIEW.LARGE_TICKET,         param: {enabled: false, basis: amount}, message: "At or above the human-review amount"}
   - {id: REVIEW.CONCENTRATION,        param: {max_buyer_share: 0.30, max_supplier_share: 0.30}, message: "Exposure to one buyer or seller above the pool share cap"}
-  - {id: REVIEW.THIN_PROFILE,         message: "Buyer has no tier or rating"}
+  - {id: REVIEW.THIN_PROFILE,         param: {terms_tier: C}, message: "Buyer has no tier or rating"}   # terms then use tier C
   - {id: REVIEW.MANDATE_APR,          message: "Risk price above the seller's APR mandate"}
 
 terms:

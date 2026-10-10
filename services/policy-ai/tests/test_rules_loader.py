@@ -107,6 +107,7 @@ def test_finance_tbd_markers_kept():
         lambda raw: raw["review_triggers"].append(dict(raw["review_triggers"][0])),  # duplicate id
         lambda raw: raw["terms"]["haircuts"].append({"id": "TERMS.FLOOR2", "minus": 0.1, "message": "m"}),
         lambda raw: raw.update(version="v1"),
+        lambda raw: _by_id(raw["review_triggers"], "REVIEW.THIN_PROFILE").update(param={"terms_tier": "D"}),
     ],
 )
 def test_invalid_rule_sets_fail_at_load(tmp_path, edit):
