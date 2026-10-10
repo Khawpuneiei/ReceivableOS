@@ -45,9 +45,8 @@ class ExtractedInvoice(BaseModel):
     fraud_score: float = Field(ge=0, le=1)
     fraud_flags: list[str] = []
     doc_hash: str  # "sha256:<hex of file bytes>"; changes if the file is re-saved
-    invoice_fingerprint: (
-        str  # "hmac-sha256:<hex>" of canonical content keyed by FINGERPRINT_SECRET; registry key
-    )
+    # "0x" + HMAC-SHA256 hex of the canonical content, key FINGERPRINT_HMAC_KEY; registry key (bytes32)
+    invoice_fingerprint: str
 
 
 class Decision(str, Enum):
