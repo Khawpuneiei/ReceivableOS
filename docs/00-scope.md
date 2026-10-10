@@ -56,7 +56,7 @@ Team: P (PM, also AI engineer), Finance, three AI engineers.
 
 | # | Module | Owner | Repo path | Knowledge doc |
 |---|---|---|---|---|
-| 1 | Scope, PR review, **integration** (orchestrator, UI wiring to services), submission | **P (PM)** | `docs/00-scope.md`, `shared/schemas.py`, `integration/` | this file |
+| 1 | Scope, PR review, **integration** (orchestrator, UI wiring to services), submission | **P (PM)** | `docs/00-scope.md`, `shared/schemas.py`, `services/orchestrator/` | this file |
 | 2 | Finance domain, pain-point numbers, business model, demo story numbers | **Finance** | `docs/02-finance-domain.md` | `docs/02` |
 | 3 | Agent wallet + agent-injection guardrails + mandate enforcement + **the whole on-chain layer** (`AgentWallet`, `PolicyGuard`, `ReceivableRegistry`, `FinancingVault`, settlement token, deployment, mock ledger) | **Agent AI eng** | `services/agent-wallet/`, `services/agent-wallet/contracts/` | `docs/03`, `docs/01` |
 | 4 | Credit risk model + credit decision (approve/review/reject, advance rate, fee) + NL mandate → policy JSON | **Policy AI eng** | `services/policy-ai/` | `docs/04` |
@@ -85,7 +85,7 @@ Input: multipart `file` (PDF/PNG/JPG). Output:
 {
   "invoice_id": "inv_0001",
   "supplier": {"name": "Siam Fresh Pack", "tax_id": "0105559000000"},
-  "buyer": {"name": "Mekong Basket Retail", "tax_id": "0107559000001"},
+  "buyer": {"name": "Mekong Basket Retail PCL", "tax_id": "0107559000001"},
   "invoice_no": "INV-2026-0142",
   "issue_date": "2026-09-15",
   "due_date": "2026-11-14",
@@ -134,7 +134,7 @@ Input: `{ "decision": <4.2 output>, "payee": "0x...", "amount": "524300.00", "cu
 The wallet also exposes `register`, `approve`, `settle`, `mandate/activate` and `audit` endpoints (proposed by the Architect, `docs/01`); their exact shapes are in `shared/schemas.py`.
 
 ### 4.4 Orchestrator (P) — glue, owned by the PM seat
-Stub lives in `integration/run_demo.py`. `POST /flow/run` takes an uploaded invoice and a mandate id, calls 4.1 → registry duplicate check → 4.2 → lender quotes → 4.3, and returns every intermediate result for the UI. `POST /flow/repay` simulates "buyer paid" and triggers settlement. Ports: orchestrator 8000, ocr 8001, policy 8002, wallet 8003, UI 3000.
+Lives in `services/orchestrator/`; demo supplier and buyer profiles in `services/orchestrator/samples/profiles.json`. `POST /flow/run` takes an uploaded invoice and a mandate id, calls 4.1 → registry duplicate check → 4.2 → lender quotes → 4.3, and returns every intermediate result for the UI. `POST /flow/repay` simulates "buyer paid" and triggers settlement. Ports: orchestrator 8000, ocr 8001, policy 8002, wallet 8003, UI 3000.
 
 The code version of this contract is the Pydantic models in `shared/schemas.py`, owned by P. If this section and that file disagree, `shared/schemas.py` wins and this section gets fixed.
 
@@ -239,7 +239,7 @@ Copy into each review. A "no" on any **bold** line blocks the merge.
 
 The canonical scenario, numbers and the eight attack variants live in **`docs/02-finance-domain.md`** (Finance owns them; approval due Sat Oct 11, 10:00). Summary so every module uses the same values:
 
-1. Siam Fresh Pack (SME supplier) uploads a THB 749,000 invoice to Mekong Basket Retail (buyer), due in 45 days.
+1. Siam Fresh Pack (SME supplier) uploads a THB 749,000 invoice to Mekong Basket Retail PCL (buyer), due in 45 days.
 2. Mandate in plain language: max 70% advance (LTV), APR at most 12%, buyer PD at most 5%, human review above THB 837,500. The compiler shows the JSON.
 3. OCR extracts fields; no injection; fraud score low. Registry confirms the invoice is not financed elsewhere.
 4. Credit decision: approve, advance_rate 0.70, limit THB 524,300, fee_rate 0.009 per 30 days, risk_score (PD) about 0.003, under the 5% cap.
@@ -267,4 +267,4 @@ Target slide: 5 green tx hashes (register, create position, lender funds vault, 
 | 2026-10-10 | `risk_score` = buyer PD (0 to 1), fraud risk stays in `fraud_score` | coordinator default, [OPEN] P |
 | 2026-10-10 | Code freeze for every module is Oct 12 12:00 (Policy brief said 18:00) | scope default, [OPEN] P |
 | 2026-10-10 | Demo tax IDs: seller 0105559000000, buyer 0107559000001 (valid Thai checksum) | final |
-| 2026-10-10 | Demo scenario and numbers come from `docs/02` (THB, Siam Fresh Pack → Mekong Basket Retail) | Finance thread; Finance teammate to approve by Oct 11 10:00 |
+| 2026-10-10 | Demo scenario and numbers come from `docs/02` (THB, Siam Fresh Pack → Mekong Basket Retail PCL) | Finance thread; Finance teammate to approve by Oct 11 10:00 |
