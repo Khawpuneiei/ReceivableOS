@@ -14,5 +14,5 @@
   "status": "blocked",
   "chain_ref": "mock:0x14f1c14b4e94733dc0a4554507e8c0128a178595968776b81c500b5af03b3592",
   "chain": "mock",
-  "block_reason": "PayeeNotAllowlisted"
+  "block_reason": "PayeeNotAllowed"
 }
