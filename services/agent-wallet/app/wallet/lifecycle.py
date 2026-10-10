@@ -3,11 +3,16 @@
 Idempotency: a repeated write with the same key returns the stored result and sends nothing to the ledger.
 Off-chain checks run before any ledger call; the ledger's own checks run again on chain, so a compromised
 service still cannot pay outside the mandate.
+
+Hold path: when the classifier flags a draft and INJECTION_CLASSIFIER_ACTION=hold, the draft is stored and
+nothing is sent to the ledger. An approver releases it (every hard check runs again first) or rejects it.
+Holds expire after 24 hours, as CLAUDE.md 2.4 requires for pending approvals.
 """
 
 import hashlib
 import uuid
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
@@ -27,7 +32,7 @@ from app.models import (
     SettleIntent,
 )
 from app.money import apr_to_bps
-from app.wallet.store import ReceivableFact, Store
+from app.wallet.store import Hold, ReceivableFact, Store
 from shared.money import fee_rate_30d_to_apr
 from shared.schemas import (
     GuardCheck,
@@ -41,6 +46,7 @@ from shared.schemas import (
 
 CENT = Decimal("0.01")
 BANGKOK = timezone(timedelta(hours=7))
+HOLD_TTL = timedelta(hours=24)
 TARGET_NAMES = {"ReceivableRegistry": "Registry", "FinancingVault": "Vault"}  # mandate name -> ledger name
 ZERO_ADDRESS = "0x" + "00" * 20  # placeholder for an unresolved payee; the guard always blocks it
 
@@ -56,7 +62,7 @@ class WalletService:
         demo_mode: bool = False,
         canary: str | None = None,
         classifier: Classifier | None = None,
-        classifier_blocks: bool = False,
+        classifier_action: str = "log",
     ) -> None:
         self.ledger = ledger
         self.store = store
@@ -66,7 +72,7 @@ class WalletService:
         self.demo_mode = demo_mode
         self.canary = canary
         self.classifier = classifier
-        self.classifier_blocks = classifier_blocks
+        self.classifier_action = classifier_action  # "log" | "hold" | "block"
         self.mandate: Mandate | None = None
         self.paused = False
         self.audit = AuditLog()
@@ -97,10 +103,10 @@ class WalletService:
         )
 
     @staticmethod
-    def _blocked(checks: list[GuardCheck]) -> WalletResult:
-        """Off-chain block: the first failing check in layer order is the reason. No ledger call was made."""
+    def _blocked(checks: list[GuardCheck], reason: str | None = None) -> WalletResult:
+        """Off-chain block. The reason is the first hard failure in layer order, never a hold marker."""
         tx_id = f"tx_{uuid.uuid4().hex[:16]}"
-        first = next((c.code for c in checks if not c.passed), None)
+        first = reason or next((c.code for c in checks if not c.passed and c.layer != "HOLD"), None)
         return WalletResult(
             tx_id=tx_id,
             status=TxStatus.blocked,
@@ -110,11 +116,11 @@ class WalletService:
         )
 
     def _scan_blocks(self, request: Any) -> WalletResult | None:
-        """L2 for requests without a draw: an injection or canary in any string blocks the call."""
+        """L2 for requests without a draw. There is no approval path for these, so a hold blocks too."""
         report = scan_payload(request.model_dump(mode="json"), self.canary, self.classifier)
         if report.canary_hit:
             return self._blocked([GuardCheck(layer="L2", code="CanaryLeak", passed=False)])
-        if report.rule_flagged or (report.classifier_flagged and self.classifier_blocks):
+        if report.rule_flagged or (report.classifier_flagged and self.classifier_action in ("hold", "block")):
             return self._blocked([GuardCheck(layer="L2", code="InjectionSuspected", passed=False)])
         return None
 
@@ -130,7 +136,7 @@ class WalletService:
             spent_last_24h=self._spent_24h(),
             canary=self.canary,
             classifier=self.classifier,
-            classifier_blocks=self.classifier_blocks,
+            classifier_action=self.classifier_action,
         )
 
     def _finish(self, res: ChainResult, extra: list[GuardCheck] | None = None) -> WalletResult:
@@ -331,8 +337,10 @@ class WalletService:
             guard_checks = [GuardCheck(layer="DEMO", code="OffchainBypassed", passed=True)]
         else:
             guard = check_draw(intent, req, fact, self._context(), payee_resolved=resolved is not None)
-            if not guard.passed:
+            if any(not c.passed and c.layer != "HOLD" for c in guard.checks):
                 return self._blocked(guard.checks)
+            if any(not c.passed and c.layer == "HOLD" for c in guard.checks):
+                return self._hold(intent, req, guard.checks)  # classifier-only flag: a human decides
             guard_checks = guard.checks
         res = self.ledger.execute(intent)
         if res.ok and fact is not None:
@@ -340,6 +348,59 @@ class WalletService:
         if res.ok or res.pending_id is not None:
             self.store.spends.append((self.clock(), req.amount))
         return self._finish(res, extra=guard_checks)
+
+    def _hold(self, intent: DrawIntent, req: WalletRequest, checks: list[GuardCheck]) -> WalletResult:
+        """Stores the draft and returns pending. The ledger is not called until an approver releases it."""
+        tx_id = f"tx_{uuid.uuid4().hex[:16]}"
+        self.store.holds[tx_id] = Hold(
+            tx_id=tx_id, intent=intent, request=req, checks=checks, held_at=self.clock()
+        )
+        return WalletResult(
+            tx_id=tx_id,
+            status=TxStatus.pending_approval,
+            approvals_required=1,
+            audit_ref=f"aud_{tx_id[3:15]}",
+            checks=[*checks, GuardCheck(layer="L4", code="NeedsHumanApproval", passed=False)],
+        )
+
+    def list_holds(self) -> list[dict[str, Any]]:
+        """Open holds for the approver: ids, amounts and codes only. Invoice text is not shown."""
+        return [
+            {
+                "tx_id": h.tx_id,
+                "invoice_id": h.intent.invoice_id,
+                "amount": str(h.intent.amount),
+                "apr_bps": h.intent.apr_bps,
+                "held_at": h.held_at.isoformat(),
+                "expires_at": (h.held_at + HOLD_TTL).isoformat(),
+                "flags": sorted({c.code for c in h.checks if not c.passed}),
+            }
+            for h in self.store.holds.values()
+        ]
+
+    def _decide_hold(self, hold: Hold, approve: bool) -> WalletResult:
+        if not approve:
+            return self._blocked(
+                [GuardCheck(layer="L4", code="HoldRejected", passed=False)], reason="HoldRejected"
+            )
+        if self.clock() - hold.held_at > HOLD_TTL:
+            return self._blocked(
+                [GuardCheck(layer="L4", code="HoldExpired", passed=False)], reason="HoldExpired"
+            )
+        # The approver overrides the classifier flag only. Every hard check runs again, because the wallet
+        # may have changed (paused, mandate expired, receivable drawn) since the draft was held.
+        fact = self.store.receivables.get(hold.intent.invoice_fingerprint)
+        ctx = replace(self._context(), classifier_action="log")
+        guard = check_draw(hold.intent, hold.request, fact, ctx, payee_resolved=True)
+        if not guard.passed:
+            return self._blocked(guard.checks)
+        res = self.ledger.execute(hold.intent)
+        if res.ok and fact is not None:
+            fact.drawn_amount = hold.request.amount
+        if res.ok or res.pending_id is not None:
+            self.store.spends.append((self.clock(), hold.intent.amount))
+        approved = GuardCheck(layer="L4", code="HumanApproved", passed=True)
+        return self._finish(res, extra=[*guard.checks, approved])
 
     # ----- TX-5: settlement waterfall -----
 
@@ -375,6 +436,11 @@ class WalletService:
     # ----- human approval, kill switch, mandate -----
 
     def confirm(self, tx_id: str, approve: bool) -> WalletResult:
+        hold = self.store.holds.pop(tx_id, None)
+        if hold is not None:
+            result = self._decide_hold(hold, approve)
+            self._audit(hold.intent.invoice_id, "draw", result, actor="approver")
+            return result
         invoice_id = self.store.txs.get(tx_id, ("unknown", None))[0]
         pending_id = self.store.pending.pop(tx_id, None)
         if pending_id is None:

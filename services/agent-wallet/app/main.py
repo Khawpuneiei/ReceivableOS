@@ -47,7 +47,7 @@ def build_service(clock: Callable[[], datetime] = _now) -> WalletService:
         demo_mode=settings.demo_mode,
         canary=settings.agent_canary,
         classifier=classifier,
-        classifier_blocks=settings.injection_classifier_blocks,
+        classifier_action=settings.injection_classifier_action,
     )
 
 
@@ -140,6 +140,11 @@ def create_app(service: WalletService | None = None) -> FastAPI:
         if svc.mandate is None:
             raise HTTPException(status_code=404, detail="no mandate active")
         return {"mandate_id": svc.mandate.mandate_id, "mandate_hash": svc.mandate.mandate_hash}
+
+    @app.get("/wallet/holds")
+    def list_holds(x_approver_token: str | None = Header(default=None)) -> dict:
+        _check_token(settings.wallet_approver_token, x_approver_token)  # only the approver sees the queue
+        return {"holds": svc.list_holds()}
 
     def _audit_view(entries: list[dict]) -> dict:
         return {"entries": entries, "verified": svc.audit.verify()}  # whole-chain check, not just these rows
