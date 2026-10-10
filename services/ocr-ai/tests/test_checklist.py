@@ -170,3 +170,25 @@ def test_hosted_candidate_disagreement_keeps_grounded_amount_and_prewarm_skips_o
     assert not body["fraud_flags"]
     assert body["model_checks"] == [{"provider": "hosted", "cache": "hit"}]
     assert len(calls) == 1
+
+
+def test_generated_demo_order_is_approve_review_reject_duplicate_by_evidence(client, tmp_path):
+    from datagen.showcase_invoices import generate
+
+    generate(tmp_path / "showcase")
+    results = []
+    for file in sorted((tmp_path / "demo").glob("0[1-4]_*.pdf")):
+        response = client.post(
+            "/ocr/extract", files={"file": (file.name, file.read_bytes(), "application/pdf")}
+        )
+        assert response.status_code == 200, response.text
+        results.append(response.json())
+    happy, injected, inflated, duplicate = results
+    assert happy["fraud_score"] < 0.30 and not happy["review_required"]
+    assert injected["fraud_score"] < 0.30 and injected["injection_flags"] and injected["review_required"]
+    assert "duplicate_fingerprint" not in injected["fraud_flags"]
+    assert inflated["fraud_score"] >= 0.30 and "math_inconsistent" in inflated["fraud_flags"]
+    assert duplicate["fraud_score"] >= 0.30
+    assert {"duplicate_invoice_hash", "duplicate_fingerprint"} <= set(duplicate["fraud_flags"])
+    assert happy["doc_hash"] == duplicate["doc_hash"]
+    assert happy["invoice_fingerprint"] == duplicate["invoice_fingerprint"]

@@ -1,6 +1,41 @@
 # OCR-owned invoice and PO verification
 
-This service reads uploaded documents. It has no financing, wallet, delivery, acceptance, or authenticity authority. The implementation replaces the original fixed-response stub on `ocr/evidence-fraud-graph`. The shared schema and other services remain unchanged.
+This README is the handoff entry point for the OCR AI engineer's scope on branch `ocr/evidence-fraud-graph`. It covers invoice/PO OCR, document injection defence, source-grounded cross-document checks, and explainable fraud evidence. OCR prepares evidence for Policy and Wallet; it does not approve financing, authorize payment, or decide that a document is authentic. Shared schemas and other service owners' code remain unchanged.
+
+## Handoff status — 11 October 2026
+
+The OCR-owned implementation and automation are in place for review. The latest checked-in demo sequence is deliberately ordered and separates the four decisions: `01_happy.pdf` is an approve candidate, `02_injected.pdf` requires review, `03_inflated.pdf` is rejected for inconsistent math, and `04_duplicate.pdf` is rejected as an exact and semantic duplicate of 01. Cases 02 and 03 have distinct invoice numbers so the injection case does not accidentally trigger the duplicate rules. The local evidence-gate replay passes all four expectations; the live downstream Policy stub still violates two hard guards by approving the injected and inflated invoices. That downstream gap remains visible in `docs/DEMO_LOOP_RESULTS.json` and the release report.
+
+```mermaid
+flowchart LR
+    Upload[PDF / PNG / JPEG] --> Guard[Size, MIME, signature checks]
+    Guard --> Parse[Isolated parser: SHA-256, text, page images, metadata, QR]
+    Parse --> Detect[Hidden / tiny / off-page / Unicode / QR injection signals]
+    Parse --> OCR[PDF text first; PaddleOCR for scan pages]
+    OCR --> Rules[Rules extract fields with source locations]
+    Parse --> Vision[Optional local Qwen-VL or hosted Anthropic candidate]
+    Vision --> Compare[Strict schema + disagreement / failure review]
+    Rules --> Compare
+    Detect --> Review[Confidence, validation and review reasons]
+    Compare --> Review
+    Review --> Match[Invoice ↔ PO and supporting-document checks]
+    Match --> Fraud[Duplicate, amount, identity and graph risk rules]
+    Fraud --> JSON[Typed OCR result + JSON evidence / unsigned handoff]
+    JSON --> Policy[Policy owner: approve / review / reject]
+    Policy --> Wallet[Wallet / security owner: guarded execution]
+```
+
+The processing order protects source evidence: parsers inspect private document content; deterministic rules own the values and their page/bounding-box evidence; vision models return nullable proposals that can trigger a review but cannot overwrite rules output. Injection findings, unknown values, validation failures, or model disagreements remain explicit in the JSON. Invoice/PO comparison and the fraud graph add risk context; only the downstream Policy service may apply the final decision.
+
+The current evidence is intentionally scoped. The checked-in synthetic regression evaluation reports clean-PDF exact field accuracy 28/28, injection catch 16/16 with 0/16 changed extracted values, hard-negative alerts 0/20, and planted fraud precision/recall 100%/100% at score 0.30 (TP 8, FP 0, FN 0, TN 4). Supporting-document automation passes 6/6 scenarios. Actual local PaddleOCR HTTP smoke tests read PNG and JPEG and matched all seven evaluated fields on each; actual local Qwen-VL completed eight prewarm requests with the second round served from cache. These results verify this synthetic/demo set, not broad vendor accuracy or live hosted-model quality. The external invoice challenge set remains 77.59% on header fields, Simplified Chinese is experimental, and Thai scan extraction has known gaps.
+
+For a complete checklist-by-checklist audit, API payloads, fraud rules, 12-document case walkthrough and loop results, start with [the detailed checklist and demo guide](docs/CHECKLIST_AND_DEMO.md). Key handoff references:
+
+- [Architecture](docs/ARCHITECTURE.md), [fraud validation](docs/FRAUD_VALIDATION.md), [handoff packet](docs/HANDOFF.md), and [contract proposal](docs/CONTRACT_PROPOSAL.md).
+- [Supported document catalog and integration stages](docs/DOCUMENT_CATALOG.md), [CLAUDE.md requirements-to-code review](docs/CLAUDE_REVIEW.md), and [fixture cleanup/provenance record](docs/INVOICE_FIXTURE_CLEANUP.md).
+- [Release gate](docs/RELEASE_CHECK.json), [ordered four-invoice demo](docs/DEMO_ORDER_CHECK.json), [checklist metrics](docs/CHECKLIST_EVALUATION.json), [actual model checks](docs/CHECKLIST_MODEL_CHECK.json), [supporting-document loop](docs/CASE_LOOP_RESULTS.json), and [actual Policy integration loop](docs/DEMO_LOOP_RESULTS.json).
+
+To reproduce the no-cloud-key release checks from this directory, use `.venv/bin/python scripts/release_check.py --fresh`. This installs the core/dev dependencies in a temporary clean clone, generates fixtures, runs tests and Ruff, starts the service on port 8001, and verifies extraction plus protected result retrieval. The command reports OCR release checks separately from downstream Policy's two known control violations. `.venv/bin/python scripts/release_check.py --strict` is the final cross-service gate and currently exits nonzero until Policy enforces injection → review and inflated/high-risk → reject. No cloud API key is required for the core run. Live Anthropic calls, independent global holdout accuracy, and PR approval/merge remain unverified.
 
 Current architecture uses source geometry for separate panels and explicit line tables, plus experimental Simplified Chinese anchors. Responses add a finding-scoped typed `fraud_graph` and unsigned `handoff` for future wallet/security review. See [architecture](docs/ARCHITECTURE.md), [handoff packet](docs/HANDOFF.md) and [historical financial retest (comparison-v2)](docs/FINTECH_RETEST.md). Older reports are historical evidence.
 

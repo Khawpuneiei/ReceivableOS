@@ -171,6 +171,7 @@ def main():
         [sys.executable, "-m", "ruff", "format", "--check", "."],
         [sys.executable, "scripts/eval.py", "--output", "docs/CHECKLIST_EVALUATION.json"],
         [sys.executable, "scripts/case_loop.py"],
+        [sys.executable, "scripts/demo_order.py"],
         [sys.executable, "scripts/demo_loop.py", "--skip-fraud-eval"],
     ]
     results = []

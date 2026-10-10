@@ -76,7 +76,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2414
+      "elapsed_seconds": 0.4825
     },
     {
       "file": "en_invoice_changed.pdf",
@@ -95,7 +95,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.225
+      "elapsed_seconds": 0.4624
     },
     {
       "file": "en_invoice_duplicate_render.pdf",
@@ -114,7 +114,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2268
+      "elapsed_seconds": 0.4552
     },
     {
       "file": "en_invoice_shared_account.pdf",
@@ -133,7 +133,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2501
+      "elapsed_seconds": 0.4546
     },
     {
       "file": "en_invoice_cluster_math.pdf",
@@ -152,7 +152,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2535
+      "elapsed_seconds": 0.4643
     },
     {
       "file": "en_invoice_cluster_currency.pdf",
@@ -171,7 +171,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.4515
+      "elapsed_seconds": 0.4542
     },
     {
       "file": "en_invoice_incomplete.pdf",
@@ -190,7 +190,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.3191
+      "elapsed_seconds": 0.4365
     },
     {
       "file": "en_invoice_amount_mismatch.pdf",
@@ -209,7 +209,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2511
+      "elapsed_seconds": 0.4574
     },
     {
       "file": "en_invoice_currency_mismatch.pdf",
@@ -228,7 +228,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2661
+      "elapsed_seconds": 0.4473
     },
     {
       "file": "en_invoice_partial.pdf",
@@ -247,7 +247,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2652
+      "elapsed_seconds": 0.4566
     },
     {
       "file": "en_invoice_visible_injection.pdf",
@@ -266,7 +266,7 @@
         "buyer_name": true
       },
       "injection_alert": true,
-      "elapsed_seconds": 0.2682
+      "elapsed_seconds": 0.465
     },
     {
       "file": "en_invoice_hidden_injection.pdf",
@@ -285,7 +285,7 @@
         "buyer_name": true
       },
       "injection_alert": true,
-      "elapsed_seconds": 0.269
+      "elapsed_seconds": 0.4531
     },
     {
       "file": "en_invoice_benign_note.pdf",
@@ -304,7 +304,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.3015
+      "elapsed_seconds": 0.4637
     },
     {
       "file": "en_po_clean.pdf",
@@ -323,7 +323,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2668
+      "elapsed_seconds": 0.446
     },
     {
       "file": "th_invoice_clean.pdf",
@@ -342,7 +342,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2693
+      "elapsed_seconds": 0.4451
     },
     {
       "file": "th_invoice_changed.pdf",
@@ -361,7 +361,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2619
+      "elapsed_seconds": 0.4608
     },
     {
       "file": "th_invoice_duplicate_render.pdf",
@@ -380,7 +380,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2735
+      "elapsed_seconds": 0.4632
     },
     {
       "file": "th_invoice_shared_account.pdf",
@@ -399,7 +399,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2964
+      "elapsed_seconds": 0.4704
     },
     {
       "file": "th_invoice_cluster_math.pdf",
@@ -418,7 +418,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2831
+      "elapsed_seconds": 0.4573
     },
     {
       "file": "th_invoice_cluster_currency.pdf",
@@ -437,7 +437,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2846
+      "elapsed_seconds": 0.4376
     },
     {
       "file": "th_invoice_incomplete.pdf",
@@ -456,7 +456,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.3012
+      "elapsed_seconds": 0.4597
     },
     {
       "file": "th_invoice_amount_mismatch.pdf",
@@ -475,7 +475,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2923
+      "elapsed_seconds": 0.4485
     },
     {
       "file": "th_invoice_currency_mismatch.pdf",
@@ -494,7 +494,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2982
+      "elapsed_seconds": 0.4446
     },
     {
       "file": "th_invoice_partial.pdf",
@@ -513,7 +513,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.286
+      "elapsed_seconds": 0.4665
     },
     {
       "file": "th_invoice_visible_injection.pdf",
@@ -532,7 +532,7 @@
         "buyer_name": true
       },
       "injection_alert": true,
-      "elapsed_seconds": 0.2807
+      "elapsed_seconds": 0.4664
     },
     {
       "file": "th_invoice_hidden_injection.pdf",
@@ -551,7 +551,7 @@
         "buyer_name": true
       },
       "injection_alert": true,
-      "elapsed_seconds": 0.2867
+      "elapsed_seconds": 0.4624
     },
     {
       "file": "th_invoice_benign_note.pdf",
@@ -570,7 +570,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.3194
+      "elapsed_seconds": 0.4598
     },
     {
       "file": "th_po_clean.pdf",
@@ -589,7 +589,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.2744
+      "elapsed_seconds": 0.4494
     }
   ],
   "verification_records": [
@@ -1376,8 +1376,8 @@
     "negative_documents": 6
   },
   "latency_seconds": {
-    "p50": 0.27395,
-    "p95": 0.3191
+    "p50": 0.45735,
+    "p95": 0.4665
   },
   "limitations": [
     "Generated label templates only; no held-out real-world document distribution",

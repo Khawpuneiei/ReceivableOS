@@ -1,0 +1,55 @@
+{
+  "data_origin": "synthetic-only",
+  "ordered_results": [
+    {
+      "file": "01_happy.pdf",
+      "invoice_no": "SFP-INV-2026-0142",
+      "fraud_score": 0.0,
+      "fraud_flags": [],
+      "injection_flags": [],
+      "expected_policy": "approve",
+      "evidence_gate": "approve",
+      "passed": true
+    },
+    {
+      "file": "02_injected.pdf",
+      "invoice_no": "SFP-INV-2026-0143",
+      "fraud_score": 0.0,
+      "fraud_flags": [],
+      "injection_flags": [
+        "VISIBLE_INSTRUCTION"
+      ],
+      "expected_policy": "review",
+      "evidence_gate": "review",
+      "passed": true
+    },
+    {
+      "file": "03_inflated.pdf",
+      "invoice_no": "SFP-INV-2026-0144",
+      "fraud_score": 0.4,
+      "fraud_flags": [
+        "math_inconsistent"
+      ],
+      "injection_flags": [],
+      "expected_policy": "reject",
+      "evidence_gate": "reject",
+      "passed": true
+    },
+    {
+      "file": "04_duplicate.pdf",
+      "invoice_no": "SFP-INV-2026-0142",
+      "fraud_score": 0.96,
+      "fraud_flags": [
+        "duplicate_invoice_hash",
+        "duplicate_fingerprint"
+      ],
+      "injection_flags": [],
+      "expected_policy": "reject",
+      "evidence_gate": "reject",
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "policy_endpoint_called": false,
+  "limitation": "Evidence gate only; actual Policy guards are evaluated separately in DEMO_LOOP_RESULTS.json"
+}

@@ -1,6 +1,6 @@
 # OCR + Fraud: checklist และคู่มือ demo ล่าสุด
 
-สถานะ 10 ตุลาคม 2026 — branch `ocr/evidence-fraud-graph`; ขอบเขต `services/ocr-ai/`, เอกสารตัวอย่างของ OCR ใน `data/invoices/`, และ `docs/05-ocr-ai.md` งานนี้เตรียม evidence ให้ Policy/Wallet; ไม่ได้ให้ OCR อนุมัติเงินเอง
+สถานะ 11 ตุลาคม 2026 — branch `ocr/evidence-fraud-graph`; ขอบเขต `services/ocr-ai/`, เอกสารตัวอย่างของ OCR ใน `data/invoices/`, และ `docs/05-ocr-ai.md` งานนี้เตรียม evidence ให้ Policy/Wallet; ไม่ได้ให้ OCR อนุมัติเงินเอง
 
 ```mermaid
 flowchart TD
@@ -133,3 +133,20 @@ Generatorค่าdefaultเขียนregression fixturesลงtemporary path 
 Policyต้องenforce injection→review, confidence<0.80→review, fraud>=0.30→reject และรับpair/case evidenceตามcontractที่reviewแล้ว Orchestratorปัจจุบันส่งprojectionของinvoice จึงยังไม่ส่งcasebundleทั้งชุด Registryตรวจrepeat registrationได้ แต่ไม่พิสูจน์prior financingทุกแห่ง Wallet/Cybersecurityต้องตรวจauthentication, tenant context, signed handoff, mandate/payee และexecution guardsตามหน้าที่ของตน OCRไม่แก้owner codeเพื่อทำให้ผลtestดูผ่าน
 
 งานresearchถัดไปคือvendor-labelled holdoutแยกsupplier/layout, line-table variations, native Chinese invoices, Thai scans, visual tampering และlabelled benign/fraud corpusจริง รวมถึงverified buyer/bank/registry/signature sources [DocILE](https://github.com/rossumai/docile) ใช้ศึกษาextraction/line itemsได้ แต่ไม่ใช่fraud labelsหรือหลักฐานfinancing eligibility
+
+## ตรวจลำดับ demo จริง
+
+ชุด `data/invoices/demo/` ถูก replay ตามลำดับเดียวกันบน state ชั่วคราว เพื่อพิสูจน์ทั้งผลรายไฟล์และผลที่เกิดจากประวัติการรับเอกสาร:
+
+| ไฟล์ | Expected evidence gate | สิ่งที่ต้องเห็น |
+| --- | --- | --- |
+| `01_happy.pdf` | approve candidate | คะแนน fraud ต่ำกว่า 0.30, ไม่มี injection และไม่ต้อง review |
+| `02_injected.pdf` | review | `VISIBLE_INSTRUCTION`, review required; เลข 0143 ไม่ซ้ำ happy invoice 0142 |
+| `03_inflated.pdf` | reject | `math_inconsistent`, fraud score 0.40; เลข 0144 แยกจากอีกสองใบ |
+| `04_duplicate.pdf` | reject | byte-identical กับ 01 และแสดง `duplicate_invoice_hash` กับ `duplicate_fingerprint`, fraud score 0.96 |
+
+ผลทั้ง 4 รายการผ่านใน [ordered demo report](DEMO_ORDER_CHECK.json) ด้วย `.venv/bin/python scripts/demo_order.py`; `release_check.py --fresh` เรียก loop นี้ให้อัตโนมัติด้วย การทดสอบนี้ยืนยัน OCR evidence gate โดยไม่เรียก Policy endpoint ส่วน [actual Policy integration result](DEMO_LOOP_RESULTS.json) ยังบันทึก 2 control violations เพราะ Policy stub ยอม approve ใบ injected และ inflated อยู่
+
+การปิดท้าย release run ผ่านทั้ง working environment และ local clone ที่ติดตั้ง core/dev dependencies ใหม่โดยไม่มี cloud API key: 184 tests ผ่านทั้งสองที่, Ruff check/format ผ่าน, fixtures สร้างได้, และ clean clone เริ่ม server บน port 8001 แล้วผ่าน `POST /ocr/extract` กับ protected `GET /ocr/invoices/{id}`. ดังนั้น `ocr_checks_passed` เป็น true แต่ `release_ready` ยัง false จาก Policy violations สองรายการข้างต้น (ไม่ใช่ OCR regression). ใช้ [release report](RELEASE_CHECK.json) ตรวจรายละเอียดของแต่ละขั้น
+
+Draft PRสำหรับPM review: [ReceivableOS PR16](https://github.com/Khawpuneiei/ReceivableOS/pull/16) ยังไม่ merge

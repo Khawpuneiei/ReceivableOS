@@ -9,7 +9,7 @@
       ],
       "exit_code": 0,
       "passed": true,
-      "output_tail": "........................................................................ [ 39%]\n........................................................................ [ 78%]\n.......................................                                  [100%]\n=============================== warnings summary ===============================\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n183 passed, 5 warnings in 53.29s\n",
+      "output_tail": "........................................................................ [ 39%]\n........................................................................ [ 78%]\n........................................                                 [100%]\n=============================== warnings summary ===============================\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n184 passed, 5 warnings in 109.70s (0:01:49)\n",
       "error_tail": ""
     },
     {
@@ -36,7 +36,7 @@
       ],
       "exit_code": 0,
       "passed": true,
-      "output_tail": "100 files already formatted\n",
+      "output_tail": "103 files already formatted\n",
       "error_tail": ""
     },
     {
@@ -64,6 +64,16 @@
     {
       "command": [
         "/Users/wisitsuwannao/Documents/Workspace/ReceivableOS/services/ocr-ai/.venv/bin/python",
+        "scripts/demo_order.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output_tail": "{\n  \"data_origin\": \"synthetic-only\",\n  \"ordered_results\": [\n    {\n      \"file\": \"01_happy.pdf\",\n      \"invoice_no\": \"SFP-INV-2026-0142\",\n      \"fraud_score\": 0.0,\n      \"fraud_flags\": [],\n      \"injection_flags\": [],\n      \"expected_policy\": \"approve\",\n      \"evidence_gate\": \"approve\",\n      \"passed\": true\n    },\n    {\n      \"file\": \"02_injected.pdf\",\n      \"invoice_no\": \"SFP-INV-2026-0143\",\n      \"fraud_score\": 0.0,\n      \"fraud_flags\": [],\n      \"injection_flags\": [\n        \"VISIBLE_INSTRUCTION\"\n      ],\n      \"expected_policy\": \"review\",\n      \"evidence_gate\": \"review\",\n      \"passed\": true\n    },\n    {\n      \"file\": \"03_inflated.pdf\",\n      \"invoice_no\": \"SFP-INV-2026-0144\",\n      \"fraud_score\": 0.4,\n      \"fraud_flags\": [\n        \"math_inconsistent\"\n      ],\n      \"injection_flags\": [],\n      \"expected_policy\": \"reject\",\n      \"evidence_gate\": \"reject\",\n      \"passed\": true\n    },\n    {\n      \"file\": \"04_duplicate.pdf\",\n      \"invoice_no\": \"SFP-INV-2026-0142\",\n      \"fraud_score\": 0.96,\n      \"fraud_flags\": [\n        \"duplicate_invoice_hash\",\n        \"duplicate_fingerprint\"\n      ],\n      \"injection_flags\": [],\n      \"expected_policy\": \"reject\",\n      \"evidence_gate\": \"reject\",\n      \"passed\": true\n    }\n  ],\n  \"passed\": true,\n  \"policy_endpoint_called\": false,\n  \"limitation\": \"Evidence gate only; actual Policy guards are evaluated separately in DEMO_LOOP_RESULTS.json\"\n}\n",
+      "error_tail": ""
+    },
+    {
+      "command": [
+        "/Users/wisitsuwannao/Documents/Workspace/ReceivableOS/services/ocr-ai/.venv/bin/python",
         "scripts/demo_loop.py",
         "--skip-fraud-eval"
       ],
@@ -74,6 +84,12 @@
     }
   ],
   "ocr_checks_passed": true,
+  "release_scope": "Offline OCR checks plus mock-owner Policy guard gate; excludes PM review and live hosted inference",
+  "unverified": [
+    "Live hosted provider/model inference",
+    "Global vendor holdout >=90%",
+    "Authoritative issuer/bank/signature/settlement verification"
+  ],
   "fresh_clone": {
     "passed": true,
     "checks": [
@@ -137,7 +153,7 @@
         ],
         "exit_code": 0,
         "passed": true,
-        "output_tail": "........................................................................ [ 39%]\n........................................................................ [ 78%]\n.......................................                                  [100%]\n=============================== warnings summary ===============================\n../../../venv/lib/python3.11/site-packages/fastapi/testclient.py:1\n  /private<temporary>/venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n183 passed, 6 warnings in 54.01s\n",
+        "output_tail": "........................................................................ [ 39%]\n........................................................................ [ 78%]\n........................................                                 [100%]\n=============================== warnings summary ===============================\n../../../venv/lib/python3.11/site-packages/fastapi/testclient.py:1\n  /private<temporary>/venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n184 passed, 6 warnings in 116.38s (0:01:56)\n",
         "error_tail": ""
       },
       {
@@ -164,7 +180,7 @@
         ],
         "exit_code": 0,
         "passed": true,
-        "output_tail": "101 files already formatted\n",
+        "output_tail": "103 files already formatted\n",
         "error_tail": ""
       },
       {
@@ -182,11 +198,5 @@
     "paddle_installed": false
   },
   "policy_control_violations": 2,
-  "release_ready": false,
-  "release_scope": "Offline OCR checks plus mock-owner Policy guard gate; excludes PM review, PR merge and live hosted inference",
-  "unverified": [
-    "Live hosted provider/model inference",
-    "Global vendor holdout >=90%",
-    "Authoritative issuer/bank/signature/settlement verification"
-  ]
+  "release_ready": false
 }

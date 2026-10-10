@@ -22,7 +22,7 @@
       {
         "round": 1,
         "file": "02_injected.pdf",
-        "doc_hash": "sha256:81d39a2ab4da8c1b30c14e019e777539b4da7d39d687e67d53eb5b8cd499dd49",
+        "doc_hash": "sha256:03b738e2f34d18fbdfc0ae03390fbdc7c08da72a23cefe05c737c8bdf3a4ee84",
         "checks": [
           {
             "provider": "local_qwen",
@@ -37,7 +37,7 @@
       {
         "round": 1,
         "file": "03_inflated.pdf",
-        "doc_hash": "sha256:63a19f1ca9b0e503b83b1bb8cb50fc78dff0dab11d00e09a83d20e941b2ea4b8",
+        "doc_hash": "sha256:6e8bfac2e97abb2c0d7eae20e84dc9d833a6cd7c390cae9a5d24f26917be2773",
         "checks": [
           {
             "provider": "local_qwen",
@@ -82,7 +82,7 @@
       {
         "round": 2,
         "file": "02_injected.pdf",
-        "doc_hash": "sha256:81d39a2ab4da8c1b30c14e019e777539b4da7d39d687e67d53eb5b8cd499dd49",
+        "doc_hash": "sha256:03b738e2f34d18fbdfc0ae03390fbdc7c08da72a23cefe05c737c8bdf3a4ee84",
         "checks": [
           {
             "provider": "local_qwen",
@@ -97,7 +97,7 @@
       {
         "round": 2,
         "file": "03_inflated.pdf",
-        "doc_hash": "sha256:63a19f1ca9b0e503b83b1bb8cb50fc78dff0dab11d00e09a83d20e941b2ea4b8",
+        "doc_hash": "sha256:6e8bfac2e97abb2c0d7eae20e84dc9d833a6cd7c390cae9a5d24f26917be2773",
         "checks": [
           {
             "provider": "local_qwen",

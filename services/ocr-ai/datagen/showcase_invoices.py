@@ -467,9 +467,11 @@ def generate(output: Path = OUTPUT) -> list[Path]:
     demo.mkdir(parents=True, exist_ok=True)
     variants = profile.copy()
     variants["total"] = "849000.00"
+    variants["invoice_no"] = "SFP-INV-2026-0144"
+    injected_profile = {**profile, "invoice_no": "SFP-INV-2026-0143"}
     for filename, content in (
         ("01_happy.pdf", invoice),
-        ("02_injected.pdf", build_pdf(profile, visible_injection=True)),
+        ("02_injected.pdf", build_pdf(injected_profile, visible_injection=True)),
         ("03_inflated.pdf", build_pdf(variants)),
         ("04_duplicate.pdf", invoice),
         ("purchase_order.pdf", purchase_order),
