@@ -2,12 +2,12 @@
   "decision": "review",
   "advance_rate": "0.70",
   "limit": "524300.00",
-  "fee_rate": "0.01",
-  "apr": "0.1217",
+  "fee_rate": "0.0105",
+  "apr": "0.1278",
   "must_contain": [
     "PRICING.RISK_FEE",
     "REVIEW.MANDATE_APR",
     "TERMS.MANDATE_CAP"
   ],
-  "model_version": "credit-lr-2026-10-10.1"
+  "model_version": "credit-lr-2026-10-10.2"
 }

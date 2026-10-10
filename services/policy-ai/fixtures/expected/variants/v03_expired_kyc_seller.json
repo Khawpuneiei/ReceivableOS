@@ -7,5 +7,5 @@
   "must_contain": [
     "KO.KYC_INVALID"
   ],
-  "model_version": "credit-lr-2026-10-10.1"
+  "model_version": "credit-lr-2026-10-10.2"
 }
