@@ -3,6 +3,7 @@
 > **For P (PM, integration, pitch).** Five concerns a judge or a bank partner will poke at: spending limits and mandates, human approval and dual control, the audit log, KYC/AML, and data privacy. For each: what can go wrong in *this* product, what you will be asked, what the state of the art is, the setting we recommend for the demo, and the one line you say on stage.
 >
 > Status: **v0.1, 2026-10-10.** Builds on the wallet mechanics in `services/agent-wallet/CLAUDE.md` (and `docs/03-agent-wallet.md` once it lands), the mandate in `docs/02-finance-domain.md` §10, and the attack cases A1–A6 in `docs/01-architecture.md` §3.6. This file does not redefine those mechanics; it says which settings to pick and how to talk about them.
+> **Feeds the submission.** The official security self-assessment (permission tiers + known-risk list, in English) lives in `pitch/security-self-assessment.md`, owned by the Agent Wallet eng and P (`docs/01` §2.1). Lift from here: key roles and dual control (§2.1, §2.4), mandate limits (§1.4), and known risks (§1.1, §1.5, §2.1, §3.1, §6 "Known limits").
 > Numbers marked **(est.)** are our assumptions, not sourced facts. This is not legal advice.
 
 ---
