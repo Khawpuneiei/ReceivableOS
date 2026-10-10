@@ -3,23 +3,15 @@
   "decision": "review",
   "advance_rate": "0.60",
   "limit": "449400.00",
-  "fee_rate": "0.0115",
-  "apr": "0.1399",
+  "fee_rate": "0.012",
+  "apr": "0.146",
   "risk_score": {
+    "min": 0.0036,
     "max": 0.0058
   },
   "must_contain": [
     "REVIEW.UNCONFIRMED_BUYER",
     "REVIEW.MANDATE_APR",
     "TERMS.HAIRCUT_UNCONFIRMED"
-  ],
-  "finance_expected": {
-    "fee_rate": "0.012",
-    "apr": "0.146",
-    "risk_score": {
-      "min": 0.0036,
-      "max": 0.0058
-    }
-  },
-  "note": "PENDING P/Finance decision. Finance's V3 number is fee 0.012 (needs PD in (0.0036, 0.0058]). The served LR scorecard (credit-lr-2026-10-10.1) estimates PD 0.00339 against a latent truth of 0.0044, so the fee steps down to 0.0115 (APR 0.1399). Decision, advance, limit and reason codes are unchanged."
+  ]
 }
