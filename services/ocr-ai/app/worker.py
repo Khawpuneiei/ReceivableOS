@@ -105,7 +105,7 @@ def paddle_read(parsed: ParsedDocument) -> ParsedDocument:
     # Local staged model directories are mandatory; inference must not download model weights.
     detector = os.environ.get("OCR_PADDLE_DET_DIR")
     recognizer = os.environ.get("OCR_PADDLE_REC_DIR")
-    recognition_name = os.environ.get("OCR_PADDLE_REC_NAME", "th_PP-OCRv5_mobile_rec")
+    recognition_name = os.environ.get("OCR_PADDLE_REC_NAME", "en_PP-OCRv5_mobile_rec")
     if recognition_name not in {"th_PP-OCRv5_mobile_rec", "en_PP-OCRv5_mobile_rec", "PP-OCRv5_mobile_rec"}:
         raise ValueError("Unsupported staged recognition model")
     if not detector or not recognizer:
@@ -122,9 +122,10 @@ def paddle_read(parsed: ParsedDocument) -> ParsedDocument:
         use_doc_unwarping=False,
         use_textline_orientation=False,
     )
-    import numpy as np
-
     spans = []
+    if parsed.images:
+        import numpy as np
+
     for index, encoded in enumerate(parsed.images):
         image = np.asarray(Image.open(io.BytesIO(base64.b64decode(encoded))).convert("RGB"))
         for result in engine.predict(image):

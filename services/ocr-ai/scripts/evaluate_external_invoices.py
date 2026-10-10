@@ -38,9 +38,10 @@ HEADER_FIELDS = (
     ("amount", "total", "decimal"),
 )
 LINE_FIELDS = (
-    ("sku", "sku", "text"),
+    ("sku", "supplierSku", "text"),
     ("description", "description", "text"),
     ("quantity", "quantity", "decimal"),
+    ("unit", "unit", "text"),
     ("unit_price", "unitPrice", "decimal"),
     ("total", "lineTotal", "decimal"),
 )
@@ -94,7 +95,6 @@ def truth_coverage(expected: dict) -> list[str]:
     for index, line in enumerate(expected.get("lines", [])):
         unsupported_line_fields = (
             "barcode",
-            "unit",
             "discount",
             "tax",
             "pack",
@@ -306,6 +306,23 @@ def main() -> None:
             "observed_lines": total_observed_lines,
             "elapsed_seconds": round(sum(item.get("elapsed_seconds", 0) for item in records), 3),
         },
+        "evaluation_role": (
+            "development challenge only after parser changes; publisher-authored synthetic labels, "
+            "not an independent holdout or production accuracy estimate"
+        ),
+        "comparison_baseline": {
+            "captured_in_commit": "6885189",
+            "header_field_matches": 29,
+            "header_fields": 232,
+            "line_field_matches": 0,
+            "line_fields": 330,
+            "expected_lines": 66,
+            "observed_lines": 0,
+            "note": (
+                "Original run used the then-current parser and a line evaluator that did not map "
+                "publisher supplierSku or score line units. Current results use corrected labels."
+            ),
+        },
         "input_counts": {
             "pdfs": sum(item["format"] == "pdf" for item in records),
             "pngs": sum(item["format"] == "png" for item in records),
@@ -320,9 +337,10 @@ def main() -> None:
                 "or production accuracy estimate."
             ),
             (
-                "The service schema does not represent discounts, freight, duty, barcodes, pack "
-                "conversions, or free quantities; those concepts are reported as unsupported, "
-                "not scored as extraction failures."
+                "The OCR-local schema preserves raw line units, but does not represent discounts, "
+                "freight, duty, barcodes, pack conversions, or free quantities; those concepts "
+                "are reported as unsupported, not scored as extraction failures. Shared schemas "
+                "do not carry the OCR-local unit field."
             ),
             (
                 "This run uses the English Paddle recognition model. Arabic and bilingual Arabic "

@@ -113,8 +113,8 @@ def test_global_multi_line_money_and_minor_units(client, currency, subtotal, tax
     lines += [
         f"Subtotal: {subtotal}",
         f"Tax: {tax}",
-        f"Item: A | Boxes | 4 | {unit_a} | {Decimal(unit_a) * 4:.3f}",
-        f"Item: B | Labels | 3 | {unit_b} | {Decimal(unit_b) * 3:.3f}",
+        f"Item: A | Boxes | 4 | EA | {unit_a} | {Decimal(unit_a) * 4:.3f}",
+        f"Item: B | Labels | 3 | EA | {unit_b} | {Decimal(unit_b) * 3:.3f}",
     ]
     response = upload(client, render_pdf(lines))
     assert response.status_code == 200
@@ -189,7 +189,10 @@ def test_canonical_three_decimal_amount_is_not_reparsed_as_an_ambiguous_source()
 
 def test_incomplete_table_is_review_evidence_not_a_false_sum_fraud(client):
     lines = [line for line in document_lines() if not line.startswith("Item:")]
-    lines += ["Item: A | Food trays | 25000 | 14.00 | 350000.00", "Item: second row unsupported layout"]
+    lines += [
+        "Item: A | Food trays | 25000 | EA | 14.00 | 350000.00",
+        "Item: second row unsupported layout",
+    ]
     response = upload(client, render_pdf(lines))
     assert response.status_code == 200
     data = response.json()

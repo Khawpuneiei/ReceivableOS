@@ -35,7 +35,7 @@ The service does not verify delivery, acceptance, tax registration, legal authen
 bounded upload
   -> isolated PDF/image parser and page renderer
   -> use readable PDF text; run staged PaddleOCR only for unreadable pages when enabled
-  -> spatial role anchors and the explicitly supported five-column line table
+  -> spatial role anchors and explicit five- or six-column line tables
   -> optional loopback Qwen-VL candidates; disagreement/alert can require review but cannot fill fields
   -> Decimal, date, currency, jurisdiction and arithmetic validation
   -> for /ocr/verify, compare the separately uploaded PO and invoice
@@ -53,7 +53,7 @@ The parser and OCR run in child processes with a restricted environment. The ser
 | `app/layout.py`, `app/extract.py` | Spatial rows, explicit role labels, supported line-table shape, evidence-grounded partial extraction and injection patterns |
 | `app/normalize.py`, `app/validate.py` | Locale-aware Decimal/date/currency normalization and deterministic validation |
 | `app/qwen.py` | Strict local Qwen-VL candidate schema and loopback-only HTTP call |
-| `app/compare.py` | Evidence-backed invoice/PO checks (`invoice-po-rules-v2`) |
+| `app/compare.py` | Evidence-backed invoice/PO checks (`invoice-po-rules-v3`) |
 | `app/fingerprint.py`, `app/history.py` | Registry-v1 fingerprint, local scoped HMAC tokens and bounded atomic observation history |
 | `app/fraud.py`, `app/graph.py` | Rule findings, uncalibrated noisy-OR score and finding-scoped graph (`graph-rules-v1`) |
 | `app/pipeline.py` | Extraction, compatibility projection, comparison, observation, fraud graph and handoff orchestration |
@@ -80,7 +80,9 @@ Use `scripts/setup_local.py` to create ignored local settings safely. It preserv
 
 ## Extraction and language limits
 
-The deterministic extractor binds values to explicit labels and source geometry. It supports the aliases in `app/extract.py`, English and Thai labels, a limited experimental Simplified Chinese label set, and the exact five-column `SKU / DESCRIPTION / QTY / UNIT PRICE / LINE TOTAL` layout. It does not infer arbitrary table columns, handwriting, Arabic roles, discounts, freight/duty, barcodes, pack conversions, or free quantities. Do not relax these limits by taking the nearest number or name on a page.
+The deterministic extractor binds values to explicit labels and source geometry. It supports the aliases in `app/extract.py`, English and Thai labels, a limited experimental Simplified Chinese label set, a five-column `SKU / DESCRIPTION / QTY / UNIT PRICE / LINE TOTAL` layout, and a six-column `SKU / DESCRIPTION / QTY / UNIT / PRICE / TOTAL` layout. Unknown table-shaped headers are explicitly marked unsupported. It does not infer arbitrary table columns, handwriting, Arabic roles, discounts, freight/duty, barcodes, pack conversions, or free quantities. A supplier name inferred from an unlabeled letterhead is retained as ambiguous evidence and requires review. Do not relax these limits by taking the nearest number or name on a page.
+
+`/ocr/verify` compares a line quantity or unit price only when both documents provide a matching unit after Unicode normalization, whitespace compaction and case folding. Missing units make unit, quantity and unit-price checks unknown; differing units mismatch and leave the numeric comparisons unknown. No unit aliases or pack conversions are inferred. The shared single-invoice projection has no unit field; handoff v3 requires `respect_unknown_line_unit_checks`, and a consumer that ignores it cannot safely use local quantity/price comparisons.
 
 English is the primary evaluated language. Thai is secondary and its scan results still have gaps. Simplified Chinese remains experimental and forces review. Arabic and Arabic-English documents are not a supported language profile. Currency code recognition or OCR text visibility does not prove that other invoice fields were extracted correctly.
 
@@ -92,7 +94,7 @@ PDF text/layout is preferred because it is fast, preserves original text evidenc
 
 Qwen3-VL is an optional local experiment, not the primary OCR engine. It returns nullable candidates under a strict schema, has no tools or API keys, and cannot populate missing fields. Disagreement, invalid/unavailable output, or an instruction alert routes to review. The current prompt raised benign false alerts in the documented smoke cases; do not promote it as a dependable injection detector. When enabled, the current pipeline calls it for each document and limits it to page one, which adds latency and can create unnecessary review. Keep it disabled by default; any future dispatch optimization (for example, only calling it for scanned or unresolved documents) must be measured for missed alerts and preserve the candidate-only boundary.
 
-The small four-scan benchmark recorded Qwen candidate matches of 28/28 versus Paddle's 23/28, with Qwen taking about 12–13 seconds per call and Paddle about 5.6–7.1 seconds. That candidate-only sample is too small to establish general superiority. Later 80-document English/Chinese/Thai tests evaluate the deterministic extraction path, not Qwen-versus-Paddle production quality. See `docs/ENGINE_BENCHMARK.json`, `docs/FINTECH_RETEST.md`, and `docs/RELIABILITY_REVIEW.md` before making engine claims.
+The latest four-scan benchmark uses language-matched Paddle recognizers and records Paddle 24/28 versus Qwen candidates 28/28; English ties at 14/14, while Thai is 10/14 for Paddle and 14/14 for Qwen on two fixtures. Paddle took 9.96–10.99 seconds and Qwen 9.25–11.06 seconds in one run, but Ollama cache state and background load were uncontrolled, so these are not comparable latency targets. Four generated scans do not establish general superiority. Qwen still has false injection alerts in documented HTTP smoke cases and remains candidate-only. New service setup defaults to the English Paddle profile; Thai/Chinese model choice is explicit and there is no per-document language router. See `docs/ENGINE_BENCHMARK.json`, `docs/FINTECH_RETEST.md`, and `docs/RELIABILITY_REVIEW.md` before making engine claims.
 
 A scanned-document Paddle worker currently starts per request and initializes its staged model in that process. Do not add a persistent model server without reviewing process isolation, secrets, memory/resource bounds, concurrency, shutdown, and reproducible latency. Benchmark cold and warm paths separately and report exact corpus/model/runtime versions.
 

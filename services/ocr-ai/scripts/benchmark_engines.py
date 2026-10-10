@@ -18,12 +18,13 @@ from app.qwen import read_candidates  # noqa: E402
 
 DATA = SERVICE.parents[1] / "data" / "invoices"
 FIELDS = ("document_number", "amount", "currency", "issue_date", "due_date", "supplier_name", "buyer_name")
+RECOGNIZERS = {"en": "en_PP-OCRv5_mobile_rec", "th": "th_PP-OCRv5_mobile_rec"}
 
 
 def main() -> None:
     cache = SERVICE / ".cache" / "paddlex" / "official_models"
     os.environ.setdefault("OCR_PADDLE_DET_DIR", str(cache / "PP-OCRv5_mobile_det"))
-    os.environ.setdefault("OCR_PADDLE_REC_DIR", str(cache / "th_PP-OCRv5_mobile_rec"))
+    os.environ.setdefault("OCR_PADDLE_REC_DIR", str(cache / "en_PP-OCRv5_mobile_rec"))
     os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
     settings = Settings.from_env()
     labels = [json.loads(line) for line in (DATA / "labels.jsonl").read_text().splitlines()]
@@ -37,7 +38,11 @@ def main() -> None:
             started = time.monotonic()
             values, error = {}, None
             try:
+                recognition_model = None
                 if engine == "paddle":
+                    recognition_model = RECOGNIZERS[label["language"]]
+                    os.environ["OCR_PADDLE_REC_NAME"] = recognition_model
+                    os.environ["OCR_PADDLE_REC_DIR"] = str(cache / recognition_model)
                     document = extract_document(
                         run_worker("paddle", content), label["document_type"]
                     ).document
@@ -65,6 +70,7 @@ def main() -> None:
                 "language": label["language"],
                 "document_type": label["document_type"],
                 "engine": engine,
+                "recognition_model": recognition_model,
                 "elapsed_seconds": round(time.monotonic() - started, 3),
                 "error": error,
                 "field_matches": matches,
@@ -78,7 +84,8 @@ def main() -> None:
         "comparison_policy": "Exact scalar string matches for seven fields, including monetary formatting",
         "prompt_version": "grand-total-payable-v2",
         "schema_policy": "Every nullable field is required; extra properties forbidden",
-        "paddle_models": ["PP-OCRv5_mobile_det", "th_PP-OCRv5_mobile_rec"],
+        "paddle_detector": "PP-OCRv5_mobile_det",
+        "paddle_recognizers_by_language": RECOGNIZERS,
         "qwen_model": settings.qwen_model,
         "records": records,
         "limitations": [
@@ -86,6 +93,7 @@ def main() -> None:
             "Qwen outputs are candidates; exact matches do not establish grounding",
             "Paddle per-span confidence is not calibrated field accuracy",
             "Per-request isolated Paddle worker includes import/model initialization cost",
+            "Single local timing run; Ollama/model cache state and background load were not controlled",
         ],
     }
     (SERVICE / "docs" / "ENGINE_BENCHMARK.json").write_text(json.dumps(report, indent=2) + "\n")

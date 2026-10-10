@@ -78,14 +78,34 @@ def anchored_rows(spans: list[Span], instruction: re.Pattern) -> list[tuple[str,
     return result
 
 
-TABLE_HEADER = ("sku", "description", "qty", "unitprice", "linetotal")
+TABLE_HEADERS = {
+    ("sku", "description", "qty", "unitprice", "linetotal"),
+    ("sku", "description", "qty", "unit", "price", "total"),
+}
+
+TABLE_SUMMARY = re.compile(
+    r"^(subtotal|sub-total|tax(?:\s+amount)?|vat(?:\s+amount)?|vat\s+\d+(?:\.\d+)?%?|"
+    r"grand\s+total|total|amount\s+due|balance\s+due|discount|freight|shipping|duty)(?:\b|$)",
+    re.IGNORECASE,
+)
+
+
+def _unsupported_table_header(cells: list[str]) -> bool:
+    """Recognize table-shaped headers that are too different to parse safely."""
+    normalized = {compact(cell) for cell in cells}
+    has_sku = bool(normalized & {"sku", "itemcode", "productcode"})
+    has_description = bool(normalized & {"description", "itemdescription", "productdescription"})
+    has_quantity = bool(normalized & {"qty", "quantity", "orderedqty"})
+    has_money = bool(normalized & {"unitprice", "price", "linetotal", "total", "amount"})
+    return has_sku and has_description and has_quantity and has_money
 
 
 def table_rows(spans: list[Span], instruction: re.Pattern):
-    """Accept a source row with five whitespace-delimited cells under an exact header.
+    """Accept five- or six-column source rows under exact supported headers.
 
     This deliberately does not infer missing cells, shifted columns or continuation
-    pages. Unknown rows below a detected header invalidate aggregate line sums.
+    pages. Unknown rows inside an active table invalidate aggregate line sums. A
+    recognized financial-summary row closes the table before it is interpreted.
     """
     records, incomplete = [], False
     active = None
@@ -93,19 +113,33 @@ def table_rows(spans: list[Span], instruction: re.Pattern):
         text = "  ".join(text for text, _ in segments(row))
         cells = [value.strip() for value in re.split(r"\s{2,}", text.strip())]
         location = (row[0].page, row[0].source)
-        if tuple(compact(value) for value in cells) == TABLE_HEADER:
-            active = location
+        normalized_header = tuple(compact(value) for value in cells)
+        if normalized_header in TABLE_HEADERS:
+            if active and len(records) == active[2]:
+                incomplete = True
+            active = (location, len(cells), len(records))
             continue
-        if active != location:
+        if _unsupported_table_header(cells):
+            incomplete = True
+            active = None
             continue
-        if len(cells) != len(TABLE_HEADER) or any(not value for value in cells):
+        if active is None or active[0] != location:
+            continue
+        if cells and TABLE_SUMMARY.match(cells[0]):
+            if len(records) == active[2]:
+                incomplete = True
+            active = None
+            continue
+        expected_cells = active[1]
+        if len(cells) != expected_cells or any(not value for value in cells):
             incomplete = True
             continue
         # Numeric columns must look numeric; normalization is done by the caller.
-        if not all(re.fullmatch(r"[\d.,]+", value) for value in cells[2:]):
+        numeric_cells = cells[2:] if expected_cells == 5 else (cells[2], cells[4], cells[5])
+        if not all(re.fullmatch(r"[\d.,]+", value) for value in numeric_cells):
             incomplete = True
             continue
         records.append((cells, row))
-    if active and not records:
+    if active and len(records) == active[2]:
         incomplete = True
     return records, incomplete

@@ -2,7 +2,7 @@
 
 Status: ready for owner review; no owner agreement or downstream adoption claimed.
 
-The [financial retest](FINTECH_RETEST.md) adds `comparison_version: invoice-po-rules-v2`: exact printed financial comparisons and mandatory review for every mismatch, including line-only discrepancies. Unmatched shared projections carry confidence below 0.80. Pair response validation binds both ordered document hashes and the observation ID and rejects inconsistent review state; it does not authenticate transport or verify signatures. Partial invoicing preserves resolved over-order discrepancies. Zero face value and small internal rounding differences require review without an automatic fraud accusation.
+The current local handoff declares `comparison_version: invoice-po-rules-v3`. It requires matching observed line units before comparing quantity or unit prices; absent units are unknown, different units mismatch, and no conversion is attempted. The earlier `invoice-po-rules-v2` financial retest remains historical. Every resolved mismatch requires review, and unmatched shared projections carry confidence below 0.80. Pair response validation binds both ordered document hashes and the observation ID and rejects inconsistent review state; it does not authenticate transport or verify signatures. Partial invoicing preserves resolved over-order discrepancies. Zero face value and small internal rounding differences require review without an automatic fraud accusation.
 
 | Consumer input | Required interpretation |
 |---|---|

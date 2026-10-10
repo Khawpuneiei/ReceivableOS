@@ -70,6 +70,7 @@ class LineExtraction(LocalModel):
     description: FieldValue[str] = Field(default_factory=FieldValue[str])
     sku: FieldValue[str] = Field(default_factory=FieldValue[str])
     quantity: FieldValue[Decimal] = Field(default_factory=FieldValue[Decimal])
+    unit: FieldValue[str] = Field(default_factory=FieldValue[str])
     unit_price: FieldValue[Decimal] = Field(default_factory=FieldValue[Decimal])
     total: FieldValue[Decimal] = Field(default_factory=FieldValue[Decimal])
 
@@ -196,7 +197,7 @@ class ConsumerHandoff(LocalModel):
     document_hashes: list[Digest] = Field(min_length=1, max_length=2)
     extraction_version: Literal["spatial-rules-v2"] = "spatial-rules-v2"
     graph_rule_version: Literal["graph-rules-v1"] = "graph-rules-v1"
-    comparison_version: Literal["invoice-po-rules-v2"] = "invoice-po-rules-v2"
+    comparison_version: Literal["invoice-po-rules-v3"] = "invoice-po-rules-v3"
     review_required: bool
     review_reasons: list[str] = Field(default_factory=list, max_length=100)
     injection_flags: list[str] = Field(default_factory=list, max_length=100)
@@ -213,6 +214,7 @@ class ConsumerHandoff(LocalModel):
         "authenticate_service_response",
         "bind_document_hashes_to_request",
         "enforce_review_and_injection_rules",
+        "respect_unknown_line_unit_checks",
         "check_registry_and_po_allocation",
         "verify_payee_and_wallet_mandate",
     )

@@ -67,7 +67,7 @@ def document_lines(
         ("Tax Basis", "inclusive"),
         ("Language", "th" if thai else "en"),
         ("Locale", "th-TH" if thai else "en-US"),
-        ("Item", f"TRAY-01 | Food trays | {quantity} | 14.00 | 700000.00"),
+        ("Item", f"TRAY-01 | Food trays | {quantity} | EA | 14.00 | 700000.00"),
         ("Bank Account", "100-200-3001"),
         ("Bank Country", "TH"),
         ("Bank Scheme", "LOCAL"),

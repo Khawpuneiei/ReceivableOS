@@ -11,7 +11,7 @@ os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--language", choices=("en", "th", "zh"), default="th")
+    parser.add_argument("--language", choices=("en", "th", "zh"), default="en")
     arguments = parser.parse_args()
     recognition_name = {
         "en": "en_PP-OCRv5_mobile_rec",

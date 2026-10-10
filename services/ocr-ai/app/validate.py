@@ -62,17 +62,18 @@ def _validate_document(doc: DocumentExtraction) -> DocumentExtraction:
             field = getattr(doc, name)
             if field.value is not None and field.value % tolerance:
                 reasons.append(f"MONEY_PRECISION:{name}")
-        for index, line in enumerate(doc.lines):
-            if (
-                line.quantity.value is not None
-                and line.unit_price.value is not None
-                and line.total.value is not None
-            ):
-                arithmetic(
-                    line.quantity.value * line.unit_price.value - line.total.value,
-                    f"LINE_MATH_MISMATCH:{index}",
-                    f"line:{index}",
-                )
+        if "UNSUPPORTED_FINANCIAL_COMPONENT" not in reasons:
+            for index, line in enumerate(doc.lines):
+                if (
+                    line.quantity.value is not None
+                    and line.unit_price.value is not None
+                    and line.total.value is not None
+                ):
+                    arithmetic(
+                        line.quantity.value * line.unit_price.value - line.total.value,
+                        f"LINE_MATH_MISMATCH:{index}",
+                        f"line:{index}",
+                    )
         if (
             doc.lines
             and doc.subtotal.value is not None
@@ -83,13 +84,16 @@ def _validate_document(doc: DocumentExtraction) -> DocumentExtraction:
                 )
                 for reason in reasons
             )
+            and "UNSUPPORTED_FINANCIAL_COMPONENT" not in reasons
         ):
             arithmetic(
                 sum((line.total.value for line in doc.lines), Decimal(0)) - doc.subtotal.value,
                 "LINE_SUM_MISMATCH",
                 "subtotal",
             )
-        if all(getattr(doc, name).value is not None for name in ("amount", "subtotal", "tax_amount")):
+        if "UNSUPPORTED_FINANCIAL_COMPONENT" not in reasons and all(
+            getattr(doc, name).value is not None for name in ("amount", "subtotal", "tax_amount")
+        ):
             arithmetic(
                 doc.subtotal.value + doc.tax_amount.value - doc.amount.value, "TOTAL_MISMATCH", "total"
             )

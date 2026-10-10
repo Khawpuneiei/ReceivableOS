@@ -1,5 +1,7 @@
 # Financial retest and review invariants
 
+Historical snapshot: this report records comparison-v2 and its 131-test result. The current local pair comparison is `invoice-po-rules-v3`; see [the current handoff](HANDOFF.md) and [ADR 0006](adr/0006-explicit-line-unit-comparison.md).
+
 10 October 2026, on `ocr/evidence-fraud-graph`. Baseline: `06ad5bc8a757596d9b4ffd9bce597259d3874261`. All document inputs and labels are synthetic. Shared schemas and other-service source remain unchanged. See [the decision](adr/0005-exact-financial-comparison-and-review.md), [regressions](../tests/test_fintech_review.py) and [check provenance](FINTECH_RETEST_CHECKS.json).
 
 ## Reproduced discrepancies and fixes

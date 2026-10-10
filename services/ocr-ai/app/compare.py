@@ -1,5 +1,6 @@
 """Independent invoice/PO checks on declared currency and tax bases."""
 
+import unicodedata
 from decimal import Decimal
 
 from app.config import REVIEW_CONFIDENCE
@@ -9,6 +10,9 @@ from app.normalize import normalize_reference
 
 def compare_documents(invoice: DocumentExtraction, po: DocumentExtraction) -> list[ComparisonCheck]:
     checks = []
+
+    def normalize_unit(value: str) -> str:
+        return " ".join(unicodedata.normalize("NFKC", value).split()).casefold()
 
     def compare(
         field: str,
@@ -88,6 +92,7 @@ def compare_documents(invoice: DocumentExtraction, po: DocumentExtraction) -> li
     left_lines = {line.sku.value: line for line in invoice.lines if line.sku.value}
     right_lines = {line.sku.value: line for line in po.lines if line.sku.value}
     unique_lines = len(left_lines) == len(invoice.lines) and len(right_lines) == len(po.lines)
+    comparable_units: set[str] = set()
     if not unique_lines or not left_lines or not right_lines:
         checks.append(
             ComparisonCheck(field="line_items", status="unknown", rule_code="LINE_EVIDENCE_UNKNOWN")
@@ -107,20 +112,39 @@ def compare_documents(invoice: DocumentExtraction, po: DocumentExtraction) -> li
                     )
                 )
                 continue
+            units_match = left.unit.status == right.unit.status == "present" and normalize_unit(
+                left.unit.value
+            ) == normalize_unit(right.unit.value)
+            compare(
+                f"line_items.{sku}.unit",
+                left.unit,
+                right.unit,
+                "LINE_UNIT",
+                normalize=normalize_unit,
+            )
+            if units_match:
+                comparable_units.add(sku)
             compare(f"line_items.{sku}.description", left.description, right.description, "LINE_DESCRIPTION")
-            compare(f"line_items.{sku}.quantity", left.quantity, right.quantity, "LINE_QUANTITY")
+            compare(
+                f"line_items.{sku}.quantity",
+                left.quantity,
+                right.quantity,
+                "LINE_QUANTITY",
+                eligible=sku in comparable_units,
+            )
             compare(
                 f"line_items.{sku}.unit_price",
                 left.unit_price,
                 right.unit_price,
                 "LINE_UNIT_PRICE",
-                eligible=same_currency and same_basis,
+                eligible=same_currency and same_basis and sku in comparable_units,
             )
     partial_skus = {
         sku
         for sku, left in left_lines.items()
         if unique_lines
         and sku in right_lines
+        and sku in comparable_units
         and left.quantity.status == right_lines[sku].quantity.status == "present"
         and min(left.quantity.confidence, right_lines[sku].quantity.confidence) >= REVIEW_CONFIDENCE
         and left.quantity.value < right_lines[sku].quantity.value

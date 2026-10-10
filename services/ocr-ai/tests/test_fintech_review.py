@@ -17,12 +17,20 @@ from app.worker import parse
 def financial_lines(*, po=False, currency="THB", amount="100.00", items=None):
     lines = document_lines(po=po, currency=currency)
     lines = [line for line in lines if not line.startswith(("Item:", "Subtotal:", "Tax:", "Total:"))]
+    item_rows = items or ["Item: A | Widget | 1 | 100 | 100"]
+    normalized_items = []
+    for line in item_rows:
+        label, value = line.split(":", 1)
+        cells = [cell.strip() for cell in value.split("|")]
+        if len(cells) == 5:
+            cells.insert(3, "EA")
+        normalized_items.append(f"{label}: " + " | ".join(cells))
     return [
         *lines,
         f"Subtotal: {amount}",
         "Tax: 0",
         f"Total: {amount}",
-        *(items or ["Item: A | Widget | 1 | 100 | 100"]),
+        *normalized_items,
     ]
 
 
@@ -77,6 +85,31 @@ def test_partial_line_does_not_hide_another_line_exceeding_the_po(client):
     assert quantities["line_items.A.quantity"] == "mismatch"
     assert quantities["line_items.B.quantity"] == "unknown"
     assert result["status"] == "mismatch"
+
+
+def test_quantity_comparison_requires_compatible_units_through_pair_handoff(client):
+    invoice = financial_lines(items=["Item: A | Widget | 2 | EA | 10 | 20"])
+    po = financial_lines(po=True, items=["Item: A | Widget | 2 | BOX | 10 | 20"])
+
+    result = post_pair(client, invoice, po)
+    checks = {check["field"]: check for check in result["checks"]}
+    assert result["status"] == "mismatch"
+    assert result["handoff"]["comparison_version"] == "invoice-po-rules-v3"
+    assert "respect_unknown_line_unit_checks" in result["handoff"]["required_consumer_checks"]
+    assert result["handoff"]["review_required"] is True
+    assert checks["line_items.A.unit"]["status"] == "mismatch"
+    assert checks["line_items.A.quantity"]["status"] == "unknown"
+    assert checks["line_items.A.unit_price"]["status"] == "unknown"
+
+
+def test_quantity_and_unit_price_are_unknown_when_unit_evidence_is_missing():
+    invoice = extract_document(parse(render_pdf(["Item: A | Widget | 2 | 10 | 20"])), "invoice").document
+    po = extract_document(parse(render_pdf(["Item: A | Widget | 2 | 10 | 20"])), "purchase_order").document
+
+    checks = {check.field: check for check in compare_documents(invoice, po)}
+    assert checks["line_items.A.unit"].status == "unknown"
+    assert checks["line_items.A.quantity"].status == "unknown"
+    assert checks["line_items.A.unit_price"].status == "unknown"
 
 
 def test_zero_face_value_cannot_leave_extraction_without_review(client):

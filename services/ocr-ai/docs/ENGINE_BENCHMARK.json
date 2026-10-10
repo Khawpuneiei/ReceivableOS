@@ -1,9 +1,13 @@
 {
   "data_origin": "synthetic-only",
-  "paddle_models": [
-    "PP-OCRv5_mobile_det",
-    "th_PP-OCRv5_mobile_rec"
-  ],
+  "comparison_policy": "Exact scalar string matches for seven fields, including monetary formatting",
+  "prompt_version": "grand-total-payable-v2",
+  "schema_policy": "Every nullable field is required; extra properties forbidden",
+  "paddle_detector": "PP-OCRv5_mobile_det",
+  "paddle_recognizers_by_language": {
+    "en": "en_PP-OCRv5_mobile_rec",
+    "th": "th_PP-OCRv5_mobile_rec"
+  },
   "qwen_model": "qwen3-vl:4b-instruct",
   "records": [
     {
@@ -11,7 +15,8 @@
       "language": "en",
       "document_type": "invoice",
       "engine": "paddle",
-      "elapsed_seconds": 7.106,
+      "recognition_model": "en_PP-OCRv5_mobile_rec",
+      "elapsed_seconds": 9.961,
       "error": null,
       "field_matches": {
         "document_number": true,
@@ -30,7 +35,8 @@
       "language": "en",
       "document_type": "invoice",
       "engine": "qwen",
-      "elapsed_seconds": 12.856,
+      "recognition_model": null,
+      "elapsed_seconds": 10.721,
       "error": null,
       "field_matches": {
         "document_number": true,
@@ -49,7 +55,8 @@
       "language": "en",
       "document_type": "purchase_order",
       "engine": "paddle",
-      "elapsed_seconds": 5.621,
+      "recognition_model": "en_PP-OCRv5_mobile_rec",
+      "elapsed_seconds": 10.898,
       "error": null,
       "field_matches": {
         "document_number": true,
@@ -68,7 +75,8 @@
       "language": "en",
       "document_type": "purchase_order",
       "engine": "qwen",
-      "elapsed_seconds": 12.729,
+      "recognition_model": null,
+      "elapsed_seconds": 10.245,
       "error": null,
       "field_matches": {
         "document_number": true,
@@ -87,16 +95,17 @@
       "language": "th",
       "document_type": "invoice",
       "engine": "paddle",
-      "elapsed_seconds": 5.646,
+      "recognition_model": "th_PP-OCRv5_mobile_rec",
+      "elapsed_seconds": 10.574,
       "error": null,
       "field_matches": {
-        "document_number": true,
+        "document_number": false,
         "amount": true,
         "currency": true,
         "issue_date": false,
         "due_date": true,
         "supplier_name": true,
-        "buyer_name": false
+        "buyer_name": true
       },
       "correct": 5,
       "total": 7
@@ -106,7 +115,8 @@
       "language": "th",
       "document_type": "invoice",
       "engine": "qwen",
-      "elapsed_seconds": 12.401,
+      "recognition_model": null,
+      "elapsed_seconds": 11.056,
       "error": null,
       "field_matches": {
         "document_number": true,
@@ -125,7 +135,8 @@
       "language": "th",
       "document_type": "purchase_order",
       "engine": "paddle",
-      "elapsed_seconds": 5.607,
+      "recognition_model": "th_PP-OCRv5_mobile_rec",
+      "elapsed_seconds": 10.985,
       "error": null,
       "field_matches": {
         "document_number": false,
@@ -134,9 +145,9 @@
         "issue_date": false,
         "due_date": true,
         "supplier_name": true,
-        "buyer_name": false
+        "buyer_name": true
       },
-      "correct": 4,
+      "correct": 5,
       "total": 7
     },
     {
@@ -144,7 +155,8 @@
       "language": "th",
       "document_type": "purchase_order",
       "engine": "qwen",
-      "elapsed_seconds": 12.919,
+      "recognition_model": null,
+      "elapsed_seconds": 9.245,
       "error": null,
       "field_matches": {
         "document_number": true,
@@ -164,19 +176,6 @@
     "Qwen outputs are candidates; exact matches do not establish grounding",
     "Paddle per-span confidence is not calibrated field accuracy",
     "Per-request isolated Paddle worker includes import/model initialization cost",
-    "Warm OS/model caches and uncontrolled background load; one timing observation per engine/document",
-    "Additional digital HTTP smoke cases show model false injection alerts and amount disagreement; four-scan results do not establish reliability"
-  ],
-  "comparison_policy": "Exact scalar string matches for seven fields, including monetary formatting",
-  "prompt_version": "grand-total-payable-v2",
-  "schema_policy": "Every nullable field is required; extra properties forbidden",
-  "environment": {
-    "hardware": "Apple M5, 16 GB RAM",
-    "platform": "macOS arm64",
-    "python": "3.11.17",
-    "paddleocr": "3.7.0",
-    "paddlepaddle": "3.3.0",
-    "ollama": "0.34.4",
-    "qwen_digest_prefix": "ee4b975b58c1"
-  }
+    "Single local timing run; Ollama/model cache state and background load were not controlled"
+  ]
 }
