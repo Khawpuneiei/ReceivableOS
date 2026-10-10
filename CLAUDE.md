@@ -60,7 +60,8 @@ services/<name>/
 The spec is section 4 of `docs/00-scope.md`; `shared/schemas.py` is the same contract as code. Summary:
 
 **OCR** — `POST /ocr/extract` (multipart file upload, field `file`) returns `ExtractedInvoice`:
-`invoice_id, supplier {name, tax_id}, buyer {name, tax_id}, invoice_no, issue_date, due_date, amount, currency, line_items [{description, qty, unit_price, total}], confidence, injection_flags, fraud_score, fraud_flags, doc_hash`
+`invoice_id, supplier {name, tax_id}, buyer {name, tax_id}, invoice_no, issue_date, due_date, amount, currency, line_items [{description, qty, unit_price, total}], confidence, injection_flags, fraud_score, fraud_flags, doc_hash, invoice_fingerprint`
+`doc_hash` hashes the file bytes; `invoice_fingerprint` hashes the canonical content (supplier, buyer, invoice number, amount, currency, date) so a re-saved PDF is still caught as a duplicate. The registry keys on `invoice_fingerprint`.
 
 **Policy** — `POST /policy/decide` takes `{invoice: ExtractedInvoice, supplier_profile, buyer_profile}` and returns `PolicyDecision`:
 `decision (approve | review | reject), advance_rate, limit, fee_rate, risk_score, reasons, model_version, policy_version`

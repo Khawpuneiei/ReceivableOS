@@ -1,7 +1,7 @@
 """orchestrator: end-to-end ReceivableOS flow (scope 4.4). Owner: PM.
 
 POST /flow/run: invoice -> ocr-ai -> registry duplicate check -> policy-ai -> (lender quotes) -> agent-wallet.
-Stub: the registry is an in-memory set of doc_hash values and lender quotes are skipped.
+Stub: the registry is an in-memory set of invoice_fingerprint values and lender quotes are skipped.
 """
 
 import json
@@ -17,7 +17,7 @@ WALLET_URL = os.getenv("WALLET_URL", "http://localhost:8003")
 PROFILES = json.loads((Path(__file__).resolve().parents[1] / "samples" / "profiles.json").read_text())
 
 app = FastAPI(title="orchestrator")
-_registered: set[str] = set()  # stand-in for the on-chain ReceivableRegistry
+_registered: set[str] = set()  # stand-in for the on-chain ReceivableRegistry, keyed by invoice_fingerprint
 
 
 @app.get("/health")
@@ -34,12 +34,13 @@ async def flow_run(file: UploadFile = File(...), mandate_id: str = Form("mandate
         r.raise_for_status()
         invoice = steps["ocr"] = r.json()
 
-        duplicate = invoice["doc_hash"] in _registered
-        steps["registry"] = {"doc_hash": invoice["doc_hash"], "duplicate": duplicate}
+        key = invoice["invoice_fingerprint"]
+        duplicate = key in _registered
+        steps["registry"] = {"invoice_fingerprint": key, "duplicate": duplicate}
         if duplicate:
             steps["outcome"] = "blocked: invoice already registered"
             return steps
-        _registered.add(invoice["doc_hash"])
+        _registered.add(key)
 
         r = await client.post(f"{POLICY_URL}/policy/decide", json={"invoice": invoice, **PROFILES})
         r.raise_for_status()

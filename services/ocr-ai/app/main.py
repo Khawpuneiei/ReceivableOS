@@ -25,10 +25,13 @@ async def extract(file: UploadFile = File(...)) -> ExtractedInvoice:
     content = await file.read()
     digest = hashlib.sha256(content).hexdigest()
     today = date.today()
+    # canonical content: supplier tax id | buyer tax id | invoice no | amount | currency | issue date
+    canonical = f"0105559000000|0107559000001|SFP-2026-0101|749000.00|THB|{today.isoformat()}"
+    fingerprint = hashlib.sha256(canonical.encode()).hexdigest()
     return ExtractedInvoice(
         invoice_id=f"inv_{digest[:12]}",
-        supplier=Party(name="Siam Fresh Pack Co., Ltd."),
-        buyer=Party(name="Mekong Basket Retail Co., Ltd."),
+        supplier=Party(name="Siam Fresh Pack Co., Ltd.", tax_id="0105559000000"),
+        buyer=Party(name="Mekong Basket Retail Co., Ltd.", tax_id="0107559000001"),
         invoice_no="SFP-2026-0101",
         issue_date=today,
         due_date=today + timedelta(days=45),
@@ -40,4 +43,5 @@ async def extract(file: UploadFile = File(...)) -> ExtractedInvoice:
         fraud_score=0.0,
         fraud_flags=["stub"],
         doc_hash=f"sha256:{digest}",
+        invoice_fingerprint=f"sha256:{fingerprint}",
     )

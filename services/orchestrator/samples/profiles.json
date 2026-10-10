@@ -1,10 +1,12 @@
 {
   "supplier_profile": {
     "name": "Siam Fresh Pack Co., Ltd.",
+    "tax_id": "0105559000000",
     "wallet_address": "0xSUPPLIER",
     "kyc_valid": true
   },
   "buyer_profile": {
-    "name": "Mekong Basket Retail Co., Ltd."
+    "name": "Mekong Basket Retail Co., Ltd.",
+    "tax_id": "0107559000001"
   }
 }

@@ -4,7 +4,7 @@ Owner: PM. Scope: the end-to-end flow and demo glue (scope doc section 4.4).
 
 Endpoints on port 8000: `GET /health`, `POST /flow/run` (multipart `file`, optional form `mandate_id`), `POST /flow/repay` (form `invoice_id`).
 
-Status: stub. Calls ocr-ai, then an in-memory duplicate check standing in for the `ReceivableRegistry` contract, then policy-ai, then agent-wallet. Lender quotes and settlement are not wired yet. Sending the same file twice shows the duplicate block.
+Status: stub. Calls ocr-ai, then an in-memory duplicate check on `invoice_fingerprint` standing in for the `ReceivableRegistry` contract, then policy-ai, then agent-wallet. Lender quotes and settlement are not wired yet. Sending the same file twice shows the duplicate block.
 
 - `run_demo.py` posts an invoice to `/flow/run` and prints every step.
 - `samples/profiles.json` holds the demo supplier and buyer profiles.
