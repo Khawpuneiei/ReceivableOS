@@ -1,0 +1,41 @@
+{
+  "targets": {
+    "auc_min": 0.75,
+    "ece_max": 0.03
+  },
+  "provenance": {
+    "data": "synthetic_invoices.csv",
+    "data_sha256": "633706e5f84b5767c34fbbc7357d03de2482873f307ba145388a0ef839aea71c",
+    "synth_config_sha256": "b62245ef08457fa67b7b0b8fcc2bd8cbb4f72715637bfd015a5360222423a9e3",
+    "train_config_sha256": "fb7975a02693889d3c0f05255004fd3d30c99f6c616f01583219583d45c9ef21",
+    "seed": 20261010,
+    "rows": {
+      "train": 13290,
+      "validation": 3261,
+      "test": 3449
+    },
+    "base_rate": 0.04165
+  },
+  "models": {
+    "lr": {
+      "validation": {
+        "rows": 3261,
+        "base_rate": 0.040172,
+        "auc": 0.8397,
+        "pr_auc": 0.3376,
+        "brier": 0.031912,
+        "ece": 0.005909,
+        "ks": 0.5438
+      },
+      "test": {
+        "rows": 3449,
+        "base_rate": 0.050739,
+        "auc": 0.8455,
+        "pr_auc": 0.2906,
+        "brier": 0.041567,
+        "ece": 0.015812,
+        "ks": 0.5601
+      }
+    }
+  }
+}
