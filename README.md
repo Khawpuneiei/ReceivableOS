@@ -32,7 +32,7 @@ ReceivableOS/
 ├── CLAUDE.md            # rules every AI assistant follows in this repo
 ├── .env.example         # copy to .env, never commit .env
 ├── docs/                # design docs, one per topic (index: docs/README.md)
-├── shared/schemas.py    # the API contract as Pydantic models (PM)
+├── shared/              # API contract (schemas.py) and money helpers (money.py), PM
 ├── services/
 │   ├── orchestrator/    # POST /flow/run, /flow/repay  port 8000 (PM)
 │   ├── ocr-ai/          # POST /ocr/extract            port 8001
@@ -68,6 +68,7 @@ python services/orchestrator/run_demo.py
 Tests and lint (run tests one service at a time):
 
 ```bash
+pytest shared
 for s in ocr-ai policy-ai agent-wallet orchestrator; do pytest services/$s; done
 ruff check . && ruff format --check .
 ```
