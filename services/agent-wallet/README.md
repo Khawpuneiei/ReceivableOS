@@ -29,7 +29,7 @@ On Windows, use `.venv\Scripts\pip` in place of `.venv/bin/pip`.
 From the repo root:
 
 ```bash
-export WALLET_OWNER_TOKEN=change-me WALLET_APPROVER_TOKEN=change-me-too WALLET_RISK_ORACLE_TOKEN=change-me-three
+export WALLET_OWNER_TOKEN=change-me WALLET_APPROVER_TOKEN=change-me-too WALLET_RISK_ORACLE_TOKEN=change-me-three DEMO_MODE=1
 python -m uvicorn app.main:app --app-dir services/agent-wallet --port 8003
 ```
 
