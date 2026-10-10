@@ -15,6 +15,8 @@ from pathlib import Path
 
 SERVICE = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(SERVICE), str(SERVICE.parents[1])]
+from datagen.generate import generate  # noqa: E402
+
 from app.config import Settings  # noqa: E402
 from app.pipeline import extract, extract_invoice, verify  # noqa: E402
 
@@ -47,18 +49,22 @@ def values(doc):
 
 
 def evaluate(output: Path | None = None):
-    labels = [json.loads(line) for line in (DATA / "labels.jsonl").read_text().splitlines()]
     rows = []
     signals = []
     pair_rows = []
-    with tempfile.TemporaryDirectory(prefix="ocr-evaluation-") as temporary:
+    with (
+        tempfile.TemporaryDirectory(prefix="ocr-evaluation-fixtures-") as fixture_temporary,
+        tempfile.TemporaryDirectory(prefix="ocr-evaluation-") as temporary,
+    ):
+        fixture_root = Path(fixture_temporary)
+        labels = generate(fixture_root, font_path=DATA / "fonts" / "NotoSansThai-Regular.ttf")
         root = Path(temporary)
         for index, label in enumerate(labels):
             if label["case"] == "scan":
                 continue
             cfg = settings(root / f"field-{index}.sqlite")
             started = time.monotonic()
-            result = extract((DATA / label["file"]).read_bytes(), label["document_type"], cfg)
+            result = extract((fixture_root / label["file"]).read_bytes(), label["document_type"], cfg)
             actual = values(result.document)
             matches = {field: actual[field] == label["truth"][field] for field in FIELDS}
             rows.append(
@@ -76,8 +82,8 @@ def evaluate(output: Path | None = None):
             )
             if label["document_type"] == "invoice":
                 response = verify(
-                    (DATA / label["file"]).read_bytes(),
-                    (DATA / f"{label['language']}_po_clean.pdf").read_bytes(),
+                    (fixture_root / label["file"]).read_bytes(),
+                    (fixture_root / f"{label['language']}_po_clean.pdf").read_bytes(),
                     cfg,
                     None,
                 )
@@ -92,9 +98,9 @@ def evaluate(output: Path | None = None):
         for language in ("en", "th"):
 
             def invoice(case, language=language):
-                return (DATA / f"{language}_invoice_{case}.pdf").read_bytes()
+                return (fixture_root / f"{language}_invoice_{case}.pdf").read_bytes()
 
-            po = (DATA / f"{language}_po_clean.pdf").read_bytes()
+            po = (fixture_root / f"{language}_po_clean.pdf").read_bytes()
             for sequence, cases, expected in [
                 ("exact_duplicate", ["clean", "clean"], {"duplicate_invoice_hash", "duplicate_fingerprint"}),
                 ("semantic_duplicate", ["clean", "duplicate_render"], {"duplicate_fingerprint"}),

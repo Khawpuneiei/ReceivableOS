@@ -14,6 +14,8 @@ from pathlib import Path
 SERVICE = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(SERVICE), str(SERVICE.parents[1])]
 
+from datagen.generate import generate  # noqa: E402
+from datagen.showcase_invoices import generate as generate_showcase  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402
@@ -28,6 +30,10 @@ def main():
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     data = SERVICE.parents[1] / "data/invoices"
+    fixture_temp = tempfile.TemporaryDirectory(prefix="ocr-consumer-review-fixtures-")
+    fixture_data = Path(fixture_temp.name)
+    generate(fixture_data, font_path=data / "fonts" / "NotoSansThai-Regular.ttf")
+    generate_showcase(fixture_data / "showcase")
     cache = SERVICE / ".cache/paddlex/official_models"
     os.environ["FINGERPRINT_HMAC_KEY"] = secrets.token_hex(32)
     os.environ["BANK_TOKEN_HMAC_KEY"] = secrets.token_hex(32)
@@ -35,9 +41,19 @@ def main():
     os.environ["OCR_QWEN_ENABLED"] = "1" if args.models else "0"
     os.environ["OCR_PADDLE_DET_DIR"] = str(cache / "PP-OCRv5_mobile_det")
     cases = [
-        ("complete", data / "en_invoice_clean.pdf", data / "en_po_clean.pdf", "th"),
-        ("missing_required", data / "en_invoice_incomplete.pdf", data / "en_po_clean.pdf", "th"),
-        ("mismatch", data / "en_invoice_amount_mismatch.pdf", data / "en_po_clean.pdf", "th"),
+        (
+            "complete",
+            fixture_data / "showcase/siam_fresh_invoice.pdf",
+            fixture_data / "showcase/siam_fresh_purchase_order.pdf",
+            "en",
+        ),
+        (
+            "missing_required",
+            fixture_data / "en_invoice_incomplete.pdf",
+            fixture_data / "en_po_clean.pdf",
+            "en",
+        ),
+        ("mismatch", fixture_data / "en_invoice_amount_mismatch.pdf", fixture_data / "en_po_clean.pdf", "en"),
         (
             "international_scope",
             data / "reliability/invoice-en-stacked-0.pdf",

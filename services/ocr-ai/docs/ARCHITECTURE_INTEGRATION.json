@@ -7,7 +7,7 @@
   "duplicate_outcome": "blocked: invoice already registered",
   "ocr_model_version": "spatial-rules-v2",
   "handoff_version": "ocr-handoff-v1",
-  "graph_version": "ocr-graph-v1",
+  "graph_version": "ocr-graph-v2",
   "limitations": [
     "Policy and wallet in this checkout are stubs; no guard, signature or chain transaction tested",
     "Orchestrator uses an in-memory registry and does not consume OCR pair/handoff fields",

@@ -5,12 +5,14 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import tempfile
 from pathlib import Path
 
 import pymupdf
 
 REPO = Path(__file__).resolve().parents[3]
 DATA = REPO / "data" / "invoices"
+DEFAULT_OUTPUT = Path(tempfile.gettempdir()) / "receivableos-ocr-fixtures"
 
 
 def document_lines(
@@ -64,7 +66,7 @@ def document_lines(
         ("Subtotal", "700000.00"),
         ("Tax", "49000.00"),
         ("Total", total),
-        ("Tax Basis", "inclusive"),
+        ("Tax Basis", "exclusive"),
         ("Language", "th" if thai else "en"),
         ("Locale", "th-TH" if thai else "en-US"),
         ("Item", f"TRAY-01 | Food trays | {quantity} | EA | 14.00 | 700000.00"),
@@ -110,7 +112,7 @@ def render_pdf(lines, *, font_path: Path | None = None, hidden=False, layout=0) 
     return data
 
 
-def generate(output: Path = DATA, *, font_path: Path | None = None) -> list[dict]:
+def generate(output: Path = DEFAULT_OUTPUT, *, font_path: Path | None = None) -> list[dict]:
     output.mkdir(parents=True, exist_ok=True)
     labels = []
     cases = [
@@ -234,7 +236,7 @@ def generate(output: Path = DATA, *, font_path: Path | None = None) -> list[dict
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", type=Path, default=DATA)
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--font", type=Path)
     arguments = parser.parse_args()
     generated = generate(arguments.output, font_path=arguments.font)

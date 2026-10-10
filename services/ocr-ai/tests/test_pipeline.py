@@ -1,11 +1,19 @@
 """Behavioral checks through real multipart uploads, with ephemeral observation state."""
 
 import json
+import tempfile
 from pathlib import Path
 
 import pytest
 from datagen.generate import document_lines, render_pdf
-from datagen.showcase_invoices import SHOWCASE_PROFILES, build_pdf
+from datagen.generate import generate as generate_fixtures
+from datagen.showcase_invoices import (
+    SHOWCASE_PROFILES,
+    build_pdf,
+)
+from datagen.showcase_invoices import (
+    generate as generate_showcase,
+)
 
 from app.extract import extract_document
 from app.history import ObservationStore
@@ -13,8 +21,12 @@ from app.ingest import run_worker
 from app.qwen import VisionCandidates
 from shared.schemas import ExtractedInvoice
 
-DATA = Path(__file__).resolve().parents[3] / "data" / "invoices"
-RELIABILITY_DATA = DATA / "reliability"
+CHECKED_IN_DATA = Path(__file__).resolve().parents[3] / "data" / "invoices"
+_FIXTURE_TEMP = tempfile.TemporaryDirectory(prefix="receivableos-ocr-regression-")
+DATA = Path(_FIXTURE_TEMP.name)
+generate_fixtures(DATA, font_path=CHECKED_IN_DATA / "fonts" / "NotoSansThai-Regular.ttf")
+generate_showcase(DATA / "showcase")
+RELIABILITY_DATA = CHECKED_IN_DATA / "reliability"
 
 
 def upload(client, content, headers=None):
@@ -25,7 +37,7 @@ def upload(client, content, headers=None):
 
 @pytest.mark.parametrize(
     ("filename", "profile_index"),
-    [("northstar_invoice.pdf", 0), ("bluepeak_invoice.pdf", 1)],
+    [("siam_fresh_invoice.pdf", 0)],
 )
 def test_showcase_invoice_layouts_extract_all_fields_and_lines(client, filename, profile_index):
     showcase = DATA / "showcase"
@@ -37,18 +49,20 @@ def test_showcase_invoice_layouts_extract_all_fields_and_lines(client, filename,
 
     assert value["invoice_no"] == profile["invoice_no"]
     assert value["amount"] == profile["total"]
-    assert value["currency"] == "USD"
+    assert value["currency"] == profile["currency"]
     assert value["supplier"]["name"] == profile["supplier"]
     assert value["buyer"]["name"] == profile["buyer"]
-    assert len(value["line_items"]) == 2
-    assert value["validation_flags"] == ["LEGACY_FINGERPRINT_SCOPE_REQUIRES_REVIEW"]
+    assert len(value["line_items"]) == 1
+    assert value["validation_flags"] == []
     assert value["fraud_flags"] == []
-    assert value["review_required"] is True
+    assert value["review_required"] is False
+    assert "100-200-3001" not in response.text
+    assert "1002003001" not in response.text
 
 
-@pytest.mark.parametrize("profile", SHOWCASE_PROFILES, ids=("northstar", "bluepeak"))
-def test_showcase_invoice_and_po_fields_match_under_global_review_guard(client, profile):
-    invoice = (DATA / "showcase" / f"{profile['style']}_invoice.pdf").read_bytes()
+@pytest.mark.parametrize("profile", SHOWCASE_PROFILES, ids=("siam-fresh-source-derived",))
+def test_source_derived_invoice_and_po_fields_match(client, profile):
+    invoice = (DATA / "showcase" / "siam_fresh_invoice.pdf").read_bytes()
     purchase_order = build_pdf(profile, kind="purchase_order")
     response = client.post(
         "/ocr/verify",
@@ -59,11 +73,50 @@ def test_showcase_invoice_and_po_fields_match_under_global_review_guard(client, 
     )
     assert response.status_code == 200, response.text
     value = response.json()
-    assert value["status"] == "review"
-    assert value["review_reasons"] == ["LEGACY_FINGERPRINT_SCOPE_REQUIRES_REVIEW"]
+    assert value["status"] == "matched"
+    assert value["review_reasons"] == []
     assert value["invoice"]["document_number"]["value"] == profile["invoice_no"]
     assert value["invoice"]["amount"]["value"] == profile["total"]
     assert all(check["status"] == "match" for check in value["checks"])
+
+
+def test_source_derived_invoice_payee_change_is_reviewed_and_redacted(client):
+    profile = SHOWCASE_PROFILES[0]
+    first = upload(client, build_pdf(profile)).json()
+    changed = {
+        **profile,
+        "invoice_no": "SFP-INV-2026-0143",
+        "bank_account": "900-800-7002",
+    }
+    response = upload(client, build_pdf(changed))
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert not first["fraud_flags"]
+    assert "bank_account_changed" in result["fraud_flags"]
+    assert result["review_required"]
+    assert "100-200-3001" not in response.text
+    assert "900-800-7002" not in response.text
+    finding = next(item for item in result["fraud_details"] if item["code"] == "bank_account_changed")
+    assert len(finding["path"]) == 2 and finding["evidence_refs"]
+
+
+def test_source_derived_invoice_shared_bank_is_contextual_graph_signal(client):
+    profile = SHOWCASE_PROFILES[0]
+    upload(client, build_pdf(profile))
+    peer = {
+        **profile,
+        "supplier": "Siam Group Logistics Ltd.",
+        "supplier_id": "0105559000018",
+        "invoice_no": "SGL-INV-2026-0001",
+    }
+    response = upload(client, build_pdf(peer))
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert "shared_bank_token" in result["fraud_flags"]
+    assert result["fraud_score"] == 0.15 and result["review_required"]
+    assert "100-200-3001" not in response.text
+    finding = next(item for item in result["fraud_details"] if item["code"] == "shared_bank_token")
+    assert len(finding["path"]) == 5 and finding["evidence_refs"]
 
 
 def pair(client, name, language="en"):
@@ -299,7 +352,7 @@ def test_injected_twins_preserve_fields_and_have_no_authority(client, case, flag
 
 
 def test_unicode_names_and_unknown_jurisdiction(client):
-    font = DATA / "fonts" / "NotoSansThai-Regular.ttf"
+    font = CHECKED_IN_DATA / "fonts" / "NotoSansThai-Regular.ttf"
     content = render_pdf(document_lines(supplier="บริษัท สยาม"), font_path=font)
     value = upload(client, content).json()
     assert value["supplier"]["name"] == "บริษัท สยาม"

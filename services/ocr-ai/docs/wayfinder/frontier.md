@@ -4,6 +4,8 @@ Parent: [Establish evidence for OCR and fraud reliability beyond the demo templa
 
 The six user-authorized workstreams were exercised on 10 October 2026. Five investigations are resolved; the consumer packet is ready but awaits its owner. [The workstream review](../RELIABILITY_REVIEW.md) links measurements, fixes, regressions and limitations.
 
+The latest source-derived invoice, legacy cleanup, and fraud validation task is resolved; see [the verification report](../FRAUD_VALIDATION.md) and [cleanup record](../INVOICE_FIXTURE_CLEANUP.md). The 80-document reliability corpus and the attributed external challenge fixtures remain active evaluation inputs.
+
 ## Current external handoff
 
 [Agree consumer review semantics and international fingerprint migration](tickets/consumer-contract.md) is awaiting owner review. Local examples and the concrete packet are prepared; no shared change or owner agreement is implied.

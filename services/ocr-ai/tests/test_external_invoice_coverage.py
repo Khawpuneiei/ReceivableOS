@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from datagen.generate import render_pdf
+from datagen.showcase_invoices import SHOWCASE_PROFILES, build_pdf
 
 from app.extract import extract_document
 from app.validate import validate_document
@@ -12,7 +13,7 @@ FIXTURE = (
     Path(__file__).resolve().parents[3]
     / "data/invoices/external/shopify_invoice_test_pack/fixtures/01-simple-english/invoice.pdf"
 )
-PO_FIXTURE = Path(__file__).resolve().parents[3] / "data/invoices/en_po_clean.pdf"
+PO_FIXTURE = build_pdf(SHOWCASE_PROFILES[0], kind="purchase_order")
 
 
 def test_simple_english_invoice_labels_and_six_column_table_are_extracted(client):
@@ -21,7 +22,7 @@ def test_simple_english_invoice_labels_and_six_column_table_are_extracted(client
         "/ocr/verify",
         files={
             "invoice_file": ("invoice.pdf", content, "application/pdf"),
-            "po_file": ("po.pdf", PO_FIXTURE.read_bytes(), "application/pdf"),
+            "po_file": ("po.pdf", PO_FIXTURE, "application/pdf"),
         },
     )
 

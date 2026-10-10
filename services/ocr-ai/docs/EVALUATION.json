@@ -1,6 +1,26 @@
 {
   "data_origin": "synthetic-only",
-  "rules_version": "ocr-rules-v1",
+  "rules_version": "spatial-rules-v2",
+  "code_hashes": {
+    "app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/compare.py": "6e693194fb866feef5e0395c8e657d227fb334c05a8ff99cbccbd235b8e5498e",
+    "app/config.py": "6e893da922088befe423b60b548fb8f191fef47db560f0440ddfa0ae93c58b9c",
+    "app/extract.py": "6d6054c9cff3284bb537958e5ba6d770e5393e4981e2fba64b98d94bc6e8ec64",
+    "app/fingerprint.py": "8564b4f426b2e011dc75c0cac38b8a78c10f2768df753f7776048f54561b92eb",
+    "app/fraud.py": "a3b5d56f9f8520f431fbd6e77b818af2c4a303c7624b7b98500db7c525ce4648",
+    "app/graph.py": "94c17cac9f6424e99bf18c8bc5c6949dd3b57ada06f6bfe013b23c962d915472",
+    "app/history.py": "0fcaf6ecbddf285971d8eb256af3fd58473456b41fdc80b0e7fb3e7df23194a6",
+    "app/ingest.py": "f1f3026a75f3e2ab3eab4a7d5cb1a1cfaaa41114e73f2896e7f6ce718697a5d7",
+    "app/layout.py": "dbc4be79316dc722c9efc5274703a03c36c84037b158d03337eb01ce7d274318",
+    "app/main.py": "56aa3f8b7181c34642546eb7e4ae8a125517a5274b4fd9969dd000f52bdd3dea",
+    "app/models.py": "78c58459ee7771b02cbb196375e245aaf8e0a1b566426cdd16cf8c4bc18de293",
+    "app/normalize.py": "00427894178cda4d478c9de6d261da593a78d40e5d761e888dae875e90211ec2",
+    "app/pipeline.py": "7ef0a91168e7c22fee7bd5e166b8b4f60f501b4768f20a49cca8fbabad1dca76",
+    "app/qwen.py": "79123ff98372697d5cbc5fe58c56c9f98ad470efc912a89e5a4c0e58ee605967",
+    "app/validate.py": "21658aae403b32bb35ded07874fcb94401d659d79c8b7feb010eb870ad634f12",
+    "app/worker.py": "7167a739a5c7f57d8038d12ccde579e0feeb09fd5a238512c180478f4297a1f0",
+    "scripts/eval.py": "cd44a416fededb01c771ce9f57d39a60233c2cf81afc8def0455f38667706522"
+  },
   "groups": [
     {
       "language": "en",
@@ -53,7 +73,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.867
+      "elapsed_seconds": 0.4547
     },
     {
       "file": "en_invoice_changed.pdf",
@@ -72,7 +92,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 1.1516
+      "elapsed_seconds": 0.4316
     },
     {
       "file": "en_invoice_duplicate_render.pdf",
@@ -91,7 +111,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.9062
+      "elapsed_seconds": 0.4301
     },
     {
       "file": "en_invoice_shared_account.pdf",
@@ -110,7 +130,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.811
+      "elapsed_seconds": 0.424
     },
     {
       "file": "en_invoice_cluster_math.pdf",
@@ -129,7 +149,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 1.2455
+      "elapsed_seconds": 0.4458
     },
     {
       "file": "en_invoice_cluster_currency.pdf",
@@ -148,7 +168,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 1.2766
+      "elapsed_seconds": 0.4426
     },
     {
       "file": "en_invoice_incomplete.pdf",
@@ -167,7 +187,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 1.2636
+      "elapsed_seconds": 0.4389
     },
     {
       "file": "en_invoice_amount_mismatch.pdf",
@@ -186,7 +206,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 1.6509
+      "elapsed_seconds": 0.4344
     },
     {
       "file": "en_invoice_currency_mismatch.pdf",
@@ -205,7 +225,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 1.1086
+      "elapsed_seconds": 0.4379
     },
     {
       "file": "en_invoice_partial.pdf",
@@ -224,7 +244,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.8258
+      "elapsed_seconds": 0.4593
     },
     {
       "file": "en_invoice_visible_injection.pdf",
@@ -243,7 +263,7 @@
         "buyer_name": true
       },
       "injection_alert": true,
-      "elapsed_seconds": 0.766
+      "elapsed_seconds": 0.4366
     },
     {
       "file": "en_invoice_hidden_injection.pdf",
@@ -262,7 +282,7 @@
         "buyer_name": true
       },
       "injection_alert": true,
-      "elapsed_seconds": 0.8618
+      "elapsed_seconds": 0.4403
     },
     {
       "file": "en_invoice_benign_note.pdf",
@@ -281,7 +301,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.8261
+      "elapsed_seconds": 0.4997
     },
     {
       "file": "en_po_clean.pdf",
@@ -300,7 +320,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.8557
+      "elapsed_seconds": 0.5522
     },
     {
       "file": "th_invoice_clean.pdf",
@@ -319,7 +339,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.9177
+      "elapsed_seconds": 0.4445
     },
     {
       "file": "th_invoice_changed.pdf",
@@ -338,7 +358,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.6955
+      "elapsed_seconds": 0.506
     },
     {
       "file": "th_invoice_duplicate_render.pdf",
@@ -357,7 +377,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.9006
+      "elapsed_seconds": 0.7474
     },
     {
       "file": "th_invoice_shared_account.pdf",
@@ -376,7 +396,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.9669
+      "elapsed_seconds": 0.43
     },
     {
       "file": "th_invoice_cluster_math.pdf",
@@ -395,7 +415,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 1.0454
+      "elapsed_seconds": 0.4338
     },
     {
       "file": "th_invoice_cluster_currency.pdf",
@@ -414,7 +434,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.9662
+      "elapsed_seconds": 0.4323
     },
     {
       "file": "th_invoice_incomplete.pdf",
@@ -433,7 +453,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.8977
+      "elapsed_seconds": 0.4553
     },
     {
       "file": "th_invoice_amount_mismatch.pdf",
@@ -452,7 +472,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.8771
+      "elapsed_seconds": 0.4317
     },
     {
       "file": "th_invoice_currency_mismatch.pdf",
@@ -471,7 +491,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.8755
+      "elapsed_seconds": 0.4438
     },
     {
       "file": "th_invoice_partial.pdf",
@@ -490,7 +510,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.8435
+      "elapsed_seconds": 0.4362
     },
     {
       "file": "th_invoice_visible_injection.pdf",
@@ -509,7 +529,7 @@
         "buyer_name": true
       },
       "injection_alert": true,
-      "elapsed_seconds": 0.9409
+      "elapsed_seconds": 0.4269
     },
     {
       "file": "th_invoice_hidden_injection.pdf",
@@ -528,7 +548,7 @@
         "buyer_name": true
       },
       "injection_alert": true,
-      "elapsed_seconds": 1.2203
+      "elapsed_seconds": 0.4175
     },
     {
       "file": "th_invoice_benign_note.pdf",
@@ -547,7 +567,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 1.4591
+      "elapsed_seconds": 0.4596
     },
     {
       "file": "th_po_clean.pdf",
@@ -566,7 +586,7 @@
         "buyer_name": true
       },
       "injection_alert": false,
-      "elapsed_seconds": 0.878
+      "elapsed_seconds": 0.4905
     }
   ],
   "verification_records": [
@@ -895,8 +915,8 @@
     "negative_documents": 6
   },
   "latency_seconds": {
-    "p50": 0.9034,
-    "p95": 1.2766
+    "p50": 0.4396,
+    "p95": 0.506
   },
   "limitations": [
     "Generated label templates only; no held-out real-world document distribution",

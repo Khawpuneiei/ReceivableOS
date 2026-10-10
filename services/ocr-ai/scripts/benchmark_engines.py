@@ -5,11 +5,14 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tempfile
 import time
 from pathlib import Path
 
 SERVICE = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(SERVICE), str(SERVICE.parents[1])]
+
+from datagen.generate import generate  # noqa: E402
 
 from app.config import Settings  # noqa: E402
 from app.extract import extract_document  # noqa: E402
@@ -27,12 +30,14 @@ def main() -> None:
     os.environ.setdefault("OCR_PADDLE_REC_DIR", str(cache / "en_PP-OCRv5_mobile_rec"))
     os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
     settings = Settings.from_env()
-    labels = [json.loads(line) for line in (DATA / "labels.jsonl").read_text().splitlines()]
+    fixture_temp = tempfile.TemporaryDirectory(prefix="ocr-engine-benchmark-fixtures-")
+    fixture_root = Path(fixture_temp.name)
+    labels = generate(fixture_root, font_path=DATA / "fonts" / "NotoSansThai-Regular.ttf")
     records = []
     for label in labels:
         if label["case"] != "scan":
             continue
-        content = (DATA / label["file"]).read_bytes()
+        content = (fixture_root / label["file"]).read_bytes()
         parsed = run_worker("parse", content)
         for engine in ("paddle", "qwen"):
             started = time.monotonic()

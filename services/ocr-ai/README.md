@@ -4,7 +4,10 @@ This service reads uploaded documents. It has no financing, wallet, delivery, ac
 
 Current architecture uses source geometry for separate panels and explicit line tables, plus experimental Simplified Chinese anchors. Responses add a finding-scoped typed `fraud_graph` and unsigned `handoff` for future wallet/security review. See [architecture](docs/ARCHITECTURE.md), [handoff packet](docs/HANDOFF.md) and [historical financial retest (comparison-v2)](docs/FINTECH_RETEST.md). Older reports are historical evidence.
 
-For polished English business-document examples beyond the OCR stress corpus, see the [synthetic invoice showcase](../../data/invoices/showcase/README.md). It contains two fictional invoice designs, raster previews, and extraction plus invoice-to-PO checks.
+Current synthetic API, graph, privacy, and fraud-scenario coverage is recorded in [the OCR and fraud validation report](docs/FRAUD_VALIDATION.md).
+The removed flat fixtures and the retained evaluation corpora are listed in [the invoice fixture cleanup record](docs/INVOICE_FIXTURE_CLEANUP.md).
+
+For a polished business-document sample derived from the original Siam Fresh Pack / Mekong Basket synthetic fixture data, see the [invoice showcase](../../data/invoices/showcase/README.md). It includes an invoice, its matching PO, raster previews, and refreshed clean, injected, inflated-total, and duplicate demo examples.
 
 ## Run from the repository root
 
@@ -90,7 +93,7 @@ services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/eval.py
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/benchmark_engines.py
 ```
 
-Generation is offline with the checked-in SIL OFL Noto Thai font. There are 32 labeled documents: 28 PDFs, four scans, plus five demo aliases. Evaluations use temporary stores and ephemeral secrets; they never reset operational history. [EVALUATION.json](docs/EVALUATION.json) reports extraction by language/type, injection twins, independent pair checks, and planted duplicate/graph sequences. Engine results separately report scanned-document failures and latency. All results are synthetic-only, with no independent real-world holdout and no fraud precision/recall claim.
+Generation is offline with the checked-in SIL OFL Noto Thai font. The 32 labeled regression inputs and five aliases are generated into temporary directories by tests and evaluations; they are not checked in as a flat set of duplicate PDFs. Evaluations use temporary stores and ephemeral secrets; they never reset operational history. [EVALUATION.json](docs/EVALUATION.json) reports extraction by language/type, injection twins, independent pair checks, and planted duplicate/graph sequences. Engine results separately report scanned-document failures and latency. All results are synthetic-only, with no independent real-world holdout and no fraud precision/recall claim.
 
 ## External fictional invoice challenge set
 

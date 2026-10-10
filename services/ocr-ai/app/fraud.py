@@ -33,9 +33,7 @@ def graph_findings(records: list[tuple[str, InvoiceObservation]], current_id: st
         prior_supplier_accounts = [
             (oid, record)
             for oid, record in records
-            if oid != current_id
-            and record.supplier_token == current.supplier_token
-            and record.bank_token
+            if oid != current_id and record.supplier_token == current.supplier_token and record.bank_token
         ]
         if prior_supplier_accounts:
             previous_id, previous = prior_supplier_accounts[-1]
