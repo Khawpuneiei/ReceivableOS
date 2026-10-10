@@ -6,7 +6,7 @@ from decimal import Decimal
 import pytest
 from factories import AS_OF, ctx_for, happy_body
 
-from app.engine import PASS, PENDING, RULES, build_ctx, merge_outcome, rule, rule_trace, run_pre_model
+from app.engine import AFTER_TERMS, PASS, RULES, build_ctx, merge_outcome, rule, rule_trace, run_pre_model
 from app.rules import active_rules, check_registry
 from app.schemas import PolicyRequestExt
 from shared.schemas import Decision
@@ -204,18 +204,14 @@ def test_request_as_of_date_wins_over_today():
 # --- Registry ---
 
 
-def test_every_hard_rule_and_pre_model_knockout_has_a_predicate():
-    r = active_rules()
-    for section in (r.hard_rules, r.knockouts):
-        for entry in section:
-            assert entry.id in RULES or entry.id in PENDING, entry.id
+def test_every_yaml_rule_has_exactly_one_predicate():
+    assert set(active_rules().rule_ids()) == set(RULES)
+    check_registry(active_rules(), RULES)
 
 
-def test_pending_ids_are_in_yaml_and_not_yet_registered():
-    yaml_ids = set(active_rules().rule_ids())
-    assert PENDING <= yaml_ids
-    assert not PENDING & set(RULES)
-    check_registry(active_rules(), [*RULES, *PENDING])
+def test_terms_dependent_rules_run_after_terms_not_before():
+    assert AFTER_TERMS == {"KO.NO_HEADROOM", "KO.PRICING", "REVIEW.CONCENTRATION", "REVIEW.MANDATE_APR"}
+    assert not {r.id for r in run_pre_model(ctx_for(happy_body()))} & AFTER_TERMS
 
 
 def test_duplicate_registration_fails():

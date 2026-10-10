@@ -59,13 +59,14 @@ terms:
     - {id: TERMS.HAIRCUT_PD,       param: {pd_above: 0.03},      minus: 0.05, message: "Predicted default above the haircut threshold"}
   floor_advance: 0.50
   max_single_invoice_limit: {THB: "3000000.00", USD: "90000.00"}
-  caps:                                # reason ids for every step that lowers the advance or the limit
+  caps:                                # reason ids for the steps that change the advance or the limit
     - {id: TERMS.FLOOR,              message: "Advance raised to the platform floor"}
     - {id: TERMS.MANDATE_CAP,        message: "Advance capped by the mandate"}
     - {id: TERMS.CAP_BUYER_LIMIT,    message: "Limit capped by the buyer's remaining limit"}
     - {id: TERMS.CAP_FACILITY,       message: "Limit capped by the seller's remaining facility"}
     - {id: TERMS.CAP_SINGLE_INVOICE, message: "Limit capped by the single-invoice maximum"}
     - {id: TERMS.CAP_MANDATE_TX,     message: "Limit capped by the mandate's per-transaction maximum"}
+    - {id: TERMS.HEADROOM,           message: "Existing exposure reduces the remaining limit"}   # shown, even when not binding
 
 pricing:
   id: PRICING.RISK_FEE
