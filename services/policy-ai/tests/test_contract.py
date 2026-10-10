@@ -2,30 +2,11 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 import pytest
+from factories import INVOICE
 from pydantic import ValidationError
 
 from app.schemas import Mandate, PolicyDecisionExt, PolicyRequestExt, ReasonDetail
 from shared.schemas import PolicyDecision, PolicyRequest
-
-INVOICE = {
-    "invoice_id": "inv_sfp_0142",
-    "supplier": {"name": "Siam Fresh Pack Co., Ltd.", "tax_id": "0105559000000"},
-    "buyer": {"name": "Mekong Basket Retail PCL", "tax_id": "0107559000001"},
-    "invoice_no": "SFP-INV-2026-0142",
-    "issue_date": "2026-10-01",
-    "due_date": "2026-11-15",
-    "amount": "749000.00",
-    "currency": "THB",
-    "line_items": [
-        {"description": "Food trays", "qty": "50000", "unit_price": "14.00", "total": "700000.00"},
-    ],
-    "confidence": 0.95,
-    "injection_flags": [],
-    "fraud_score": 0.07,
-    "fraud_flags": [],
-    "doc_hash": "sha256:" + "ab" * 32,
-    "invoice_fingerprint": "0x" + "cd" * 32,
-}
 
 # The agent wallet's demo mandate (its CLAUDE.md 5.2), including wallet-only keys.
 WALLET_MANDATE = {
