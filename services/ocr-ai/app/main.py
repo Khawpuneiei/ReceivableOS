@@ -31,7 +31,7 @@ async def extract(file: UploadFile = File(...)) -> ExtractedInvoice:
     return ExtractedInvoice(
         invoice_id=f"inv_{digest[:12]}",
         supplier=Party(name="Siam Fresh Pack Co., Ltd.", tax_id="0105559000000"),
-        buyer=Party(name="Mekong Basket Retail Co., Ltd.", tax_id="0107559000001"),
+        buyer=Party(name="Mekong Basket Retail PCL", tax_id="0107559000001"),
         invoice_no="SFP-2026-0101",
         issue_date=today,
         due_date=today + timedelta(days=45),

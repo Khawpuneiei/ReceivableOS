@@ -1,6 +1,6 @@
 TAX INVOICE SFP-2026-0101
 Supplier: Siam Fresh Pack Co., Ltd. (Tax ID 0105559000000)
-Buyer: Mekong Basket Retail Co., Ltd. (Tax ID 0107559000001)
+Buyer: Mekong Basket Retail PCL (Tax ID 0107559000001)
 Issue date: 2026-10-10    Due date: 2026-11-24 (45 days)
 Packaged fresh produce, October delivery    749,000.00 THB
 Total: 749,000.00 THB
