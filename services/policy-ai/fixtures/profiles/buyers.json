@@ -1,0 +1,66 @@
+{
+  "mekong-basket-retail": {
+    "name": "Mekong Basket Retail PCL",
+    "tax_id": "0107559000001",
+    "internal_rating": "A-",
+    "revenue_thb": "18000000000.00",
+    "on_time_payment_rate": 0.97,
+    "avg_days_late": 1.5,
+    "buyer_confirmed": true,
+    "relationship_months": 36,
+    "sector": "retail",
+    "current_exposure": "0.00",
+    "buyer_limit": "10000000.00"
+  },
+  "chao-phraya-fresh-mart": {
+    "name": "Chao Phraya Fresh Mart Co., Ltd.",
+    "tax_id": "0105562000015",
+    "internal_rating": "BBB",
+    "revenue_thb": "6200000000.00",
+    "on_time_payment_rate": 0.92,
+    "avg_days_late": 4.0,
+    "buyer_confirmed": true,
+    "relationship_months": 24,
+    "sector": "retail",
+    "current_exposure": "0.00",
+    "buyer_limit": "6000000.00"
+  },
+  "lanna-home-goods": {
+    "name": "Lanna Home Goods Co., Ltd.",
+    "tax_id": "0105562000023",
+    "internal_rating": "BB",
+    "revenue_thb": "1800000000.00",
+    "on_time_payment_rate": 0.95,
+    "avg_days_late": 2.5,
+    "buyer_confirmed": true,
+    "relationship_months": 36,
+    "sector": "manufacturing",
+    "current_exposure": "0.00",
+    "buyer_limit": "3000000.00"
+  },
+  "ratchaburi-wholesale": {
+    "name": "Ratchaburi Wholesale Co., Ltd.",
+    "tax_id": "0105562000031",
+    "internal_rating": "B",
+    "revenue_thb": "700000000.00",
+    "on_time_payment_rate": 0.7,
+    "avg_days_late": 21.0,
+    "buyer_confirmed": true,
+    "relationship_months": 8,
+    "sector": "food",
+    "current_exposure": "0.00",
+    "buyer_limit": "1500000.00"
+  },
+  "isan-market-pcl": {
+    "name": "Isan Market PCL",
+    "tax_id": "0107559000028",
+    "revenue_thb": "2400000000.00",
+    "on_time_payment_rate": 0.9,
+    "avg_days_late": 5.0,
+    "buyer_confirmed": true,
+    "relationship_months": 0,
+    "sector": "retail",
+    "current_exposure": "0.00",
+    "buyer_limit": "4000000.00"
+  }
+}
