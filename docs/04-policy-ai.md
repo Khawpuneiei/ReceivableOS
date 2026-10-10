@@ -32,7 +32,7 @@ Two jobs, both deterministic where money is concerned:
 |---|---|---|
 | `fee_rate` | Discount fee **per 30 days** on the advance (0.009 = 0.90%/30d ≈ 10.95% APR) | Adopted from Finance. Policy returns the risk-based maximum; the wallet takes quotes at or below it and within the mandate APR. |
 | `risk_score` | **Calibrated probability of default over the tenor**, 0–1, higher = riskier | Differs from Finance's "combined fraud + credit, 0.18". A composite would trip the mandate's 5% default cap and isn't a probability. Happy path ⇒ ≈ 0.003. |
-| Money | Decimal strings (`"524300.00"`) | Per `shared/schemas.py`. |
+| Money and rates | Decimal strings (`"524300.00"`, `"0.009"`) | Per `shared/schemas.py`; `model_version` and `policy_version` are contract fields. |
 | Mandate field names | `max_ltv`, `max_apr`, `max_predicted_default`, `human_review_above`… (from your architecture doc) | Proposal; will match whatever the Agent Wallet guard consumes. |
 
 ## How a decision is made
@@ -63,6 +63,18 @@ Test scenarios: happy path, inflated amount (reject), unconfirmed buyer (review)
 partial payment (smaller advance), hostile mandate text (no looser caps). Expensive-lender and over-LTV offers are
 blocked by the wallet guard, not here.
 
+## Demo UI and demo data (also owned by the Policy AI engineer)
+
+- **UI:** one Streamlit screen in `ui/` on port 3000, talking only to the orchestrator: mandate → invoice evidence →
+  decision with reasons and PD gauge → lender offers → on-chain tx timeline → attack buttons A1–A6, each adding a red
+  BLOCKED row with who stopped it and the tx hash. Runs from saved fixtures until the orchestrator is ready. You wire
+  it to the orchestrator. Built only after the credit decision passes its scenarios. Layout in CLAUDE.md §12.
+- **Demo data:** 5 sellers, 5 buyers, 3 mandates and one request + expected result per scenario, matching
+  Finance's numbers and OCR's sample invoices (checksum-valid tax IDs 0105559000000 / 0107559000001,
+  buyer "Mekong Basket Retail PCL"). You recheck.
+- **Pitch pack:** the engineer supplies the "how the AI decides" slides (pipeline, rules as data, calibration plot,
+  mandate JSON, blocked-attack screenshot).
+
 ## Credit risk model
 
 - **Target:** buyer doesn't pay within 60 days after the due date.
@@ -79,7 +91,7 @@ blocked by the wallet guard, not here.
 
 | From | Needed | Stand-in until then |
 |---|---|---|
-| OCR AI | `ExtractedInvoice` with `confidence`, `fraud_score`, `injection_flags`, and fraud flag names `duplicate_invoice_hash`, `duplicate_fingerprint`, `po_amount_mismatch` | Hand-written fixtures |
+| OCR AI | `ExtractedInvoice` with `confidence`, `fraud_score`, `injection_flags`, and OCR's flag codes `DUPLICATE_HASH`, `DUPLICATE_INVOICE`, `PO_MISMATCH` (reject); other fraud flags ⇒ review | Hand-written fixtures |
 | Finance | Oct 11 sign-offs: demo numbers, thresholds by rating × confirmed, feature ranges for synthetic data | YAML defaults above |
 | Agent Wallet | The mandate JSON shape its guard consumes; agreement to re-check limit, expiry and mandate caps | Proposed shape in CLAUDE.md §7 |
 | Orchestrator (PM) | Full seller/buyer profiles (CLAUDE.md §5.3) and the active mandate passed to `/policy/decide` | Fixture profiles; missing fields are skipped, never guessed |
@@ -88,7 +100,8 @@ blocked by the wallet guard, not here.
 
 - **Oct 10:** contract subclasses, profile normaliser, rules engine with placeholder PD, fixtures; callable on :8002 tonight.
 - **Oct 11:** synthetic data, trained and calibrated model, mandate compiler, Finance numbers applied, end to end with OCR and Wallet.
-- **Oct 12:** optional LLM explanation, docs update, code freeze 18:00.
+- **Oct 11 (also):** demo data for the policy module (sent to P for recheck) and demo UI v1 in fixtures mode.
+- **Oct 12:** UI attack buttons and audit view wired with P, metrics and docs, **code freeze at noon**; afternoon is rehearsal.
 
 ## Known limitations (say these before judges do)
 

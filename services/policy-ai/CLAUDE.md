@@ -4,7 +4,7 @@
 > Read the root `CLAUDE.md` (team rules) and `shared/schemas.py` (the contract) first; this file adds what is
 > specific to Policy AI: scope, design, rule set, credit model, mandate compiler, build plan, acceptance criteria
 > and ready-to-paste prompts.
-> Owner: Policy AI engineer. Reviewer: P (PM). Deadline: end of **Oct 12** (Bangkok time).
+> Owner: Policy AI engineer. Reviewer: P (PM). Deadline: code freeze **Oct 12, 12:00** Bangkok time (end of day for rehearsal).
 
 ---
 
@@ -62,6 +62,10 @@ financing decision** and compiles plain-language mandates into **validated JSON*
    deterministic parser for the demo sentence; rejects out-of-range values with an error.
 5. Fixtures for the demo scenarios (§10) and tests for every rule that rejects or reviews.
 6. `GET /health` (keep it), `GET /policy/rules` (active rule set + version, for the dashboard).
+7. **Demo data for the policy module** (P rechecks): seller/buyer profiles, mandates and request fixtures for every
+   scenario in §11, consistent with Finance's numbers and OCR's sample invoices (§11.1).
+8. **Demo UI design and build** (`ui/`, Streamlit, port 3000; PM wires it to the orchestrator) — §12. The credit
+   decision comes first: start the UI only once `/policy/decide` passes scenarios 1–7.
 
 **Stretch (only after must-ship is green):**
 - `POST /policy/explain` — LLM narrative of a finished decision (decision JSON in, ≤ 80 words out, numbers checked).
@@ -70,7 +74,7 @@ financing decision** and compiles plain-language mandates into **validated JSON*
 **Out of scope (do not build):** OCR, fraud models, document injection detection (OCR AI owns these; you only
 *consume* `fraud_score`, `fraud_flags`, `injection_flags`, `confidence`), duplicate-invoice registry (orchestrator /
 chain), wallet, signing, guard enforcement, contracts (Agent AI eng), lender quotes and KYC mock (orchestrator, PM),
-frontend, real bureau/KYC data, TabPFN / GNN / federated learning (roadmap slide only).
+a production frontend (Next.js only if time remains), real bureau/KYC data, TabPFN / GNN / federated learning (roadmap slide only).
 **Do not edit `shared/schemas.py`** — contract changes are a separate `contract:` PR by/with P.
 
 ---
@@ -103,23 +107,30 @@ frontend, real bureau/KYC data, TabPFN / GNN / federated learning (roadmap slide
 ### 5.1 The contract you must keep (`shared/schemas.py`, owned by P)
 
 ```python
+class Party(BaseModel):  name: str; tax_id: str | None = None
+
 class PolicyRequest(BaseModel):           # body of POST /policy/decide
-    invoice: ExtractedInvoice             # OCR output: invoice_id, supplier (str), buyer (str), invoice_no,
-                                          # issue_date, due_date, amount (Decimal), currency, line_items,
-                                          # confidence, injection_flags, fraud_score, fraud_flags
+    invoice: ExtractedInvoice             # OCR output: invoice_id, supplier: Party, buyer: Party, invoice_no,
+                                          # issue_date, due_date, amount (Decimal), currency,
+                                          # line_items [{description, qty, unit_price, total}], confidence,
+                                          # injection_flags, fraud_score, fraud_flags, doc_hash, invoice_fingerprint
     supplier_profile: dict[str, Any] = {}
     buyer_profile: dict[str, Any] = {}
 
 class PolicyDecision(BaseModel):          # response
     decision: Decision                    # approve | review | reject
-    advance_rate: float                   # 0..1
-    limit: Decimal                        # serialises as a decimal string, e.g. "7000.00"
-    fee_rate: float                       # per 30 days on the advance (0.009 = 0.90%/30d)
+    advance_rate: Decimal                 # 0..1, JSON "0.70"
+    limit: Decimal                        # JSON "524300.00"
+    fee_rate: Decimal                     # per 30 days on the advance, JSON "0.009"
     risk_score: float                     # 0..1, higher = riskier; WE DEFINE IT as the calibrated PD over the tenor
     reasons: list[str]
+    model_version: str                    # e.g. "credit-lgbm-2026-10-11.1" or "scorecard-fallback"
+    policy_version: str                   # e.g. "credit-policy-v0.1"
 ```
 
-Money is Decimal (string in JSON), rates and scores are floats, dates ISO. Import these models — don't copy them.
+This is the shape on the repo-skeleton branch (PR #2), which folds in the Architect's contract changes (parties as
+objects, `doc_hash`, `invoice_fingerprint`). If `main` differs when you start, `shared/schemas.py` wins — re-read it.
+Money and rates are Decimal (strings in JSON), `risk_score` is a float, dates ISO. Import these models — don't copy them.
 
 ### 5.2 What you add inside your service (allowed: optional fields only)
 
@@ -132,13 +143,11 @@ class PolicyRequestExt(PolicyRequest):
     as_of_date: date | None = None         # defaults to today; makes tests/hashes reproducible
 
 class PolicyDecisionExt(PolicyDecision):
-    model_version: str                     # e.g. "credit-lgbm-2026-10-11.1"
-    policy_version: str                    # e.g. "credit-policy-v0.1"
     decision_id: str
     pd: float                              # = risk_score
     expected_loss: Decimal
     tenor_days: int
-    apr: float                             # fee_rate × 365/30
+    apr: Decimal                           # fee_rate × 365/30 (convenience; the wallet uses the shared helper)
     fee_amount: Decimal                    # limit × fee_rate × tenor_days/30
     reason_details: list[ReasonDetail]     # {code, source: rule|model, message, effect}
     top_features: list[FeatureContribution]  # {feature, value, contribution}
@@ -167,8 +176,8 @@ Finance; if P decides otherwise, add a separate `pd` and redefine only `risk_sco
 
 ### 5.3 Profiles are free-form dicts — normalise them
 
-`supplier_profile` and `buyer_profile` are `dict[str, Any]` in the contract, and `integration/samples/profiles.json`
-currently sends only a few keys. Write `app/profiles.py` that converts each dict into a typed internal model, with
+`supplier_profile` and `buyer_profile` are `dict[str, Any]` in the contract. The orchestrator's demo profiles are
+in `services/orchestrator/samples/profiles.json` (they match the example below), but other callers may send fewer keys. Write `app/profiles.py` that converts each dict into a typed internal model, with
 **aliases** and **explicit "missing" handling**:
 
 | Internal field | Accepted keys (first found wins) | If missing |
@@ -189,22 +198,21 @@ currently sends only a few keys. Write `app/profiles.py` that converts each dict
 | `buyer.sector` | `sector` | `"other"` |
 
 Rules whose inputs are missing are **skipped and logged** in `rule_trace` as `skip(missing)`, never silently
-evaluated on a guessed value. Send P the full profile shape (§5.4 example) so `integration/samples/profiles.json`
-can be extended — that file is the PM's, don't edit it yourself.
+evaluated on a guessed value. `services/orchestrator/samples/` is the PM's; propose changes, don't edit it.
 
 Example of a full profile pair — the shared demo scenario from `docs/02-finance-domain.md` §10 (use for fixtures):
 
 ```json
 {
   "supplier_profile": {
-    "name": "Siam Fresh Pack Co., Ltd.", "tax_id": "0105559000001", "wallet_address": "0xSUPPLIER",
+    "name": "Siam Fresh Pack Co., Ltd.", "tax_id": "0105559000000", "wallet_address": "0xSUPPLIER",
     "years_trading": 3, "revenue_thb": "62000000.00", "invoices_financed_count": 12,
     "invoices_total": 36, "paid_on_time": 34, "historical_default_rate": 0.0, "dilution_rate": 0.02,
     "kyc_valid": true, "kyc_expiry": "2027-06-30",
     "current_exposure": "0.00", "facility_limit": "3000000.00"
   },
   "buyer_profile": {
-    "name": "Mekong Basket Retail PCL", "tax_id": "0107559000002", "internal_rating": "A-",
+    "name": "Mekong Basket Retail PCL", "tax_id": "0107559000001", "internal_rating": "A-",
     "revenue_thb": "18000000000.00", "on_time_payment_rate": 0.97, "avg_days_late": 1.5,
     "buyer_confirmed": true, "relationship_months": 36, "sector": "retail",
     "current_exposure": "0.00", "buyer_limit": "10000000.00"
@@ -212,7 +220,7 @@ Example of a full profile pair — the shared demo scenario from `docs/02-financ
 }
 ```
 
-`invoices_financed_count`, `on_time_payment_rate`, `avg_days_late`, `dilution_rate` and `buyer_limit` are our
+Tax IDs are the checksum-valid ones Finance confirmed. `invoices_financed_count`, `on_time_payment_rate`, `avg_days_late`, `dilution_rate` and `buyer_limit` are our
 estimates, not in Finance's primer; ask Finance to confirm them at their Oct 11 sign-off.
 
 ### 5.4 Endpoints
@@ -229,7 +237,7 @@ estimates, not in Finance's primer; ask Finance to confirm them at their Oct 11 
 
 | Counterpart | You need | They need from you | Stand-in until it arrives |
 |---|---|---|---|
-| **OCR AI** | `ExtractedInvoice`, especially `amount`, dates, `confidence`, `fraud_score`, `fraud_flags`, `injection_flags` | The exact flag strings you key on: `duplicate_invoice_hash` (KO). Any non-empty `injection_flags` ⇒ review. | Hand-written fixtures; the OCR stub. |
+| **OCR AI** | `ExtractedInvoice`, especially `amount`, dates, `confidence`, `fraud_score`, `fraud_flags`, `injection_flags` | Flag codes you key on (OCR's names, `services/ocr-ai/CLAUDE.md`): `DUPLICATE_HASH`, `DUPLICATE_INVOICE`, `PO_MISMATCH` ⇒ reject; any other fraud flag ⇒ review; any `injection_flags` ⇒ review. OCR tunes its weights so one high-severity flag reaches the 0.30 reject cutoff. | Hand-written fixtures; the OCR stub. |
 | **Finance** | Advance rates by tier, fee range, LGD, tenor/age limits, concentration caps, typical SME default/late rates for the synthetic data | The YAML + `training/synth_config.yaml` to sanity-check | Defaults marked `FINANCE-TBD` (YAML-only edits later). |
 | **Agent Wallet** | The JSON mandate shape its guard consumes (coordinator relays it; adopt their field names) | `decision`, `limit`, `fee_rate`, `risk_score`, `decision_hash`, `valid_until`, `policy_version`; mandate JSON | Mandate shape in §7. |
 | **Orchestrator (PM)** | Supplier/buyer profiles (not produced by OCR); the active mandate (optional) | Profile shape (§5.3); `reasons`, `rule_trace`, `top_features`, `/policy/rules` for the UI | Fixture profiles. |
@@ -284,8 +292,8 @@ hard_rules:                            # team-wide (docs/00-scope.md §4.2); cha
   - {id: HARD.KYC_UNKNOWN,    outcome: review}
 
 knockouts:                             # outcome: reject
-  - {id: KO.DUPLICATE,        param: {flags: [duplicate_invoice_hash, duplicate_fingerprint]}, message: "Invoice already registered or financed"}
-  - {id: KO.PO_MISMATCH,      param: {flags: [po_amount_mismatch]}, message: "Invoice amount differs from PO by more than 5%"}  # OCR raises the flag
+  - {id: KO.DUPLICATE,        param: {flags: [DUPLICATE_HASH, DUPLICATE_INVOICE]}, message: "Invoice already registered or financed"}
+  - {id: KO.PO_MISMATCH,      param: {flags: [PO_MISMATCH]}, message: "Invoice inconsistent with its PO"}  # OCR raises the flag
   - {id: KO.KYC_INVALID,      message: "Seller KYC invalid or expired"}
   - {id: KO.OVERDUE,          message: "Invoice already past due"}
   - {id: KO.TENOR_TOO_SHORT,  param: {min_tenor_days: 7},   message: "Less than 7 days to due date"}
@@ -476,8 +484,8 @@ No labelled SME invoice defaults exist for us in 2 days, so generate them from a
 3. Labels: `logit(p) = β0 + Σ βi·xi + tier×tenor interaction + N(0, 0.3)`, `β0` set for a ~4% base default rate
    (FINANCE-TBD; plausible 2–8%). `y ~ Bernoulli(p)`.
 4. Drift: last 6 cohorts get +15% late rates, so the time split is meaningful.
-5. Save `training/data/synthetic_invoices.csv` (git-ignored if > 5 MB; the generator is seeded, so it's reproducible)
-   and `training/data/README.md` describing the generator, seed and config hash.
+5. Save to `data/training/synthetic_invoices.csv` at the repo root (the Architect's layout; git-ignore it if > 5 MB —
+   the generator is seeded, so it's reproducible) and `data/training/README.md` describing generator, seed, config hash.
 
 ### 8.4 Models
 
@@ -541,7 +549,7 @@ services/policy-ai/
     llm.py                 thin pluggable client (only mandate + explain use it)
   rules/policy.v1.yaml
   training/
-    synth.py, synth_config.yaml, train.py, data/README.md
+    synth.py, synth_config.yaml, train.py        (output data goes to data/training/ at the repo root)
   model/                   model.pkl, scorecard.json, model_card.json, metrics.json, reliability.png
   fixtures/
     requests/*.json        full /policy/decide bodies for each scenario (as_of_date fixed)
@@ -556,14 +564,14 @@ Add to `requirements.txt`: `pyyaml`, `numpy`, `pandas`, `scikit-learn`, `lightgb
 Run (from repo root): `python -m uvicorn app.main:app --app-dir services/policy-ai --port 8002 --reload`
 Test: `pytest services/policy-ai && ruff check services/policy-ai`
 Train: `cd services/policy-ai && PYTHONPATH=.:../.. python -m training.train`
-End to end: `python integration/run_demo.py` with all three services up.
+End to end: `python services/orchestrator/run_demo.py` with all three services up.
 
 Branches/commits per root `CLAUDE.md`: `policy/rules-engine`, `policy/credit-model`, `policy/mandate-compiler`;
 `feat(policy): …`, `test(policy): …`. Keep PRs under ~400 lines (the model artefacts and fixtures excepted).
 
 ---
 
-## 11. Demo scenarios (fixtures you must ship)
+## 11. Demo scenarios and demo data
 
 All built on the shared demo (Siam Fresh Pack → Mekong Basket Retail, THB 749,000, `as_of_date` 2026-10-12,
 mandate passed). Variant names follow `docs/02-finance-domain.md` §10.
@@ -571,10 +579,10 @@ mandate passed). Variant names follow `docs/02-finance-domain.md` §10.
 | # | Scenario | Change from happy path | Expected |
 |---|---|---|---|
 | 1 | Happy path | — | `approve`, advance 0.70, limit "524300.00", fee_rate 0.009, risk_score ≈ 0.003 |
-| 2 | V2 Inflated amount | `amount` 1,498,000 + `fraud_flags: ["po_amount_mismatch"]` | `reject` (`KO.PO_MISMATCH`) |
+| 2 | V2 Inflated amount | `amount` 1,498,000 + `fraud_flags: ["PO_MISMATCH"]` | `reject` (`KO.PO_MISMATCH`) |
 | 3 | V3 Unconfirmed buyer | `buyer_confirmed: false` | `review`, advance 0.60, fee_rate 0.012 (`REVIEW.UNCONFIRMED_BUYER`, `REVIEW.MANDATE_APR`) |
-| 4 | V4 Injection | `injection_flags: ["injection_detected"]` | `review` (`HARD.INJECTION`); terms unchanged — never 100% |
-| 5 | Duplicate | `fraud_flags: ["duplicate_invoice_hash"]` | `reject` (`KO.DUPLICATE`) |
+| 4 | V4 Injection | `injection_flags: ["HIDDEN_TEXT"]` | `review` (`HARD.INJECTION`); terms unchanged — never 100% |
+| 5 | Duplicate | `fraud_flags: ["DUPLICATE_INVOICE"]` | `reject` (`KO.DUPLICATE`) |
 | 6 | Forged / high fraud | `fraud_score: 0.45` | `reject` (`HARD.FRAUD_SCORE`) |
 | 7 | Expired KYC | `kyc_expiry: "2026-09-30"` | `reject` (`KO.KYC_INVALID`) |
 | 8 | V6/V7 repeat seller after late + partial payment | seller `on_time_ratio` 34/37, `dilution_rate` 0.07, `current_exposure` 524,300 | still eligible, lower advance (dilution haircut) and less headroom; reasons show why |
@@ -583,16 +591,74 @@ mandate passed). Variant names follow `docs/02-finance-domain.md` §10.
 V5 (expensive lender) and V8 (over-LTV lender offer) are blocked by the wallet guard, not by this service.
 Scenarios 2–9 back the "AI proposes, guard blocks" security moments (`docs/00-scope.md` §9 step 8).
 
+### 11.1 Demo data you own (P rechecks)
+
+| File | Content |
+|---|---|
+| `services/policy-ai/fixtures/profiles/sellers.json` | Siam Fresh Pack (§5.3) + 4 more sellers (one thin-file, one with high dilution, one expired KYC, one repeat seller after V6/V7) |
+| `services/policy-ai/fixtures/profiles/buyers.json` | Mekong Basket Retail (A-) + 4 more buyers (tiers B, C, D and one with no rating) |
+| `services/policy-ai/fixtures/mandates/*.json` + `.txt` | The THB demo mandate (sentence + JSON), a strict one (max_apr 0.10) and hostile sentences |
+| `services/policy-ai/fixtures/requests/*.json` | One full `/policy/decide` body per scenario in §11, `as_of_date` 2026-10-12 |
+| `services/policy-ai/fixtures/expected/*.json` | Expected decision per scenario (tests compare against these) |
+
+Rules: names, tax IDs and amounts match Finance's §10 and OCR's sample invoices (`01_happy.pdf`…`04_duplicate.pdf`)
+exactly, so the orchestrator can look profiles up by `invoice.supplier.tax_id` / `invoice.buyer.tax_id`. All
+companies are fictional. Offer extra profiles to P for `services/orchestrator/samples/` — that folder is the PM's.
+
 ---
 
-## 12. Build plan (Oct 10 → end of Oct 12)
+## 12. Demo UI (design + build; PM wires it)
+
+**Purpose:** in 3 minutes a judge must see *evidence → AI decision with reasons → mandate → lender choice → on-chain
+tx*, and then an attack being **blocked** with a red row and its own tx hash. One screen, no navigation.
+
+**Stack:** Streamlit in `ui/` at the repo root, `streamlit run ui/app.py --server.port 3000`. It talks **only** to
+the orchestrator (`ORCHESTRATOR_URL`, default `http://localhost:8000`): `POST /flow/run` (multipart `file`,
+`mandate_id`, `supplier_id`, `buyer_id`) → `{flow_id, state, steps: [...]}`; `POST /flow/repay` `{flow_id,
+amount_paid}`; proposed `POST /flow/attack/{case}` (A1–A6, `DEMO_MODE=1`). Until the orchestrator exists, a
+`UI_MODE=fixtures` switch renders saved step JSON from `ui/fixtures/` so design work never blocks on backend.
+
+**Layout (top to bottom, wide mode):**
+
+```
+┌ Header: ReceivableOS · "AI that can move money — only inside the rules" · ledger badge (FISCO / mock) ┐
+│ 1. Mandate        text box with the plain-language sentence → [Compile] → JSON card (green = from │
+│                   text, grey = platform default)                                                  │
+│ 2. Invoice        [Upload] or [Use demo invoice] · extracted fields table · confidence bar ·      │
+│                   injection & fraud chips (red if any) · doc_hash / fingerprint (short)           │
+│ 3. Decision       big badge APPROVE / REVIEW / REJECT · advance 70% · THB 524,300 · 0.90%/30d     │
+│                   (10.95% APR) · PD 0.3% gauge vs 5% mandate line · reasons list (rule ids) ·     │
+│                   "Why?" expander: top model drivers bar chart + rule trace                       │
+│ 4. Offers         table of lender quotes; chosen row green, out-of-mandate rows red with reason   │
+│ 5. On-chain       timeline TX-1…TX-5 with short hash, status, receipt link; [Buyer paid] button   │
+│ 6. Attacks        buttons A1–A6; each appends a red BLOCKED row: who stopped it (OCR / Policy /   │
+│                   Wallet / PolicyGuard) + revert reason + tx hash                                │
+│ Footer: policy_version · model_version · decision_hash · audit link                               │
+└───────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Design rules:** state colours only (green executed/approve, amber review/pending, red blocked/reject); THB
+with thousands separators, rates as % with the per-30-day and APR forms side by side; every number on screen comes
+from a service response, never typed into the UI; nothing shows PII beyond names in the demo. Keep it readable on a
+projector (≥ 16 px body, high contrast).
+
+**UI acceptance:** the happy path and A1–A6 are each clickable and visible on one screen; the UI runs in fixtures
+mode with no backend; total code ≤ ~400 lines; screenshot of each state saved to `docs/submission/ui/` for the deck.
+
+**Pitch pack (with PM and Finance):** you own the "how the AI decides" slides: decision pipeline, rules-as-data,
+calibration plot + AUC/Brier, the mandate JSON, and the blocked-attack screenshot. Finance owns the market numbers;
+P owns the story and deck.
+
+---
+
+## 13. Build plan (Oct 10 → end of Oct 12)
 
 **Integration first:** a real `/policy/decide` the others can call by **end of Oct 10**, even with a placeholder PD.
 
 ### Oct 10 (today): contract + rules engine
 1. `app/schemas.py` subclasses, `app/profiles.py`, `rules/policy.v1.yaml`, rule registry.
 2. `app/engine.py` with the placeholder PD; `decision_hash`, `valid_until`, `/policy/rules`.
-3. Fixtures + tests for scenarios 1–8. `integration/run_demo.py` still runs.
+3. Fixtures + tests for scenarios 1–8. `services/orchestrator/run_demo.py` still runs.
 **Done when:** `pytest` + `ruff` green, each scenario returns its expected decision, OCR/Wallet engineers can call `:8002`.
 
 ### Oct 11: credit model + mandate compiler (scope milestone: attack cases wired by 23:00)
@@ -601,16 +667,18 @@ Scenarios 2–9 back the "AI proposes, guard blocks" security moments (`docs/00-
 6. `POST /policy/mandate/compile` with the deterministic parser + validator; hostile-input tests.
 7. Finance sign-offs (Oct 11 10:00 demo numbers, 12:00 thresholds table, 18:00 feature ranges): apply their numbers
    in YAML / synth config only. Adopt the wallet's mandate field names when relayed.
-**Done when:** metrics meet §8.5, scenarios 1–9 pass, run_demo works end to end on the mock ledger.
+8b. Demo data (§11.1) complete and sent to P for recheck; UI v1 in fixtures mode (sections 1–5 of §12).
+**Done when:** metrics meet §8.5, scenarios 1–9 pass, run_demo works end to end on the mock ledger, UI v1 renders.
 
 ### Oct 12: polish + freeze
-8. Optional `/policy/explain`, `/policy/simulate`.
-9. Update `docs/04-policy-ai.md` with final thresholds, metrics, scenario results, limitations.
-10. **Code freeze 18:00**; afterwards only YAML/fixture number changes and rehearsal.
+8. UI attack buttons A1–A6 + audit footer wired to the orchestrator with P; screenshots for the deck.
+9. Metrics (AUC, Brier) in the service README section and `docs/04-policy-ai.md`; final thresholds, scenario results.
+   `/policy/explain` only if everything else is done.
+10. **Code freeze 12:00 noon** (scope doc); afternoon is integration and rehearsal only: YAML/fixture number fixes, no features.
 
 ---
 
-## 13. Acceptance criteria (P reviews the PR against these)
+## 14. Acceptance criteria (P reviews the PR against these)
 
 - [ ] `POST /policy/decide` accepts `PolicyRequest` (with or without the optional extras) and returns a valid
       `PolicyDecision`; `shared/schemas.py` is untouched.
@@ -627,11 +695,13 @@ Scenarios 2–9 back the "AI proposes, guard blocks" security moments (`docs/00-
       hostile inputs never loosen caps.
 - [ ] No LLM call on `/policy/decide`.
 - [ ] p95 latency of `/policy/decide` < 200 ms locally.
-- [ ] Only files under `services/policy-ai/` and `docs/04-policy-ai.md` changed.
+- [ ] Demo data in §11.1 present and consistent with Finance's numbers (P rechecks).
+- [ ] UI renders happy path and A1–A6 on one screen, in fixtures mode and against the orchestrator.
+- [ ] Policy PRs change only `services/policy-ai/` and `docs/04-policy-ai.md`; UI PRs only `ui/`; training data only `data/training/`.
 
 ---
 
-## 14. Ready-to-paste prompts
+## 15. Ready-to-paste prompts
 
 Use in order. Each assumes your assistant has read the root `CLAUDE.md`, `shared/schemas.py` and this file.
 
@@ -643,7 +713,7 @@ optional fields in section 5.2, plus Mandate (section 7), Portfolio, ReasonDetai
 Create app/profiles.py that normalises supplier_profile/buyer_profile dicts per the table in section 5.3
 (aliases, credit_rating→tier mapping, 1−on_time_payment_rate, explicit Missing values; never guess).
 Create rules/policy.v1.yaml exactly as section 6.2 and app/rules.py that loads it into pydantic models.
-Add tests for profile normalisation, including integration/samples/profiles.json as it is today.
+Add tests for profile normalisation, including services/orchestrator/samples/profiles.json.
 ```
 
 **Prompt 2 — engine with placeholder PD**
@@ -662,12 +732,12 @@ Write a test for every hard rule, knock-out, review trigger, haircut and cap.
 ```
 Implement app/hashing.py (canonical JSON, sha256, "0x" prefix; exclude decision_id, valid_until, decision_hash)
 and fill decision_id, decision_hash, valid_until, tenor_days, fee_amount, expected_loss, pd.
-Create fixtures/requests/ for scenarios 1-8 in section 11, built from the shared demo (Siam Fresh Pack ->
+Create fixtures/requests/ for scenarios 1-8 (flag codes as in section 11) in section 11, built from the shared demo (Siam Fresh Pack ->
 Mekong Basket Retail, invoice SFP-INV-2026-0142, THB 749,000.00, line item 50,000 trays @ 14.00 = 700,000 + 7% VAT,
 issued 2026-10-01, due 2026-11-15), the profile pair in section 5.3, the mandate JSON in section 7, and
 as_of_date 2026-10-12. Scenario 1 must give approve / 0.70 / "524300.00" / 0.009 (worked example in 6.2). Tests: each scenario's decision and reason codes; identical requests ⇒ identical hash;
 editing one YAML threshold in a temp copy flips scenario 1 from approve to review; limit == advance_rate × amount.
-Confirm python integration/run_demo.py still works with the three services running.
+Confirm python services/orchestrator/run_demo.py still works with the three services running.
 ```
 
 **Prompt 4 — synthetic data**
@@ -677,7 +747,7 @@ Implement services/policy-ai/training/synth.py and training/synth_config.yaml pe
 A/B/C/D (30/40/22/8%) with consistent credit_rating, realistic distributions, labels from a known logistic model
 with a tier×tenor interaction and noise, ~4% base default rate, +15% late-rate drift in the last 6 cohorts,
 fixed seed. Output raw profile + invoice fields (same keys as section 5.3) plus cohort and y to
-training/data/synthetic_invoices.csv and document it in training/data/README.md. Print base rate by tier and cohort.
+data/training/synthetic_invoices.csv (repo root) and document it in data/training/README.md. Print base rate by tier and cohort.
 ```
 
 **Prompt 5 — train, calibrate, explain, serve**
@@ -713,17 +783,26 @@ explanation for an SME owner; post-check that every number in the output appears
 the template text. Tests with LLM_PROVIDER=none.
 ```
 
+**Prompt 7b — demo UI (after scenarios 1–7 pass)**
+```
+Read services/policy-ai/CLAUDE.md section 12. Build ui/app.py in Streamlit (port 3000) with the six stacked
+sections in the layout sketch. It calls only the orchestrator at ORCHESTRATOR_URL (POST /flow/run, /flow/repay,
+/flow/attack/{case}); with UI_MODE=fixtures it renders saved step JSON from ui/fixtures/ instead. State colours only
+(green/amber/red), THB with separators, fee shown as "0.90% / 30 days (10.95% APR)", every number from a response.
+Add ui/README.md with run instructions and ui/requirements.txt. Keep it under ~400 lines.
+```
+
 **Prompt 8 — self-review before opening the PR**
 ```
-Review this branch's diff against services/policy-ai/CLAUDE.md section 13 (acceptance criteria) and section 3
+Review this branch's diff against services/policy-ai/CLAUDE.md section 14 (acceptance criteria) and section 3
 (scope). List: unmet criteria, any threshold hard-coded in Python, any LLM call reachable from /policy/decide,
-any change to shared/schemas.py or files outside services/policy-ai/ and docs/04-policy-ai.md, and whether
-pytest, ruff and integration/run_demo.py pass.
+any change to shared/schemas.py or files outside services/policy-ai/, ui/, data/training/ and docs/04-policy-ai.md, and whether
+pytest, ruff and services/orchestrator/run_demo.py pass.
 ```
 
 ---
 
-## 15. Knowledge share with P
+## 16. Knowledge share with P
 
 Keep `docs/04-policy-ai.md` current: final thresholds and why, model choice and metrics, what the synthetic data
 assumes, scenario results, the mandate JSON shape agreed with Agent Wallet, and known limitations (synthetic labels,
