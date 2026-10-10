@@ -56,7 +56,7 @@ Team: P (PM, also AI engineer), Finance, three AI engineers.
 
 | # | Module | Owner (default) | Repo path | Knowledge doc |
 |---|---|---|---|---|
-| 1 | Scope, PR review, integration, demo flow | **P (PM)** | `docs/00-scope.md`, `services/orchestrator/` | this file |
+| 1 | Scope, PR review, integration, demo flow | **P (PM)** | `docs/00-scope.md`, `shared/schemas.py`, `integration/` | this file |
 | 2 | Finance domain, pain-point numbers, business model, demo story numbers | **Finance** | `docs/02-finance-domain.md` | `docs/02` |
 | 3 | Agent wallet + agent-injection guardrails + mandate enforcement + `AgentWallet`/`PolicyGuard` contracts | **Agent AI eng** | `services/agent-wallet/`, `contracts/` (wallet + guard) | `docs/03` |
 | 4 | Credit risk model + credit decision (approve/review/reject, advance rate, fee) + NL mandate → policy JSON | **Policy AI eng** | `services/policy-ai/` | `docs/04` |
@@ -128,9 +128,11 @@ Input: `{ "decision": <4.2 output>, "payee": "0x...", "amount": "7000.00", "curr
 `status` ∈ `executed | blocked | pending_approval | failed`. A `blocked` result carries the guard's revert reason in the audit record. Above the mandate's `human_review_above` amount the wallet returns `pending_approval` and `approvals_required: 1`.
 
 ### 4.4 Orchestrator (P) — glue, owned by the PM seat
-`POST /flow/run` takes an uploaded invoice and a mandate id, calls 4.1 → registry duplicate check → 4.2 → lender quotes → 4.3, and returns every intermediate result for the UI. `POST /flow/repay` simulates "buyer paid" and triggers settlement. Ports: orchestrator 8000, ocr 8001, policy 8002, wallet 8003, UI 3000.
+Stub lives in `integration/run_demo.py`. `POST /flow/run` takes an uploaded invoice and a mandate id, calls 4.1 → registry duplicate check → 4.2 → lender quotes → 4.3, and returns every intermediate result for the UI. `POST /flow/repay` simulates "buyer paid" and triggers settlement. Ports: orchestrator 8000, ocr 8001, policy 8002, wallet 8003, UI 3000.
 
-Rule for changing an interface: open a PR that edits **this section** first, tag P, and only then change code. No silent field renames.
+The code version of this contract is the Pydantic models in `shared/schemas.py`, owned by P. If this section and that file disagree, `shared/schemas.py` wins and this section gets fixed.
+
+Rule for changing an interface: open a PR titled `contract: ...` that changes only `shared/schemas.py` (and this section), get P's approval, and only then change service code. No silent field renames.
 
 ---
 
@@ -172,7 +174,7 @@ A module is done when **all** of its lines are true and shown in a merged PR.
 - [ ] NL mandate → JSON compiler: given the sample sentence in section 9, outputs the mandate JSON and rejects out-of-range values with an error.
 
 **Agent wallet**
-- [ ] `POST /wallet/execute` returns the 4.3 schema on chain and in mock mode (`CHAIN_MODE=fisco|mock`).
+- [ ] `POST /wallet/execute` returns the 4.3 schema on chain and in mock mode (`LEDGER_MODE=fisco|mock`, default `mock`).
 - [ ] Off-chain pre-check and on-chain `PolicyGuard` both enforce: max amount, max advance rate, max fee/APR, payee allowlist, KYC flag, duplicate invoice, mandate expiry.
 - [ ] Agent-injection test suite: ≥ 10 adversarial cases (instruction in invoice text, payee swap, amount inflation, tool-call smuggling); report how many are stopped and **where** (scanner, deterministic validator, guard).
 - [ ] Human approval path above the threshold.
@@ -198,7 +200,7 @@ A module is done when **all** of its lines are true and shown in a merged PR.
 Copy into each review. A "no" on any **bold** line blocks the merge.
 
 1. **Is this in the In-scope column of section 2?** If it is in Out of scope, close or move to a `later/` note.
-2. **Does it match the interface in section 4 exactly** (field names, types, money as strings, status enums)? Any change to section 4 comes in its own PR first.
+2. **Does it match `shared/schemas.py` exactly** (field names, types, money as strings, status enums)? Any schema change comes in its own `contract:` PR first.
 3. **Does any LLM output reach the wallet or calldata without a deterministic validator?** Must be no.
 4. **Does any invoice text reach an LLM prompt without the injection scan and data delimiters?** Must be no.
 5. **Any secret, private key, API key or real personal data committed?** Must be no (`.env` only, `.env.example` updated).
@@ -214,7 +216,7 @@ Copy into each review. A "no" on any **bold** line blocks the merge.
 
 | Risk | Likelihood | Fallback |
 |---|---|---|
-| FISCO BCOS node setup eats hours | High | Mock ledger in `CHAIN_MODE=mock` from day one; one person (contracts owner) brings up a local 4-node chain with `build_chain.sh` in parallel. Real tx hashes are required for submission, so the chain must work by Oct 12 morning. |
+| FISCO BCOS node setup eats hours | High | Mock ledger in `LEDGER_MODE=mock` (the default) from day one; one person (contracts owner) brings up a local 4-node chain with `build_chain.sh` in parallel. Real tx hashes are required for submission, so the chain must work by Oct 12 morning. |
 | LLM / vision API down or rate-limited during demo | Medium | Cache responses for the demo invoice set; pluggable client can point to a local model. |
 | OCR accuracy weak on photos | Medium | Demo on clean generated PDFs; show photo case as stretch. |
 | No real credit data | Certain | Synthetic data generator with documented assumptions plus a public credit dataset for the model; say so openly. |
