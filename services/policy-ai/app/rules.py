@@ -78,6 +78,7 @@ PARAM_MODELS: dict[str, type[_Strict]] = {
         "REVIEW.NEW_SUPPLIER": {"min_financed": Count},
         "REVIEW.LARGE_TICKET": {"enabled": bool, "basis": (Literal["amount"], "amount")},
         "REVIEW.CONCENTRATION": {"max_buyer_share": Rate, "max_supplier_share": Rate},
+        "REVIEW.THIN_PROFILE": {"terms_tier": Tier},
         "TERMS.HAIRCUT_TENOR": {"tenor_above": Count},
         "TERMS.HAIRCUT_AGE": {"age_above": Count},
         "TERMS.HAIRCUT_DILUTION": {"dilution_above": Rate},
@@ -258,6 +259,9 @@ class RuleSet(_Strict):
             missing = set(self.currency_allowlist) - set(table)
             if missing:
                 raise ValueError(f"{name} has no value for {sorted(missing)}")
+        thin_tier = self.rule("REVIEW.THIN_PROFILE").param.terms_tier
+        if thin_tier not in self.terms.base_advance_by_tier:
+            raise ValueError(f"REVIEW.THIN_PROFILE terms_tier {thin_tier} has no base advance")
         return self
 
     def predicate_rules(self) -> list[Rule | Haircut]:

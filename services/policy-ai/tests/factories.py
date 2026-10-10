@@ -7,9 +7,14 @@ Every call returns a fresh deep copy, so a test can edit nested keys freely.
 """
 
 import copy
+from collections.abc import Callable
 from datetime import date
+from pathlib import Path
+
+import yaml
 
 from app.engine import Ctx, build_ctx
+from app.rules import DEFAULT_RULES_PATH, RuleSet, load_rules
 from app.schemas import PolicyRequestExt
 
 AS_OF = date(2026, 10, 12)
@@ -90,5 +95,19 @@ def happy_body() -> dict:
     )
 
 
-def ctx_for(body: dict) -> Ctx:
-    return build_ctx(PolicyRequestExt.model_validate(body))
+def ctx_for(body: dict, rules: RuleSet | None = None) -> Ctx:
+    return build_ctx(PolicyRequestExt.model_validate(body), rules=rules)
+
+
+def edited_rules(tmp_path: Path, edit: Callable[[dict], None]) -> RuleSet:
+    """A temp copy of the active YAML with `edit` applied to the raw dict, loaded and validated."""
+    raw = yaml.safe_load(DEFAULT_RULES_PATH.read_text(encoding="utf-8"))
+    edit(raw)
+    path = tmp_path / "policy.edited.yaml"
+    path.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
+    return load_rules(path)
+
+
+def rule_entry(raw: dict, section: str, rule_id: str) -> dict:
+    """The raw YAML entry of one rule, for edits in edited_rules()."""
+    return next(r for r in raw[section] if r["id"] == rule_id)

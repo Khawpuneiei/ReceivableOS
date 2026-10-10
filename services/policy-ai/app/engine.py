@@ -9,17 +9,19 @@ Hit messages are built from the YAML message plus numbers, dates and YAML-listed
 echo free text from the invoice or the profiles, because the wallet scans reasons for injection and the
 UI renders them.
 
-This part covers the context, the registry, the hard rules and the pre-model knock-outs.
+Stages so far: hard rules, pre-model knock-outs, PD (placeholder model), PD gates and the pre-terms review
+triggers.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 from typing import Any, Literal
 
+from app import model
 from app.profiles import MISSING, BuyerProfile, SupplierProfile, normalise_buyer, normalise_supplier
 from app.rules import Rule, RuleSet, active_rules, check_registry
 from app.schemas import Mandate, PolicyRequestExt, Portfolio
@@ -39,6 +41,7 @@ class Ctx:
     rules: RuleSet
     mandate: Mandate | None = None
     portfolio: Portfolio | None = None
+    pd: Decimal | None = None  # set once the model has run
 
     @property
     def tenor_days(self) -> int:
@@ -102,21 +105,13 @@ class RuleResult:
 Predicate = Callable[[Ctx, Any], Verdict]
 RULES: dict[str, Predicate] = {}
 
-# YAML ids whose predicates arrive with the later stages (PD gates, review triggers, terms and pricing).
-# The import-time registry check accepts them until then; each later stage removes its ids from this set.
+# YAML ids whose predicates arrive with the terms and pricing stage. The import-time registry check accepts
+# them until then; that stage removes its ids from this set.
 PENDING: frozenset[str] = frozenset(
     {
         "KO.NO_HEADROOM",
         "KO.PRICING",
-        "KO.PD_TOO_HIGH",
-        "REVIEW.PD_ABOVE_CAP",
-        "REVIEW.UNCONFIRMED_BUYER",
-        "REVIEW.FRAUD_FLAGS",
-        "REVIEW.LINE_ITEMS_MISMATCH",
-        "REVIEW.NEW_SUPPLIER",
-        "REVIEW.LARGE_TICKET",
         "REVIEW.CONCENTRATION",
-        "REVIEW.THIN_PROFILE",
         "REVIEW.MANDATE_APR",
         "TERMS.HAIRCUT_UNCONFIRMED",
         "TERMS.HAIRCUT_TENOR",
@@ -235,6 +230,85 @@ def _dates_invalid(ctx: Ctx, p: Any) -> Verdict:
     return hit() if ctx.invoice.due_date < ctx.invoice.issue_date else PASS
 
 
+# --- PD gates (section 6.1 step 5) ---
+
+
+@rule("KO.PD_TOO_HIGH")
+def _pd_too_high(ctx: Ctx, p: Any) -> Verdict:
+    if ctx.pd is None:
+        return SKIP_MISSING
+    return hit(f"PD {ctx.pd} > {p.reject_above}") if ctx.pd > p.reject_above else PASS
+
+
+@rule("REVIEW.PD_ABOVE_CAP")
+def _pd_above_cap(ctx: Ctx, p: Any) -> Verdict:
+    """Review above min(review_above, the mandate's max_predicted_default, else the platform default)."""
+    if ctx.pd is None:
+        return SKIP_MISSING
+    mandate_cap = ctx.mandate.max_predicted_default if ctx.mandate else None
+    cap = min(p.review_above, ctx.rules.defaults.max_pd if mandate_cap is None else mandate_cap)
+    return hit(f"PD {ctx.pd} > cap {cap}") if ctx.pd > cap else PASS
+
+
+# --- Review triggers evaluated before terms (section 6.1 step 6) ---
+
+
+@rule("REVIEW.UNCONFIRMED_BUYER")
+def _unconfirmed_buyer(ctx: Ctx, p: Any) -> Verdict:
+    """Missing confirmation counts as unconfirmed (brief 5.3)."""
+    return PASS if ctx.buyer.confirmed is True else hit()
+
+
+def ko_flags(rules: RuleSet) -> set[str]:
+    """Every fraud flag a knock-out already handles."""
+    return {flag for ko in rules.knockouts for flag in getattr(ko.param, "flags", [])}
+
+
+@rule("REVIEW.FRAUD_FLAGS")
+def _fraud_flags(ctx: Ctx, p: Any) -> Verdict:
+    """Any OCR fraud flag no knock-out handles. Only the count is reported, never the flag text."""
+    other = set(ctx.invoice.fraud_flags) - ko_flags(ctx.rules)
+    return hit(f"{len(other)} other fraud flag(s)") if other else PASS
+
+
+@rule("REVIEW.LINE_ITEMS_MISMATCH")
+def _line_items_mismatch(ctx: Ctx, p: Any) -> Verdict:
+    """Line totals must equal the amount, either as is or plus one of the VAT rates, within tolerance."""
+    if not ctx.invoice.line_items:
+        return SKIP_MISSING
+    total, amount = ctx.line_items_sum, ctx.invoice.amount
+    if any(abs(total * (1 + vat) - amount) <= p.tolerance for vat in p.vat_rates):
+        return PASS
+    return hit(f"line items {total} vs amount {amount}")
+
+
+@rule("REVIEW.NEW_SUPPLIER")
+def _new_supplier(ctx: Ctx, p: Any) -> Verdict:
+    count = ctx.supplier.invoices_financed_count
+    if count is MISSING:
+        return SKIP_MISSING
+    return hit(f"{count} financed < {p.min_financed}") if count < p.min_financed else PASS
+
+
+@rule("REVIEW.LARGE_TICKET")
+def _large_ticket(ctx: Ctx, p: Any) -> Verdict:
+    """amount >= human_review_above (inclusive). The mandate's value wins, else the YAML default."""
+    if not p.enabled:
+        return Verdict("skip", "disabled")
+    threshold = ctx.mandate.human_review_above if ctx.mandate else None
+    if threshold is None:
+        threshold = ctx.rules.defaults.human_review_above.get(ctx.invoice.currency)
+    if threshold is None:
+        return SKIP_MISSING
+    amount = ctx.invoice.amount
+    return hit(f"amount {amount} >= {threshold}") if amount >= threshold else PASS
+
+
+@rule("REVIEW.THIN_PROFILE")
+def _thin_profile(ctx: Ctx, p: Any) -> Verdict:
+    return hit(f"terms use tier {p.terms_tier}") if ctx.buyer.credit_tier is MISSING else PASS
+
+
 check_registry(active_rules(), [*RULES, *PENDING])  # startup fails if the YAML and the predicates disagree
 
 
@@ -263,6 +337,14 @@ def run_pre_model(ctx: Ctx) -> list[RuleResult]:
     them after terms instead of here.
     """
     return run_stage(ctx, ctx.rules.hard_rules) + run_stage(ctx, ctx.rules.knockouts)
+
+
+def run_pre_terms(ctx: Ctx) -> tuple[Ctx, list[RuleResult]]:
+    """Section 6.1 steps 2-6: hard rules, knock-outs, PD, PD gates, review triggers. Returns ctx with PD."""
+    results = run_pre_model(ctx)
+    ctx = replace(ctx, pd=Decimal(str(model.predict_pd(ctx.buyer, ctx.tenor_days))))
+    results += run_stage(ctx, ctx.rules.pd_gates) + run_stage(ctx, ctx.rules.review_triggers)
+    return ctx, results
 
 
 def merge_outcome(results: Iterable[RuleResult]) -> Decision:
