@@ -129,7 +129,7 @@ Input: `{ "decision": <4.2 output>, "payee": "0x...", "amount": "524300.00", "cu
   "audit_ref": "audit_..."
 }
 ```
-`status` ∈ `executed | blocked | pending_approval | failed`. A `blocked` result carries the guard's revert reason in the audit record. At or above the mandate's `human_review_above` amount (THB 837,500 in the demo) the wallet returns `pending_approval` and `approvals_required: 1`. Proposed hard caps: THB 1.5m per transaction, THB 3m per day (pending Finance, see `docs/06`).
+`status` ∈ `executed | blocked | pending_approval | failed`. A `blocked` result carries the guard's revert reason in the audit record. At or above the mandate's `human_review_above` amount (THB 837,500 in the demo) the wallet returns `pending_approval` and `approvals_required: 1`; a human approves via `POST /wallet/confirm/{tx_id}`. Hard caps (env config): THB 1,500,000 per transaction, THB 3,000,000 per day (pending Finance, see `docs/06`).
 
 The wallet also exposes `register`, `approve`, `settle`, `mandate/activate` and `audit` endpoints (proposed by the Architect, `docs/01`); their exact shapes are in `shared/schemas.py`.
 
