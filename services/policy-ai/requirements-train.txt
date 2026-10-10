@@ -1,0 +1,5 @@
+# Training only: the synthetic data generator and model training (training/).
+# Serving needs only requirements.txt; the service never imports these.
+-r requirements.txt
+numpy>=1.26
+pandas>=2.1
