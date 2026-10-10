@@ -216,6 +216,7 @@ _LABELS: dict[str, tuple[str, str, str]] = {
     "amount_to_buyer_limit": ("BUYER_LIMIT_USE", "Invoice amount / buyer limit", "pct"),
     "ocr_confidence": ("OCR_CONFIDENCE", "OCR confidence", "num"),
     "fraud_score": ("FRAUD_SCORE", "OCR fraud score", "num"),
+    "buyer_tier_x_tenor_30d": ("TIER_X_TENOR", "Buyer tier rank x tenor in months", "num"),
 }
 
 

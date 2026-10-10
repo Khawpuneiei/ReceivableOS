@@ -44,7 +44,8 @@ def test_model_card_names_the_selected_model(trained):
     report = json.loads((out / "metrics.json").read_text(encoding="utf-8"))
     assert card["selected"] == report["selected"] in {"lr", "lgbm"}
     assert card["version"] == card["versions"][card["selected"]]
-    assert card["versions"] == {"lr": "credit-lr-2026-10-10.1", "lgbm": "credit-lgbm-2026-10-10.1"}
+    rev = train.load_config()["revision"]
+    assert card["versions"] == {"lr": f"credit-lr-2026-10-10.{rev}", "lgbm": f"credit-lgbm-2026-10-10.{rev}"}
     briers = {name: m["test"]["brier"] for name, m in report["models"].items()}
     assert briers[card["selected"]] == min(briers.values())
 

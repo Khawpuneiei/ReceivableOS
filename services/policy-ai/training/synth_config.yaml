@@ -4,7 +4,7 @@
 # FINANCE-TBD marks values Finance confirms at the Oct 11 18:00 feature-range sign-off.
 
 seed: 20261010
-n_invoices: 20000
+n_invoices: 200000               # 20k left ~12 tier-A defaults in training; 200k gives ~130
 n_buyers: 300
 n_suppliers: 800
 first_cohort: "2024-10"            # 24 monthly cohorts, 2024-10 .. 2026-09
