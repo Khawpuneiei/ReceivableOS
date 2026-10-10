@@ -54,17 +54,20 @@ Rules that hold everywhere:
 
 Team: P (PM, also AI engineer), Finance, three AI engineers.
 
-| # | Module | Owner (default) | Repo path | Knowledge doc |
+| # | Module | Owner | Repo path | Knowledge doc |
 |---|---|---|---|---|
-| 1 | Scope, PR review, integration, demo flow | **P (PM)** | `docs/00-scope.md`, `shared/schemas.py`, `integration/` | this file |
+| 1 | Scope, PR review, **integration** (orchestrator, UI wiring to services), submission | **P (PM)** | `docs/00-scope.md`, `shared/schemas.py`, `integration/` | this file |
 | 2 | Finance domain, pain-point numbers, business model, demo story numbers | **Finance** | `docs/02-finance-domain.md` | `docs/02` |
-| 3 | Agent wallet + agent-injection guardrails + mandate enforcement + `AgentWallet`/`PolicyGuard` contracts | **Agent AI eng** | `services/agent-wallet/`, `contracts/` (wallet + guard) | `docs/03` |
+| 3 | Agent wallet + agent-injection guardrails + mandate enforcement + **the whole on-chain layer** (`AgentWallet`, `PolicyGuard`, `ReceivableRegistry`, `FinancingVault`, settlement token, deployment, mock ledger) | **Agent AI eng** | `services/agent-wallet/`, `services/agent-wallet/contracts/` | `docs/03`, `docs/01` |
 | 4 | Credit risk model + credit decision (approve/review/reject, advance rate, fee) + NL mandate → policy JSON | **Policy AI eng** | `services/policy-ai/` | `docs/04` |
-| 5 | Invoice OCR + OCR injection detection + document fraud detection + demo invoice set | **OCR AI eng** | `services/ocr-ai/`, `data/invoices/` | `docs/05` |
-| 6 | `ReceivableRegistry`, `FinancingVault`, `MockStable` contracts, chain deployment, mock ledger | **P (PM)** [OPEN: or Agent AI eng] | `contracts/` | `docs/01` |
-| 7 | Demo UI (one screen) | **P (PM)** [OPEN: Finance can own the content/copy] | `ui/` | this file |
-| 8 | Pitch pack: deck, video, README in submission shape, business plan | **Finance + P** | `pitch/` | `docs/02` |
-| 9 | Architecture and research | Research thread → P | `docs/01-architecture.md` | `docs/01` |
+| 5 | Invoice OCR + OCR injection detection + document fraud detection | **OCR AI eng** | `services/ocr-ai/` | `docs/05` |
+| 6 | **Demo data**: each engineer builds the samples for their own module (OCR: invoices incl. injection/fraud/duplicate; Policy: supplier/buyer profiles and credit data; Agent: mandates, lender quotes, attack transactions). P rechecks them against the `docs/02` scenario | **Agent + OCR + Policy AI engs**, P rechecks | `data/` per module | `docs/02` |
+| 7 | **Demo UI design** (one screen, port 3000) | **Policy AI eng** (P wires it to the orchestrator) | `ui/` | this file |
+| 8 | **Pitch pack**: deck, video, README in submission shape, business plan | **P + Policy AI eng + Finance** | `pitch/` | `docs/02` |
+| 9 | Controls and compliance research: wallet spending limits, human approval, audit log, one-line KYC/AML and data-privacy stance | **P (PM)** | `docs/06-controls-and-compliance.md` | `docs/06` |
+| 10 | Architecture and research | Research thread → P | `docs/01-architecture.md` | `docs/01` |
+
+Load check: the Policy AI eng now carries the credit model, the UI design and part of the pitch. If their model slips on Oct 11, the UI falls back to P and the pitch to Finance + P.
 
 Terminology fix, because two things are called "policy":
 - **Credit policy** = the underwriting decision (Policy AI eng). Output: `decision`, `advance_rate`, `limit`, `fee_rate`.
@@ -127,6 +130,8 @@ Input: `{ "decision": <4.2 output>, "payee": "0x...", "amount": "524300.00", "cu
 ```
 `status` ∈ `executed | blocked | pending_approval | failed`. A `blocked` result carries the guard's revert reason in the audit record. Above the mandate's `human_review_above` amount the wallet returns `pending_approval` and `approvals_required: 1`.
 
+The wallet also exposes `register`, `approve`, `settle`, `mandate/activate` and `audit` endpoints (proposed by the Architect, `docs/01`); their exact shapes are in `shared/schemas.py`.
+
 ### 4.4 Orchestrator (P) — glue, owned by the PM seat
 Stub lives in `integration/run_demo.py`. `POST /flow/run` takes an uploaded invoice and a mandate id, calls 4.1 → registry duplicate check → 4.2 → lender quotes → 4.3, and returns every intermediate result for the UI. `POST /flow/repay` simulates "buyer paid" and triggers settlement. Ports: orchestrator 8000, ocr 8001, policy 8002, wallet 8003, UI 3000.
 
@@ -181,12 +186,12 @@ A module is done when **all** of its lines are true and shown in a merged PR.
 - [ ] Human approval path above the threshold.
 - [ ] Every call writes an audit record; demo shows ≥ 5 real tx hashes and ≥ 1 blocked attempt.
 
-**Contracts / chain (owner per section 3)**
+**Contracts / chain (Agent AI eng)**
 - [ ] `ReceivableRegistry` (register fingerprint, reject duplicates), `FinancingVault` (fund, draw, repay, settle), `MockStable` token, plus wallet/guard from `docs/03`.
 - [ ] Deployed to a FISCO BCOS node (local 4-node build_chain or a provided test chain); addresses in `contracts/deployments.json`.
 - [ ] Unit tests for the revert paths; interface doc with call screenshots (past-winner submission convention).
 
-**Integration + UI (PM)**
+**Integration (PM) + UI (Policy AI eng designs, P wires)**
 - [ ] One command starts everything (`make demo` or `docker compose up`).
 - [ ] The UI shows: uploaded invoice, extracted fields, flags, risk score + reasons, lender quotes, guard result, tx hashes with links/ids, and a red "BLOCKED" row.
 - [ ] Happy path and 3 attack paths run from a fresh clone in under 5 minutes.
@@ -253,7 +258,8 @@ Target slide: 5 green tx hashes (register, create position, lender funds vault, 
 | 2026-10-10 | Chain: FISCO BCOS with mock ledger fallback (replaces Base Sepolia / Safe in the design notes) | [OPEN] P to confirm |
 | 2026-10-10 | Oct 12 is the team's internal MVP deadline; the public announcement lists the preliminary round closing Nov 2 | [OPEN] P to confirm |
 | 2026-10-10 | Lender quotes, settlement trigger and KYC mock live in the orchestrator (PM) | [OPEN] P to confirm |
-| 2026-10-10 | `AgentWallet` + `PolicyGuard` contracts move to the Agent AI eng; registry/vault stay with PM | [OPEN] P to confirm |
+| 2026-10-10 | Agent AI eng owns the whole on-chain layer (all contracts, in `services/agent-wallet/contracts/`) | P |
+| 2026-10-10 | Integration: PM. Demo data: each engineer for their module, PM rechecks. Demo UI design: Policy AI eng. Pitch pack: PM + Policy AI eng + Finance. Controls/compliance research: PM (`docs/06`) | P |
 | 2026-10-10 | Settlement token on chain: simulated THB token `tTHB` (Finance doc) instead of USDC (architecture doc) | [OPEN] P to confirm |
 | 2026-10-10 | `fee_rate` is per 30 days; `risk_score` is 0 to 1, higher is riskier | [OPEN] Policy eng to confirm |
 | 2026-10-10 | Demo scenario and numbers come from `docs/02` (THB, Siam Fresh Pack → Mekong Basket Retail) | Finance thread; Finance teammate to approve by Oct 11 10:00 |
