@@ -12,7 +12,7 @@
 | Concern | One line for the stage |
 |---|---|
 | Spending limits | "The AI can propose anything, but the chain only lets it spend inside the seller's mandate: 70% advance, 12% APR, allowlisted payees, per-transaction and daily caps. If the model is fooled, the transaction reverts." |
-| Human approval | "Above THB 837,500, or whenever the invoice looks odd, the money stops and waits for a human signature that is bound to that exact payment, and the person who approves is not the person who set the rules." |
+| Human approval | "From THB 837,500 up, or whenever the invoice looks odd, the money stops and waits for a human signature that is bound to that exact payment, and the person who approves is not the person who set the rules." |
 | Audit log | "Every decision and every block is hash-chained and anchored on chain, so for any baht we can answer why, on what evidence, by which model and policy, who approved it, and which transaction moved it." |
 | KYC/AML | "We onboard businesses, not anonymous wallets: every seller, buyer and lender is a verified, allowlisted party, and in production the licensed lender stays the AML reporting entity while we hand it the KYB evidence and the audit trail." |
 | Data privacy | "No personal data goes on chain, only salted fingerprints, amounts and statuses; the documents stay off chain under Thailand's PDPA, and the demo runs on synthetic data only." |
@@ -49,6 +49,8 @@
 - **Crypto agent wallets** put limits outside the model: Coinbase *Agentic Wallets* (Feb 2026) offer spending limits and session-duration limits, with keys held in an enclave and never passed to the LLM ([ForkLog](https://forklog.com/en/coinbase-unveils-wallet-infrastructure-for-ai-agents/)). Practitioner guidance for x402 agent payments lists per-transaction caps, daily and per-endpoint budgets, allowlists, atomic budget reservation, duplicate detection and a circuit breaker after repeated violations ([dev.to](https://dev.to/l_x_1/securing-the-x402-protocol-why-autonomous-agent-payments-need-spending-controls-a90)).
 - **Smart accounts** (Safe modules, ERC-4337 session keys) are the EVM production path; scope already lists them as roadmap because they are not native to FISCO BCOS.
 
+Proof point for the pitch: the wallet's red-team eval set has 39 attack cases, reported as "N attacks, 0 unauthorized payments" (wallet brief §7.4); quote the final number from its run.
+
 Takeaway: our design (limits enforced in a contract the model cannot touch, payee allowlist, budget reserved before transfer, pause switch) matches what the industry converged on. What we lack is a signed mandate credential and a delay on loosening it; both are roadmap lines, not demo work.
 
 ### 1.4 Recommended demo setting (matches the Finance mandate)
@@ -58,7 +60,7 @@ Takeaway: our design (limits enforced in a contract the model cannot touch, paye
 | `max_ltv` | 0.70 | Finance mandate (`docs/02` §10) |
 | `max_apr` | 12% (1200 bps) | Finance mandate |
 | `max_predicted_default` | 5% | Finance mandate (checked by Policy AI, not on chain) |
-| `approval_threshold` | **THB 837,500** | Finance `human_review_above_thb` (= USD 25,000 × 33.5, est. rate) |
+| `approval_threshold` | **THB 837,500, at or above** | Finance `human_review_above_thb` (= USD 25,000 × 33.5, est. rate); wallet env default (PR #8) uses `>=` |
 | `per_tx_max` | **THB 1,500,000 (est.)** | Above the threshold so a large approved draw can still go through; Finance to confirm |
 | `daily_max` | **THB 3,000,000 (est.)** | Equals the seller's facility limit, so one bad day can never exceed the facility |
 | Payee allowlist | Siam Fresh Pack (disbursement), Andaman Factoring and Isan Growth (repayment), platform fee address | `docs/02` §10 parties |
@@ -71,7 +73,7 @@ Happy path: the THB 524,300 advance is under 837,500, so it executes without a h
 ### 1.5 Open items for P (owned by other threads; flag, don't fix here)
 
 1. **Currency and decimals.** `services/agent-wallet/CLAUDE.md` §5.2 still has USD placeholders (`per_tx_max 20000`, `daily_max 50000`, `approval_threshold 10000`, mUSD with 6 decimals). Architecture and Finance use tTHB with 2 decimals. Ask the Agent AI eng to switch the yaml and the deploy script to the THB values above, and add one unit test that a THB 524,300.00 request becomes exactly `52430000` token units.
-2. **"Above" versus "at or above".** Finance says review *above* 837,500; the wallet contract escalates when `amount >= approvalThreshold`. Pick one (recommend `>` to match Finance) so the UI and the contract never disagree on an amount of exactly 837,500.00.
+2. **"Above" versus "at or above".** Settled in the wallet PR (#8): review at or above 837,500 (`>=`). Finance's mandate text says "above"; ask Finance to reword it to "at or above" so the UI, mandate and contract read the same.
 3. **Facility limit on chain.** Nothing on chain tracks total outstanding per seller (THB 3,000,000). The daily cap is a proxy for the demo; say "outstanding-exposure limit" is roadmap.
 
 ---
@@ -84,7 +86,7 @@ Happy path: the THB 524,300 advance is under 837,500, so it executes without a h
 |---|---|---|
 | Rubber-stamping | The approver clicks "approve" on whatever the AI summarised | Approval card shows raw fields (payee registry name, amount, APR, LTV, decision hash, flags), not an LLM-written summary |
 | The AI writes the approval request | Injection text could make the summary read "safe" | The card is rendered from validated fields only; the invoice memo is shown as untrusted text, clearly labelled |
-| Approve one thing, execute another | Approver sees 900k to Lender A, chain pays something else | The contract stores the pending payment (`to`, `amount`, `invoiceKey`, `decisionHash`) at proposal time; `approve(id)` can only release that exact record |
+| Approve one thing, execute another | Approver sees 900k to Lender A, chain pays something else | The contract stores the pending payment (`to`, `amount`, `invoiceKey`, `decisionHash`) at proposal time; `approve(id)` (called via `POST /wallet/confirm/{tx_id}`) can only release that exact record |
 | Same person sets the rules and approves | No segregation of duties; one compromised laptop does both | Different keys and different people for owner and approver (see 2.4) |
 | Risk-oracle key held by the wallet service | In the MVP the wallet service holds both the agent key and the risk-oracle key (`docs/01` §5.5 roles), so a compromised wallet service could approve its own receivable | Say it on stage as a known MVP shortcut; production moves the oracle key to the Policy service (or an HSM) and has Policy sign decisions (wallet §6.4 item 1) |
 | Approval never comes | Money stuck, SME waits | Pending approvals expire after 24 h with `APPROVAL_EXPIRED` (wallet §5.4) |
@@ -107,7 +109,7 @@ Happy path: the THB 524,300 advance is under 837,500, so it executes without a h
 
 | Item | Demo value |
 |---|---|
-| Amount trigger | Advance > THB 837,500 → `pending_approval` |
+| Amount trigger | Advance ≥ THB 837,500 → `pending_approval`; approver confirms via `POST /wallet/confirm/{tx_id}` |
 | Risk triggers (approve becomes "needs human") | `decision == review`, any `injection_flags`, `fraud_score >= 0.5` (wallet §5.2 `escalate_to_human_if`) |
 | Approvers | **1 of 1, but the approver is the Finance teammate, not P.** P holds the owner key (sets the mandate, unpauses); Finance holds `approver_1` (approves, can pause) |
 | Production story | 2-of-3 approvers, hardware keys, owner as multisig with a delay on loosening limits |
@@ -240,7 +242,7 @@ KYB for companies (registry check, directors, ultimate beneficial owners, sancti
 ## 6. Checklist for P before the Oct 12 freeze
 
 - [ ] Wallet yaml and deploy script in tTHB with the 1.4 values; unit test for decimals (Agent AI eng)
-- [ ] `>` vs `>=` on the 837,500 threshold aligned between Finance, wallet service and contract
+- [ ] Finance mandate text reworded to "at or above 837,500" to match the wallet (`>=`), and Finance confirms the 1.5m / 3m caps
 - [ ] Approver key held by the Finance teammate, owner key by P
 - [ ] `flow_id` in every audit entry; anchor at end of each flow; audit panel shows `verified`
 - [ ] Invoice fingerprint uses a keyed hash (OCR AI + Agent AI eng)
