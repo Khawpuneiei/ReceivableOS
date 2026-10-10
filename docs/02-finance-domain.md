@@ -218,8 +218,8 @@ All names are **fictional**. Any resemblance to a real company is unintended.
 
 | Role | Name | Details |
 |---|---|---|
-| Seller (SME, wallet owner) | **Siam Fresh Pack Co., Ltd.** (บริษัท สยามเฟรชแพ็ค จำกัด) | Food-packaging maker, Samut Prakan; 48 staff; revenue THB 62 m/yr; tax ID `0105559000001` (fake); supplies Mekong Basket for 3 years, paid on time 34/36 invoices |
-| Buyer (debtor) | **Mekong Basket Retail PCL** (บริษัท แม่โขงบาสเก็ต รีเทล จำกัด (มหาชน)) | Large supermarket chain; revenue THB 18 bn/yr (so the 45-day rule applies); internal rating **A-**; tax ID `0107559000002` (fake) |
+| Seller (SME, wallet owner) | **Siam Fresh Pack Co., Ltd.** (บริษัท สยามเฟรชแพ็ค จำกัด) | Food-packaging maker, Samut Prakan; 48 staff; revenue THB 62 m/yr; tax ID `0105559000000` (fake); supplies Mekong Basket for 3 years, paid on time 34/36 invoices |
+| Buyer (debtor) | **Mekong Basket Retail PCL** (บริษัท แม่โขงบาสเก็ต รีเทล จำกัด (มหาชน)) | Large supermarket chain; revenue THB 18 bn/yr (so the 45-day rule applies); internal rating **A-**; tax ID `0107559000001` (fake) |
 | Lender A | **Andaman Factoring Co., Ltd.** | Quotes 70% advance at 0.90% per 30 days |
 | Lender B | **Isan Growth Credit Fund** | Quotes 65% advance at 0.75% per 30 days |
 | Platform | **ReceivableOS** | Charges seller 0.30% of face value |
