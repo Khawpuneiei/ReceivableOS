@@ -6,6 +6,7 @@ Everything here runs offline and is for training only. The service never imports
 pip install -r services/policy-ai/requirements-train.txt
 cd services/policy-ai
 PYTHONPATH=.:../.. python -m training.synth            # writes data/training/synthetic_invoices.csv
+PYTHONPATH=.:../.. python -m training.train            # writes model/ (generates the CSV first if it is missing)
 ```
 
 ## Synthetic invoices (`synth.py`, `synth_config.yaml`)
@@ -33,3 +34,18 @@ Rows carry the raw profile keys of brief section 5.3 (`supplier.*`, `buyer.*`), 
 | Runtime | well under a second |
 
 `data/` is git-ignored except `data/invoices/`, so this README lives here and not beside the CSV.
+
+## Features and the scorecard baseline (`train.py`, `train_config.yaml`)
+
+- **Features:** `app/features.py::build_features` is the one function training and serving share. It builds 16 features plus a 5-level sector one-hot (`other` is the baseline): tier, late rate, days late, confirmed, log relationship months, log supplier years, log invoices financed, historical default rate, dilution, on-time ratio, log amount, tenor, invoice age, amount / buyer limit, OCR confidence and fraud score. It is pure Python, so serving needs no numpy.
+- **Missing values:** a gap takes the median of the buyer's tier, from the train split. The medians are saved with the model. A buyer with no tier is scored with tier C's medians (`missing_tier`).
+- **Time split:** train cohorts 1-16 (13,290 rows), validation 17-20 (3,261), test 21-24 (3,449, drifted).
+- **Baseline:** standardised L2 logistic regression (C = 1). It is saved as a points scorecard in `model/scorecard.json` (600 points at 50:1 good:bad odds, PDO 20). The file holds the coefficients, means, scales, points per unit, tier medians and provenance hashes. It is plain JSON, read by `app/scorecard.py` without numpy or sklearn.
+- **Metrics:** `training/metrics.py` computes AUC, PR-AUC, Brier, ECE (10 equal-width bins) and KS, written to `model/metrics.json`.
+
+| LR scorecard | AUC | PR-AUC | Brier | ECE | KS |
+|---|---|---|---|---|---|
+| validation | 0.8397 | 0.3376 | 0.0319 | 0.0059 | 0.544 |
+| test | 0.8455 | 0.2906 | 0.0416 | 0.0158 | 0.560 |
+
+Targets: AUC at least 0.75 and ECE at most 0.03. The scorecard meets both.
