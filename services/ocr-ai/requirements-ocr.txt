@@ -1,0 +1,4 @@
+# Optional local scanned-image engine; model weights must be staged before offline use.
+-r requirements.txt
+paddlepaddle==3.3.0
+paddleocr==3.7.0

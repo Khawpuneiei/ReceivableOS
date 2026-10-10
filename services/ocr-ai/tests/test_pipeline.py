@@ -1,0 +1,230 @@
+"""Behavioral checks through real multipart uploads, with ephemeral observation state."""
+
+import json
+from pathlib import Path
+
+import pytest
+from datagen.generate import document_lines, render_pdf
+
+from app.history import ObservationStore
+from app.qwen import VisionCandidates
+from shared.schemas import ExtractedInvoice
+
+DATA = Path(__file__).resolve().parents[3] / "data" / "invoices"
+
+
+def upload(client, content, headers=None):
+    return client.post(
+        "/ocr/extract", files={"file": ("../../untrusted.pdf", content, "application/pdf")}, headers=headers
+    )
+
+
+def pair(client, name, language="en"):
+    return client.post(
+        "/ocr/verify",
+        files={
+            "invoice_file": (
+                "invoice.pdf",
+                (DATA / f"{language}_invoice_{name}.pdf").read_bytes(),
+                "application/pdf",
+            ),
+            "po_file": ("po.pdf", (DATA / f"{language}_po_clean.pdf").read_bytes(), "application/pdf"),
+        },
+    )
+
+
+@pytest.mark.parametrize("language", ["en", "th"])
+def test_actual_pdf_extract_and_shared_compatibility(client, language):
+    response = upload(client, (DATA / f"{language}_invoice_clean.pdf").read_bytes())
+    assert response.status_code == 200, response.text
+    value = response.json()
+    shared = ExtractedInvoice.model_validate(value)
+    assert str(shared.amount) == "749000.00"
+    assert shared.invoice_no == "SFP-INV-2026-0142"
+    assert value["fraud_score"] == 0 and not value["review_required"]
+    assert "100-200-3001" not in response.text and "1002003001" not in response.text
+    doc = value["document_evidence"]
+    refs = {r["ref_id"] for r in doc["evidence"]}
+    for field in ("document_number", "amount", "currency", "issue_date", "due_date"):
+        assert set(doc[field]["evidence_refs"]) <= refs
+        assert doc[field]["evidence_refs"]
+    assert all(r["page"] == 1 and r["bbox"] for r in doc["evidence"])
+    changed = upload(client, render_pdf(document_lines(invoice_no="NEW-91", total="800000.00"))).json()
+    assert changed["invoice_no"] == "NEW-91" and changed["amount"] == "800000.00"
+    assert changed["doc_hash"] != value["doc_hash"]
+    assert "math_inconsistent" in changed["fraud_flags"]
+
+
+@pytest.mark.parametrize("language", ["en", "th"])
+def test_independent_pair_provenance(client, language):
+    response = pair(client, "clean", language)
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["status"] == "matched"
+    assert data["invoice"]["doc_hash"] != data["purchase_order"]["doc_hash"]
+    invoice_refs = {r["ref_id"] for r in data["invoice"]["evidence"]}
+    po_refs = {r["ref_id"] for r in data["purchase_order"]["evidence"]}
+    for check in data["checks"]:
+        assert check["status"] == "match"
+        assert check["invoice_evidence_refs"] and check["po_evidence_refs"]
+        assert set(check["invoice_evidence_refs"]) <= invoice_refs
+        assert set(check["po_evidence_refs"]) <= po_refs
+    assert {"po_reference", "supplier.identity", "buyer.identity", "currency", "tax_basis", "amount"} <= {
+        c["field"] for c in data["checks"]
+    }
+
+
+@pytest.mark.parametrize(
+    "case, status, code",
+    [
+        ("amount_mismatch", "mismatch", "po_amount_mismatch"),
+        ("currency_mismatch", "mismatch", "po_currency_mismatch"),
+        ("incomplete", "review", None),
+        ("partial", "review", None),
+    ],
+)
+def test_pair_mismatch_and_unknown(client, case, status, code):
+    data = pair(client, case).json()
+    assert data["status"] == status
+    if code:
+        assert code in {f["code"] for f in data["fraud_details"]}
+    if case == "currency_mismatch":
+        assert next(c for c in data["checks"] if c["field"] == "amount")["status"] == "unknown"
+    if case == "incomplete":
+        assert data["compatible_invoice"] is None
+        assert data["invoice"]["due_date"]["value"] is None
+        assert upload(client, (DATA / "en_invoice_incomplete.pdf").read_bytes()).status_code == 422
+    if case == "partial":
+        assert any(c["rule_code"] == "PARTIAL_ALLOCATION_EVIDENCE_REQUIRED" for c in data["checks"])
+
+
+def test_duplicate_bytes_semantics_retry_and_persistence(client, monkeypatch):
+    content = (DATA / "en_invoice_clean.pdf").read_bytes()
+    first = upload(client, content, {"Idempotency-Key": "one"}).json()
+    retry = upload(client, content, {"Idempotency-Key": "one"}).json()
+    assert first["invoice_id"] == retry["invoice_id"] and not retry["fraud_flags"]
+    second = upload(client, content).json()
+    assert {"duplicate_invoice_hash", "duplicate_fingerprint"} <= set(second["fraud_flags"])
+    rerender = upload(client, (DATA / "en_invoice_duplicate_render.pdf").read_bytes()).json()
+    assert "duplicate_fingerprint" in rerender["fraud_flags"]
+    assert "duplicate_invoice_hash" not in rerender["fraud_flags"]
+    assert first["semantic_fingerprint"] == rerender["semantic_fingerprint"]
+    assert (
+        upload(client, render_pdf(document_lines(invoice_no="OTHER")), {"Idempotency-Key": "one"}).status_code
+        == 409
+    )
+    import os
+
+    store = ObservationStore(Path(os.environ["OCR_STATE_PATH"]))
+    assert len(store.observations()) == 3
+    payload = json.dumps([v.model_dump(mode="json") for _, v in store.observations()])
+    assert "100-200-3001" not in payload and "1002003001" not in payload
+    assert store.path.stat().st_mode & 0o777 == 0o600
+    monkeypatch.delenv("FINGERPRINT_HMAC_KEY")
+    assert upload(client, content).status_code == 503
+
+
+@pytest.mark.parametrize(
+    "case, flagged", [("visible_injection", True), ("hidden_injection", True), ("benign_note", False)]
+)
+def test_injected_twins_preserve_fields_and_have_no_authority(client, case, flagged):
+    data = upload(client, (DATA / f"en_invoice_{case}.pdf").read_bytes()).json()
+    assert data["invoice_no"] == "SFP-INV-2026-0142" and data["amount"] == "749000.00"
+    assert bool(data["injection_flags"]) is flagged
+    assert data["fraud_score"] == 0
+    assert data["review_required"] is flagged
+
+
+def test_unicode_names_and_unknown_jurisdiction(client):
+    font = DATA / "fonts" / "NotoSansThai-Regular.ttf"
+    content = render_pdf(document_lines(supplier="บริษัท สยาม"), font_path=font)
+    value = upload(client, content).json()
+    assert value["supplier"]["name"] == "บริษัท สยาม"
+    lines = document_lines(supplier_id="DE-AB-99")
+    lines = [
+        line.replace("Supplier Country: TH", "Supplier Country: DE").replace(
+            "Supplier ID Scheme: TAX_ID", "Supplier ID Scheme: VAT"
+        )
+        for line in lines
+    ]
+    result = upload(client, render_pdf(lines)).json()
+    assert not any(f.startswith("TAX_ID_INVALID:supplier") for f in result["validation_flags"])
+    assert "LEGACY_FINGERPRINT_SCOPE_REQUIRES_REVIEW" in result["validation_flags"]
+
+
+def test_qwen_candidates_cannot_replace_grounded_values(client, monkeypatch):
+    monkeypatch.setenv("OCR_QWEN_ENABLED", "1")
+    monkeypatch.setattr(
+        "app.pipeline.read_candidates",
+        lambda *_: VisionCandidates(
+            **{
+                name: False if name == "instructions_found" else "1.00" if name == "amount" else None
+                for name in VisionCandidates.model_fields
+            }
+        ),
+    )
+    value = upload(client, (DATA / "en_invoice_clean.pdf").read_bytes()).json()
+    assert value["amount"] == "749000.00"
+    assert "QWEN_DISAGREEMENT:amount" in value["validation_flags"]
+    monkeypatch.setattr("app.pipeline.read_candidates", lambda *_: None)
+    value = upload(client, render_pdf(document_lines(invoice_no="Q-92"))).json()
+    assert "QWEN_UNAVAILABLE_OR_INVALID" in value["validation_flags"]
+
+
+def test_account_cannot_leak_through_other_fields(client):
+    lines = document_lines(supplier="Pay 100-200-3001 now")
+    response = upload(client, render_pdf(lines))
+    assert response.status_code == 422
+    assert "100-200-3001" not in response.text
+
+
+def test_raw_bank_secret_required_only_for_scoped_account(client, monkeypatch):
+    monkeypatch.delenv("BANK_TOKEN_HMAC_KEY")
+    assert upload(client, (DATA / "en_invoice_clean.pdf").read_bytes()).status_code == 503
+
+
+def test_invalid_key_returns_safe_error(client):
+    assert (
+        upload(
+            client, (DATA / "en_invoice_clean.pdf").read_bytes(), {"Idempotency-Key": "x" * 201}
+        ).status_code
+        == 422
+    )
+
+
+@pytest.mark.parametrize("language", ["en", "th"])
+def test_graph_explanations_from_actual_uploads(client, language, monkeypatch, tmp_path):
+    clean = upload(client, (DATA / f"{language}_invoice_clean.pdf").read_bytes()).json()
+    shared = upload(client, (DATA / f"{language}_invoice_shared_account.pdf").read_bytes()).json()
+    assert not clean["fraud_flags"]
+    assert shared["fraud_flags"] == ["shared_bank_token"]
+    assert shared["fraud_score"] == 0.15 and shared["review_required"]
+    finding = shared["fraud_details"][0]
+    assert len(finding["path"]) == 5 and finding["evidence_refs"]
+    assert all("100-200-3001" not in node for node in finding["path"])
+    monkeypatch.setenv("OCR_STATE_PATH", str(tmp_path / "cluster.sqlite"))
+    first = pair(client, "cluster_math", language).json()
+    second = pair(client, "cluster_currency", language).json()
+    assert "suspicious_cluster" not in {f["code"] for f in first["fraud_details"]}
+    assert {"shared_bank_token", "suspicious_cluster"} <= {f["code"] for f in second["fraud_details"]}
+
+
+def test_fraud_evidence_locations_resolve_both_current_and_prior_sources(client):
+    first = upload(client, (DATA / "en_invoice_clean.pdf").read_bytes()).json()
+    second = upload(client, (DATA / "en_invoice_duplicate_render.pdf").read_bytes()).json()
+    finding = next(f for f in second["fraud_details"] if f["code"] == "duplicate_fingerprint")
+    assert {ref["doc_hash"] for ref in finding["evidence"]} == {first["doc_hash"], second["doc_hash"]}
+    assert set(finding["evidence_refs"]) == {ref["ref_id"] for ref in finding["evidence"]}
+
+
+def test_line_unknown_is_review_and_bank_scope_is_not_inferred(client):
+    lines = [
+        line.replace("700000.00", "unknown") if line.startswith("Item:") else line
+        for line in document_lines()
+    ]
+    response = upload(client, render_pdf(lines))
+    assert response.status_code == 200
+    assert "LINE_EVIDENCE_UNRESOLVED:0" in response.json()["validation_flags"]
+    lines = [line for line in document_lines() if not line.startswith("Bank Country:")]
+    data = upload(client, render_pdf(lines)).json()
+    assert "BANK_SCOPE_UNKNOWN" in data["validation_flags"]
