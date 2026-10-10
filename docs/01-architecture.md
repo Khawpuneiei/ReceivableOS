@@ -222,7 +222,7 @@ For the stage, the wallet service has a demo-only flag `skip_offchain_checks=tru
 
 **Alternative: Base Sepolia** (the plan in P's design notes; another public Topic F entry uses it). Gains: judges can click a public explorer link, Safe/4337 become available, no node to run. Cost: departs from the organiser's ecosystem. Because contracts are pinned to solc 0.8.11 and all chain calls go through the ledger interface, switching later is a config change plus one backend file, so the three engineers are not blocked either way.
 
-What FISCO needs on day 1: one person runs `build_chain.sh` for a local 4-node chain (or uses a provided test chain), creates the owner, agent, risk-oracle and lender accounts, and writes addresses to `services/agent-wallet/contracts/deployments.json`. Note: for the submission, a hash from a local chain is only verifiable through our screenshots and receipts, so `docs/submission/tx-evidence.md` must include the receipt JSON for each tx.
+What FISCO needs on day 1: one person runs `build_chain.sh` for a local 4-node chain (or uses a provided test chain), creates the owner, agent, risk-oracle and lender accounts, and writes addresses to `services/agent-wallet/contracts/deployments.json`. Note: for the submission, a hash from a local chain is only verifiable through our screenshots and receipts, so `pitch/tx-evidence.md` must include the receipt JSON for each tx.
 
 ---
 
@@ -325,6 +325,8 @@ Skeleton `PolicyDecision` has `decision, advance_rate, limit, fee_rate, risk_sco
 
 Mandate endpoints (Policy AI owns compile, Agent Wallet owns activation on-chain):
 - `POST /policy/mandate/compile` `{ "text": "never above 70% advance..." }` → `{ "mandate": {max_ltv, max_apr, max_predicted_default, max_amount_per_tx, daily_cap, allowed_currency, require_kyb, duplicate_policy, human_review_above, expires_at}, "warnings": [] }`. Values outside hard bounds (for example max_apr > 0.30) are rejected, never clamped silently. Demo mandate (from `docs/02`): `max_ltv` 0.70, `max_apr` 0.12, `max_predicted_default` 0.05, `human_review_above` THB 837,500.
+
+  How the wallet reads a mandate (Agent Wallet thread, `docs/03`): keys `max_advance_rate`, `max_apr`, `max_pd`, `human_review_above` (inclusive: review at or above), `expires_at` (optional), `max_amount_per_tx`, `daily_cap`; it accepts the compiler's `max_ltv` and `max_predicted_default` as aliases of `max_advance_rate` and `max_pd`, so the two services interoperate without a rename. Wallet env defaults when the mandate omits them: THB 1,500,000 per transaction, THB 3,000,000 per day, review at or above THB 837,500.
 - `GET /policy/mandate/{mandate_id}`.
 
 ### 5.3 Agent Wallet · `POST /wallet/*`
@@ -335,6 +337,7 @@ Mandate endpoints (Policy AI owns compile, Agent Wallet owns activation on-chain
 - `POST /wallet/approve` `{idempotency_key, decision_id, decision_hash, invoice_fingerprint, limit, fee_rate, model_version, policy_version}` → tx result (TX‑2). Signed by the risk-oracle key, not the agent key.
 - `POST /wallet/settle` `{idempotency_key, invoice_id, invoice_fingerprint, amount_paid}` → tx result (TX‑5).
 - `POST /wallet/mandate/activate` `{mandate_id, mandate}` → tx result (owner key; sets on-chain guard parameters).
+- `POST /wallet/confirm/{tx_id}` → tx result: the human owner confirms a transaction that came back `pending_approval` (named `confirm` because `approve` is the credit-approval step above).
 - `GET /wallet/audit/{invoice_id}` → list of tx results for that invoice.
 
 `POST /wallet/execute` body, skeleton fields plus **[proposed]** `idempotency_key, decision_id, decision_hash, invoice_fingerprint, apr, lender_id, mandate_id`. The skeleton nests the whole `decision` object; keep that and add the rest alongside:
@@ -368,7 +371,7 @@ Tx result (all write endpoints; skeleton `WalletResult` has `tx_id, status, chai
   "audit_ref": "aud_01J9Z6..."
 }
 ```
-`status` ∈ `executed | blocked | pending_approval | failed` (scope's set; the skeleton's `TxStatus` has `rejected` instead of `blocked` and lacks `failed`, so the contract PR should align it to scope). `blocked` means a guard said no (off-chain or on-chain); `block_reason` carries the guard code (`AprAboveMandate`, `AmountAboveLimit`, `TargetNotAllowed`, `MandateExpired`, `Paused`, `DuplicateReceivable`, `NotApproved`, `InjectionSuspected`). `chain_ref` is present for on-chain reverts too. `pending_approval` when amount > `human_review_above`; `approvals_required` says how many owner signatures are needed.
+`status` ∈ `executed | blocked | pending_approval | failed` (scope's set; the skeleton's `TxStatus` has `rejected` instead of `blocked` and lacks `failed`, so the contract PR should align it to scope). `blocked` means a guard said no (off-chain or on-chain); `block_reason` carries the guard code (`AprAboveMandate`, `AmountAboveLimit`, `TargetNotAllowed`, `MandateExpired`, `Paused`, `DuplicateReceivable`, `NotApproved`, `InjectionSuspected`). `chain_ref` is present for on-chain reverts too. `pending_approval` when amount ≥ `human_review_above` (inclusive); `approvals_required` says how many owner confirmations are needed, given through `POST /wallet/confirm/{tx_id}`.
 
 ### 5.4 Orchestrator (PM)
 
@@ -406,7 +409,6 @@ ReceivableOS/
 │   ├── 03-agent-wallet.md
 │   ├── 04-policy-ai.md
 │   ├── 05-ocr-ai.md
-│   └── submission/             + # PM: security-self-assessment.md, tx-evidence.md, deck, video link
 ├── shared/
 │   ├── schemas.py                # API contract (PM owns; change via contract: PR)
 │   ├── money.py                  # decimal string <-> token units, fee-per-30-days <-> APR
@@ -419,6 +421,7 @@ ReceivableOS/
 │   │   └── contracts/            # Solidity + forge tests + deployments.json + README (interface doc, call screenshots)
 │   └── orchestrator/             # PM: app/ (/flow/run, /flow/repay), run_demo.py (CLI driver), samples/profiles.json, lenders.yaml+, port 8000
 ├── ui/                         + # Policy AI eng: Streamlit demo screen, port 3000
+├── pitch/                      + # PM + Policy AI eng + Finance: deck, video, business plan, tx-evidence.md, security-self-assessment.md
 └── data/training/              + # synthetic PD training set (Policy + Finance)
 ```
 ---
@@ -432,10 +435,10 @@ ReceivableOS/
 | 10 Oct pm | Stub `/ocr/extract` returning fixtures; pdfplumber path for text PDFs | Stub `/policy/decide`; rule-based decision from profiles | Contracts `MockStable`, `Registry`; mock ledger; start FISCO 4-node chain | Contract PR to `shared/schemas.py` + fixtures merged first; orchestrator skeleton | 3 demo invoices, 5 supplier + 5 buyer profiles, numbers for pitch |
 | 11 Oct am | Real extraction + `doc_hash` + `invoice_fingerprint` + duplicate check | Synthetic dataset (with Finance), PD model v1 + calibration, UI v1 | `Vault`, `PolicyGuard`, `AgentWallet` + forge tests for every revert | Orchestrator runs end to end on stubs; recheck demo data | Validate realistic advance rates, APRs, PD ranges |
 | 11 Oct pm | Injection detector + fraud flags; attack fixtures A1, A2 | Hard rules, reasons, `decision_hash`; mandate compiler | Deploy to FISCO; `fisco` backend; register/approve/execute/settle endpoints | First full run on FISCO with real hashes | Pain-point slide + sources |
-| 12 Oct am | Image fallback; accuracy check on demo set | Metrics (AUROC, Brier) in README; UI attack buttons A1–A6 and audit view | Demo-mode bypass for on-chain revert; Base Sepolia deploy only if P chose it | Wire UI to orchestrator; spending-limit, approval, audit and KYC/privacy notes | Review all numbers on screen |
-| 12 Oct pm | Freeze, README | Freeze, README | Freeze, contracts README with console / python-sdk call screenshots | Tx evidence page, security self-assessment, record backup demo video | Deck finance section |
+| 12 Oct, until 12:00 freeze | Image fallback; accuracy check on demo set | Metrics (AUROC, Brier) in README; UI attack buttons A1–A6 and audit view | Demo-mode bypass for on-chain revert; Base Sepolia deploy only if P chose it | Wire UI to orchestrator; spending-limit, approval, audit and KYC/privacy notes | Review all numbers on screen |
+| 12 Oct 12:00–18:00 (after freeze) | README only | README only | Contracts README with console / python-sdk call screenshots | Tx evidence page, security self-assessment, 3-minute video, deck (`pitch/`) | Deck finance section |
 
-Freeze rule: after 12 Oct 18:00 only bug fixes merge.
+Freeze rule (from `docs/00-scope.md`): code freeze is **12 Oct 12:00**, tagged `v0.1-freeze`; after that only bug fixes P approves merge, and the afternoon is for the submission pack.
 
 ---
 
@@ -447,7 +450,7 @@ Freeze rule: after 12 Oct 18:00 only bug fixes merge.
 4. With `LEDGER_MODE=mock`, the same run passes with no chain running.
 5. Every service passes its own tests; contract tests cover every revert in §5.5.
 6. Every request/response in the running system validates against `shared/schemas.py`.
-7. `docs/submission/tx-evidence.md` lists every tx hash with what it proves.
+7. `pitch/tx-evidence.md` lists every tx hash with what it proves.
 
 ---
 
