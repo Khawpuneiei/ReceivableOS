@@ -108,7 +108,7 @@ flowchart LR
 | `services/orchestrator` | PM | Runs the flow state machine, calls the three services in order, holds mock lenders and selects the offer, stores the audit trail. |
 | `ui/` | Policy AI eng (design and build), PM wires it to the orchestrator | One-page demo on port 3000: upload, evidence panel, decision and reasons, offers, tx hashes with receipts (WeBASE block-browser link if we run WeBASE), attack buttons. |
 | `shared/` | PM | Pydantic schemas and JSON fixtures that every service imports, so contracts cannot drift. |
-| `data/`, `integration/samples/` | Each engineer for their module, P rechecks | OCR: demo invoices, injection and fraud cases. Policy: profiles and the PD training set. Agent Wallet: attack transactions. Scenario numbers come from Finance (`docs/02`). |
+| `data/`, `services/orchestrator/samples/` | Each engineer for their module, P rechecks | OCR: demo invoices, injection and fraud cases. Policy: profiles and the PD training set. Agent Wallet: attack transactions. Scenario numbers come from Finance (`docs/02`). |
 
 ### 3.2 On-chain versus off-chain
 
@@ -372,7 +372,7 @@ Tx result (all write endpoints; skeleton `WalletResult` has `tx_id, status, chai
 
 ### 5.4 Orchestrator (PM)
 
-From scope: `POST /flow/run` (multipart `file`, `mandate_id`, plus `supplier_id`, `buyer_id`) runs the pipeline and returns `{flow_id, state, steps:[...]}` with every intermediate result for the UI; `POST /flow/repay` `{flow_id, amount_paid}` simulates "buyer paid" and triggers settlement. **[proposed]** `GET /flow/{flow_id}` and `POST /flow/attack/{case}` (DEMO_MODE only, replays A1–A6). `integration/run_demo.py` from the skeleton stays as the command-line driver of the same flow.
+From scope: `POST /flow/run` (multipart `file`, `mandate_id`, plus `supplier_id`, `buyer_id`) runs the pipeline and returns `{flow_id, state, steps:[...]}` with every intermediate result for the UI; `POST /flow/repay` `{flow_id, amount_paid}` simulates "buyer paid" and triggers settlement. **[proposed]** `GET /flow/{flow_id}` and `POST /flow/attack/{case}` (DEMO_MODE only, replays A1–A6). `services/orchestrator/run_demo.py` from the skeleton stays as the command-line driver of the same flow; demo profiles live in `services/orchestrator/samples/profiles.json`.
 - Mock lenders: config file `services/orchestrator/lenders.yaml` with 2 lenders (`lender_a`: 70% at 10.95% APR, `lender_b`: 65% at 9.13% APR, numbers from `docs/02`). Selection: maximise advance subject to `apr ≤ mandate.max_apr` and `advance ≤ decision.limit`; tie → lower APR.
 
 ### 5.5 Smart contracts (Agent Wallet eng)
@@ -409,7 +409,7 @@ ReceivableOS/
 │   └── submission/             + # PM: security-self-assessment.md, tx-evidence.md, deck, video link
 ├── shared/
 │   ├── schemas.py                # API contract (PM owns; change via contract: PR)
-│   ├── money.py                + # decimal string <-> token units
+│   ├── money.py                  # decimal string <-> token units, fee-per-30-days <-> APR
 │   ├── llm_client.py           + # thin pluggable LLM client
 │   └── fixtures/               + # canonical JSON per model + attack cases A1-A6
 ├── services/
@@ -417,10 +417,7 @@ ReceivableOS/
 │   ├── policy-ai/     app/ models/+ tests/ fixtures/+ CLAUDE.md README.md
 │   ├── agent-wallet/  app/ ledger/+ (fisco.py, mock.py) tests/ CLAUDE.md README.md
 │   │   └── contracts/            # Solidity + forge tests + deployments.json + README (interface doc, call screenshots)
-│   └── orchestrator/           + # PM: /flow/run, /flow/repay, lenders.yaml, port 8000
-├── integration/
-│   ├── run_demo.py               # CLI driver of the full flow
-│   └── samples/                  # demo invoices, profiles, attack cases (Finance + OCR)
+│   └── orchestrator/             # PM: app/ (/flow/run, /flow/repay), run_demo.py (CLI driver), samples/profiles.json, lenders.yaml+, port 8000
 ├── ui/                         + # Policy AI eng: Streamlit demo screen, port 3000
 └── data/training/              + # synthetic PD training set (Policy + Finance)
 ```
@@ -444,7 +441,7 @@ Freeze rule: after 12 Oct 18:00 only bug fixes merge.
 
 ## Part 8 · Acceptance criteria (definition of done for 12 Oct)
 
-1. All four services start (commands in the root README); `/health` is green for each; `python integration/run_demo.py` completes.
+1. All four services start (commands in the root README); `/health` is green for each; `python services/orchestrator/run_demo.py` completes.
 2. The clean demo invoice runs from upload to settled with `LEDGER_MODE=fisco` and produces TX‑1 to TX‑5 hashes with receipts.
 3. Attacks A1–A6 each end in `blocked` or `reject`/`review` with the expected code, and at least A3 and A4 also show an on-chain reverted tx hash.
 4. With `LEDGER_MODE=mock`, the same run passes with no chain running.
