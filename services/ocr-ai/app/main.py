@@ -5,6 +5,8 @@ Replace the body of `extract` with the real pipeline.
 """
 
 import hashlib
+import hmac
+import os
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -27,7 +29,8 @@ async def extract(file: UploadFile = File(...)) -> ExtractedInvoice:
     today = date.today()
     # canonical content: supplier tax id | buyer tax id | invoice no | amount | currency | issue date
     canonical = f"0105559000000|0107559000001|SFP-2026-0101|749000.00|THB|{today.isoformat()}"
-    fingerprint = hashlib.sha256(canonical.encode()).hexdigest()
+    secret = os.getenv("FINGERPRINT_SECRET", "dev-only-secret").encode()
+    fingerprint = hmac.new(secret, canonical.encode(), hashlib.sha256).hexdigest()
     return ExtractedInvoice(
         invoice_id=f"inv_{digest[:12]}",
         supplier=Party(name="Siam Fresh Pack Co., Ltd.", tax_id="0105559000000"),
@@ -43,5 +46,5 @@ async def extract(file: UploadFile = File(...)) -> ExtractedInvoice:
         fraud_score=0.0,
         fraud_flags=["stub"],
         doc_hash=f"sha256:{digest}",
-        invoice_fingerprint=f"sha256:{fingerprint}",
+        invoice_fingerprint=f"hmac-sha256:{fingerprint}",
     )
