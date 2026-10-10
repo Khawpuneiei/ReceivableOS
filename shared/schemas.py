@@ -148,7 +148,7 @@ class WalletSettleRequest(BaseModel):
 
 
 class MandateActivateRequest(BaseModel):
-    """Body of POST /wallet/mandate/activate (owner token). Mandate shape: policy-ai /policy/mandate/compile."""
+    """Body of POST /wallet/mandate/activate (owner token). Mandate shape: /policy/mandate/compile."""
 
     mandate_id: str
     mandate: dict[str, Any]
