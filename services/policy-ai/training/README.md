@@ -48,4 +48,24 @@ Rows carry the raw profile keys of brief section 5.3 (`supplier.*`, `buyer.*`), 
 | validation | 0.8397 | 0.3376 | 0.0319 | 0.0059 | 0.544 |
 | test | 0.8455 | 0.2906 | 0.0416 | 0.0158 | 0.560 |
 
-Targets: AUC at least 0.75 and ECE at most 0.03. The scorecard meets both.
+
+## Main model: calibrated LightGBM
+
+- **Model:** LightGBM (`num_leaves` 15, `max_depth` 4, `min_data_in_leaf` 50, learning rate 0.03). Monotone constraints follow `app/features.MONOTONE` (+1 for tier, late rate, days late, historical default, dilution, amount, tenor, age, amount/limit, fraud; -1 for confirmed, relationship, years, invoices financed, on-time ratio, OCR confidence; 0 for sector). Early stopping on validation picked 69 trees.
+- **Calibration:** Platt and isotonic are both fitted on the validation margin, and the better validation Brier is kept. Isotonic won (0.03107 vs 0.03207).
+- **Artefacts, no pickle:** `model/lgbm.txt` (LightGBM text format, 110 KB) and `model/calibrator.json` (isotonic breakpoints). Explanations at serve time come from LightGBM's own `pred_contrib` (TreeSHAP), so `shap` is not needed.
+- **Selection:** the model with the lower **test** Brier is served (AUC breaks a tie). `model/model_card.json` records the choice. `model/metrics.json` and `model/reliability.png` show both models side by side.
+
+| Test split (cohorts 21-24, drifted) | AUC | PR-AUC | Brier | ECE (10 bins) | KS | Meets targets |
+|---|---|---|---|---|---|---|
+| LR scorecard `credit-lr-2026-10-10.1` | **0.8455** | **0.2906** | **0.04157** | 0.0158 | **0.560** | yes |
+| LightGBM + isotonic `credit-lgbm-2026-10-10.1` | 0.8428 | 0.2843 | 0.04207 | **0.0133** | 0.547 | yes |
+
+Targets: AUC at least 0.75 and ECE at most 0.03. **Selected: the LR scorecard** (lower test Brier). That is expected here: the labels come from a logistic model, so a well-specified LR is hard to beat.
+
+**Low-PD behaviour:**
+- With only ~70 shallow trees and few tier-A defaults, LightGBM is coarse at the bottom of the scale. The isotonic step there is 0.0076.
+- So the demo invoice would price at a PD of about 0.0076 under LightGBM, against the latent truth of about 0.0028. The LR scorecard gives 0.0020.
+- Brier on the test split barely sees this, because it is dominated by the riskier invoices. Check the demo pricing windows whenever the model is retrained.
+
+Re-running `training.train` with the same CSV gives byte-identical artefacts.

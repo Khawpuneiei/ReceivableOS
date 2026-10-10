@@ -1,0 +1,176 @@
+{
+  "version": "credit-lr-2026-10-10.1",
+  "selected": "lr",
+  "versions": {
+    "lr": "credit-lr-2026-10-10.1",
+    "lgbm": "credit-lgbm-2026-10-10.1"
+  },
+  "artefacts": {
+    "lr": [
+      "scorecard.json"
+    ],
+    "lgbm": [
+      "lgbm.txt",
+      "calibrator.json",
+      "scorecard.json"
+    ]
+  },
+  "target": "buyer does not pay within 60 days after the due date, or dilution above 20% (synthetic)",
+  "features": [
+    "buyer_tier_ord",
+    "buyer_late_payment_rate",
+    "buyer_avg_days_late",
+    "buyer_confirmed",
+    "log1p_relationship_months",
+    "log1p_supplier_years_in_business",
+    "log1p_supplier_invoices_financed_count",
+    "supplier_historical_default_rate",
+    "supplier_dilution_rate",
+    "supplier_on_time_ratio",
+    "log_amount",
+    "tenor_days",
+    "invoice_age_days",
+    "amount_to_buyer_limit",
+    "ocr_confidence",
+    "fraud_score",
+    "sector_retail",
+    "sector_manufacturing",
+    "sector_food",
+    "sector_construction",
+    "sector_logistics"
+  ],
+  "monotone_constraints": {
+    "buyer_tier_ord": 1,
+    "buyer_late_payment_rate": 1,
+    "buyer_avg_days_late": 1,
+    "buyer_confirmed": -1,
+    "log1p_relationship_months": -1,
+    "log1p_supplier_years_in_business": -1,
+    "log1p_supplier_invoices_financed_count": -1,
+    "supplier_historical_default_rate": 1,
+    "supplier_dilution_rate": 1,
+    "supplier_on_time_ratio": -1,
+    "log_amount": 1,
+    "tenor_days": 1,
+    "invoice_age_days": 1,
+    "amount_to_buyer_limit": 1,
+    "ocr_confidence": -1,
+    "fraud_score": 1,
+    "sector_retail": 0,
+    "sector_manufacturing": 0,
+    "sector_food": 0,
+    "sector_construction": 0,
+    "sector_logistics": 0
+  },
+  "medians": {
+    "missing_tier": "C",
+    "tiers": {
+      "A": {
+        "buyer_late_payment_rate": 0.0222,
+        "buyer_avg_days_late": 1.1,
+        "log1p_supplier_years_in_business": 1.94591,
+        "log1p_supplier_invoices_financed_count": 2.944439,
+        "supplier_historical_default_rate": 0.0,
+        "supplier_dilution_rate": 0.0365,
+        "supplier_on_time_ratio": 0.948718,
+        "amount_to_buyer_limit": 0.028544
+      },
+      "B": {
+        "buyer_late_payment_rate": 0.0752,
+        "buyer_avg_days_late": 3.9,
+        "log1p_supplier_years_in_business": 2.079442,
+        "log1p_supplier_invoices_financed_count": 2.995732,
+        "supplier_historical_default_rate": 0.0,
+        "supplier_dilution_rate": 0.0367,
+        "supplier_on_time_ratio": 0.948718,
+        "amount_to_buyer_limit": 0.046254
+      },
+      "C": {
+        "buyer_late_payment_rate": 0.1417,
+        "buyer_avg_days_late": 7.3,
+        "log1p_supplier_years_in_business": 2.079442,
+        "log1p_supplier_invoices_financed_count": 2.995732,
+        "supplier_historical_default_rate": 0.0,
+        "supplier_dilution_rate": 0.0376,
+        "supplier_on_time_ratio": 0.95,
+        "amount_to_buyer_limit": 0.116583
+      },
+      "D": {
+        "buyer_late_payment_rate": 0.2924,
+        "buyer_avg_days_late": 13.8,
+        "log1p_supplier_years_in_business": 2.079442,
+        "log1p_supplier_invoices_financed_count": 3.091042,
+        "supplier_historical_default_rate": 0.0,
+        "supplier_dilution_rate": 0.0355,
+        "supplier_on_time_ratio": 0.948718,
+        "amount_to_buyer_limit": 0.229566
+      }
+    }
+  },
+  "lightgbm": {
+    "best_iteration": 69,
+    "params": {
+      "objective": "binary",
+      "learning_rate": 0.03,
+      "num_leaves": 15,
+      "max_depth": 4,
+      "min_data_in_leaf": 50,
+      "lambda_l2": 1.0,
+      "feature_fraction": 0.9,
+      "monotone_constraints_method": "advanced",
+      "seed": 7,
+      "deterministic": true,
+      "num_threads": 1,
+      "verbose": -1
+    }
+  },
+  "calibration": {
+    "method": "isotonic",
+    "validation_brier": {
+      "platt": 0.032065,
+      "isotonic": 0.031073
+    }
+  },
+  "metrics": {
+    "lr": {
+      "rows": 3449,
+      "base_rate": 0.050739,
+      "auc": 0.8455,
+      "pr_auc": 0.2906,
+      "brier": 0.041567,
+      "ece": 0.015812,
+      "ks": 0.5601
+    },
+    "lgbm": {
+      "rows": 3449,
+      "base_rate": 0.050739,
+      "auc": 0.8428,
+      "pr_auc": 0.2843,
+      "brier": 0.042071,
+      "ece": 0.013272,
+      "ks": 0.5466
+    }
+  },
+  "meets_targets": {
+    "lr": true,
+    "lgbm": true
+  },
+  "provenance": {
+    "data": "synthetic_invoices.csv",
+    "data_sha256": "633706e5f84b5767c34fbbc7357d03de2482873f307ba145388a0ef839aea71c",
+    "synth_config_sha256": "b62245ef08457fa67b7b0b8fcc2bd8cbb4f72715637bfd015a5360222423a9e3",
+    "train_config_sha256": "1caf16b9b3b87ed0188ebea3fcf3ac4cf83252e3ccf8eb63d4de3fd66879f8d5",
+    "seed": 20261010,
+    "rows": {
+      "train": 13290,
+      "validation": 3261,
+      "test": 3449
+    },
+    "base_rate": 0.04165
+  },
+  "limitations": [
+    "labels are synthetic, drawn from a known latent model (training/README.md)",
+    "with recourse assumed; no real bureau or KYC data",
+    "few tier-A defaults in training, so low PDs carry wide estimation error"
+  ]
+}

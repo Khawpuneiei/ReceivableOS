@@ -5,7 +5,10 @@ Run from services/policy-ai:  PYTHONPATH=.:../.. python -m training.train [--dat
 Features come from app/features.py, the same function serving uses. Time split by cohort: train 1-16,
 validation 17-20, test 21-24 (training/train_config.yaml). Missing values take the train split's tier
 medians, which are saved with the model. Baseline: standardised L2 logistic regression, saved as a points
-scorecard in model/scorecard.json (plain JSON, no pickle).
+scorecard in model/scorecard.json (plain JSON, no pickle). Main model: LightGBM with monotone constraints,
+saved in LightGBM's text format (model/lgbm.txt) with a Platt or isotonic calibrator fitted on the validation
+split (model/calibrator.json). The model with the better test Brier is selected in model/model_card.json;
+metrics.json and reliability.png report both side by side.
 """
 
 from __future__ import annotations
@@ -23,7 +26,7 @@ import yaml
 from sklearn.linear_model import LogisticRegression
 
 from app import scorecard
-from app.features import FEATURES, IMPUTABLE, build_features
+from app.features import FEATURES, IMPUTABLE, MONOTONE, build_features
 from app.profiles import TIERS, normalise_buyer, normalise_supplier
 from training import metrics, synth
 
@@ -122,6 +125,80 @@ def _write_json(path: Path, obj: dict) -> None:
     path.write_text(json.dumps(obj, indent=2, sort_keys=False) + "\n", encoding="utf-8")
 
 
+def fit_lightgbm(x: np.ndarray, y: np.ndarray, masks: dict, cfg: dict):
+    """LightGBM with monotone constraints, early-stopped on the validation split."""
+    import lightgbm as lgb
+
+    lgb_cfg = cfg["lightgbm"]
+    params = {**lgb_cfg["params"], "monotone_constraints": [MONOTONE[f] for f in FEATURES]}
+    train_set = lgb.Dataset(x[masks["train"]], y[masks["train"]], feature_name=list(FEATURES))
+    valid_set = lgb.Dataset(x[masks["validation"]], y[masks["validation"]], reference=train_set)
+    booster = lgb.train(
+        params,
+        train_set,
+        num_boost_round=lgb_cfg["max_rounds"],
+        valid_sets=[valid_set],
+        callbacks=[lgb.early_stopping(lgb_cfg["early_stopping_rounds"], verbose=False)],
+    )
+    return booster
+
+
+def fit_calibrators(margin: np.ndarray, y: np.ndarray, cfg: dict) -> dict[str, dict]:
+    """Platt (a x margin + b) and isotonic (step function over the margin), both as plain JSON."""
+    from sklearn.isotonic import IsotonicRegression
+
+    out = {}
+    if "platt" in cfg["calibration"]["methods"]:
+        platt = LogisticRegression(C=1e6, max_iter=1000).fit(margin.reshape(-1, 1), y)
+        out["platt"] = {"method": "platt", "a": float(platt.coef_[0][0]), "b": float(platt.intercept_[0])}
+    if "isotonic" in cfg["calibration"]["methods"]:
+        floor = cfg["calibration"]["min_pd"]
+        iso = IsotonicRegression(out_of_bounds="clip", y_min=floor, y_max=1 - floor).fit(margin, y)
+        out["isotonic"] = {
+            "method": "isotonic",
+            "x": [float(v) for v in iso.X_thresholds_],
+            "y": [float(v) for v in iso.y_thresholds_],
+        }
+    return out
+
+
+def calibrate(calibrator: dict, margin: np.ndarray) -> np.ndarray:
+    """Same maths as app/model.py, vectorised."""
+    if calibrator["method"] == "platt":
+        return 1 / (1 + np.exp(-(calibrator["a"] * margin + calibrator["b"])))
+    return np.interp(margin, calibrator["x"], calibrator["y"])
+
+
+def reliability_plot(path: Path, y: np.ndarray, curves: dict[str, np.ndarray], bins: int) -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=(5, 5), dpi=100)
+    top = 0.0
+    for name, p in curves.items():
+        order = np.argsort(p, kind="mergesort")
+        chunks = np.array_split(order, bins)  # equal-count bins: most PDs sit near zero
+        xs = [float(p[c].mean()) for c in chunks]
+        ys = [float(y[c].mean()) for c in chunks]
+        ax.plot(xs, ys, marker="o", label=f"{name} ({bins} equal-count bins)")
+        top = max(top, *xs, *ys)
+    ax.plot([0, top], [0, top], linestyle="--", color="grey", label="perfect calibration")
+    ax.set_xlabel("predicted PD (test, cohorts 21-24)")
+    ax.set_ylabel("observed default rate")
+    ax.set_title("Reliability on the drifted test split")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+
+
+def select(models: dict[str, dict]) -> str:
+    """Serve the better test Brier; AUC breaks a tie (brief 8.4)."""
+    return min(models, key=lambda name: (models[name]["test"]["brier"], -models[name]["test"]["auc"]))
+
+
 def train(data: Path, out: Path, version_date: date, cfg: dict | None = None, n: int | None = None) -> dict:
     cfg = cfg or load_config()
     rows = load_rows(data, n)
@@ -130,13 +207,28 @@ def train(data: Path, out: Path, version_date: date, cfg: dict | None = None, n:
     masks = split_masks(rows, cfg)
     medians = tier_medians(x_raw[masks["train"]], tiers[masks["train"]], cfg["missing_tier"])
     x = impute(x_raw, tiers, medians)
+    bins = cfg["ece_bins"]
+
+    def report(p: np.ndarray) -> dict:
+        return {part: metrics.report(y[masks[part]], p[masks[part]], bins) for part in ("validation", "test")}
 
     card = fit_scorecard(x[masks["train"]], y[masks["train"]], cfg, f"credit-lr-{version_date}.1", medians)
-    bins = cfg["ece_bins"]
-    lr_metrics = {
-        part: metrics.report(y[masks[part]], scorecard_pd(card, x[masks[part]]), bins)
-        for part in ("validation", "test")
+    lr_pd = scorecard_pd(card, x)
+
+    booster = fit_lightgbm(x, y, masks, cfg)
+    margin = booster.predict(x, raw_score=True)
+    calibrators = fit_calibrators(margin[masks["validation"]], y[masks["validation"]], cfg)
+    val_brier = {
+        name: metrics.brier(y[masks["validation"]], calibrate(c, margin[masks["validation"]]))
+        for name, c in calibrators.items()
     }
+    calibrator = calibrators[min(val_brier, key=val_brier.get)]
+    calibrator["validation_brier"] = {k: round(v, 6) for k, v in val_brier.items()}
+    lgbm_pd = calibrate(calibrator, margin)
+
+    models = {"lr": report(lr_pd), "lgbm": report(lgbm_pd)}
+    selected = select(models)
+    versions = {"lr": card["version"], "lgbm": f"credit-lgbm-{version_date}.1"}
     synth_cfg = synth.load_config()
     provenance = {
         "data": str(data.name),
@@ -150,9 +242,54 @@ def train(data: Path, out: Path, version_date: date, cfg: dict | None = None, n:
     card["training"] = provenance
     out.mkdir(parents=True, exist_ok=True)
     _write_json(out / "scorecard.json", card)
-    report = {"targets": cfg["targets"], "provenance": provenance, "models": {"lr": lr_metrics}}
-    _write_json(out / "metrics.json", report)
-    return {"card": card, "metrics": report}
+    booster.save_model(str(out / "lgbm.txt"), num_iteration=booster.best_iteration)
+    _write_json(out / "calibrator.json", calibrator)
+    reliability_plot(
+        out / "reliability.png",
+        y[masks["test"]],
+        {n: p[masks["test"]] for n, p in (("lr", lr_pd), ("lgbm", lgbm_pd))},
+        bins,
+    )
+    targets = cfg["targets"]
+    meets = {
+        name: m["test"]["auc"] >= targets["auc_min"] and m["test"]["ece"] <= targets["ece_max"]
+        for name, m in models.items()
+    }
+    report_json = {
+        "targets": targets,
+        "meets_targets": meets,
+        "selected": selected,
+        "selection_rule": "lower test Brier, then higher test AUC",
+        "provenance": provenance,
+        "models": models,
+        "test_reliability": {
+            "lr": metrics.reliability(y[masks["test"]], lr_pd[masks["test"]], bins),
+            "lgbm": metrics.reliability(y[masks["test"]], lgbm_pd[masks["test"]], bins),
+        },
+    }
+    _write_json(out / "metrics.json", report_json)
+    model_card = {
+        "version": versions[selected],
+        "selected": selected,
+        "versions": versions,
+        "artefacts": {"lr": ["scorecard.json"], "lgbm": ["lgbm.txt", "calibrator.json", "scorecard.json"]},
+        "target": "buyer does not pay within 60 days after the due date, or dilution above 20% (synthetic)",
+        "features": list(FEATURES),
+        "monotone_constraints": {f: MONOTONE[f] for f in FEATURES},
+        "medians": medians,
+        "lightgbm": {"best_iteration": int(booster.best_iteration), "params": cfg["lightgbm"]["params"]},
+        "calibration": {"method": calibrator["method"], "validation_brier": calibrator["validation_brier"]},
+        "metrics": {name: m["test"] for name, m in models.items()},
+        "meets_targets": meets,
+        "provenance": provenance,
+        "limitations": [
+            "labels are synthetic, drawn from a known latent model (training/README.md)",
+            "with recourse assumed; no real bureau or KYC data",
+            "few tier-A defaults in training, so low PDs carry wide estimation error",
+        ],
+    }
+    _write_json(out / "model_card.json", model_card)
+    return {"card": card, "metrics": report_json, "model_card": model_card}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -164,6 +301,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--version-date", type=date.fromisoformat, default=date.today())
     args = parser.parse_args(argv)
     result = train(args.data, args.out, args.version_date, cfg)
+    print(f"selected: {result['metrics']['selected']} ({result['model_card']['version']})")
     for name, parts in result["metrics"]["models"].items():
         for part, m in parts.items():
             print(f"{name:5s} {part:10s} " + " ".join(f"{k} {v}" for k, v in m.items()))
