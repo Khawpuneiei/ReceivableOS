@@ -77,7 +77,7 @@ Terminology fix, because two things are called "policy":
 
 ## 4. Interfaces (the contract between modules)
 
-All services: Python 3.11, FastAPI, JSON over HTTP. LLM calls go through a thin pluggable client (`llm_client.complete(messages, schema)`), never a vendor SDK called directly from business logic. Money is a **string decimal** in JSON (`"749000.00"`) to avoid float errors; currency is ISO 4217 (`"THB"` for the demo, per `docs/02`). `fee_rate` is per 30 days; `risk_score` is 0 to 1, higher is riskier (both pending Policy confirmation). On chain, amounts are integers in the mock stable token's smallest unit; the conversion lives in one helper owned by the wallet (see `docs/03`).
+All services: Python 3.11, FastAPI, JSON over HTTP. LLM calls go through a thin pluggable client (`llm_client.complete(messages, schema)`), never a vendor SDK called directly from business logic. Money is a **string decimal** in JSON (`"749000.00"`) to avoid float errors; currency is ISO 4217 (`"THB"` for the demo, per `docs/02`). `fee_rate` is per 30 days; `risk_score` is 0 to 1, higher is riskier (both pending Policy confirmation). Lender quotes and the guard compare **APR**; the wallet converts `fee_rate` to APR with the shared helper in `shared/money.py`, never with its own formula. On chain, amounts are integers in the mock stable token's smallest unit; the conversion lives in one helper owned by the wallet (see `docs/03`).
 
 ### 4.1 OCR service — `POST /ocr/extract`
 Input: multipart `file` (PDF/PNG/JPG). Output:
@@ -151,6 +151,7 @@ Rule for changing an interface: open a PR titled `contract: ...` that changes on
 | **Sat Oct 11, by 10:00** | Finance teammate approves the demo scenario numbers in `docs/02` | Finance | comment on PR #3 |
 | Oct 11, by 12:00 | First real logic: OCR extracts 5 sample invoices; credit model trained on synthetic data; wallet executes one tx on chain or mock | each owner | PR + sample output |
 | Oct 11, by 18:00 | **First end-to-end run** through the orchestrator (happy path) | P | demo log |
+| Oct 11, by 22:00 | Finance teammate's 2 to 3 page business-plan draft (problem, market, business model, risk) | Finance | PR per `docs/02` |
 | Oct 11, by 23:00 | Attack cases wired: injection invoice, forged invoice, duplicate invoice, APR over mandate, payee not allowlisted | all | each blocked with a reason |
 | **Sun Oct 12, by 10:00** | Demo data set final, UI shows the full flow, eval numbers computed | P, Finance, owners | numbers in `docs/` |
 | **Oct 12, 12:00** | **Code freeze.** After this, only bug fixes P approves | all | tag `v0.1-freeze` |
