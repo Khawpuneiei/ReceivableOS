@@ -84,8 +84,8 @@ Input: multipart `file` (PDF/PNG/JPG). Output:
 ```json
 {
   "invoice_id": "inv_0001",
-  "supplier": {"name": "Siam Fresh Pack", "tax_id": "0105556000001"},
-  "buyer": {"name": "Mekong Basket Retail", "tax_id": "0107537000002"},
+  "supplier": {"name": "Siam Fresh Pack", "tax_id": "0105559000000"},
+  "buyer": {"name": "Mekong Basket Retail", "tax_id": "0107559000001"},
   "invoice_no": "INV-2026-0142",
   "issue_date": "2026-09-15",
   "due_date": "2026-11-14",
@@ -96,10 +96,11 @@ Input: multipart `file` (PDF/PNG/JPG). Output:
   "injection_flags": [],
   "fraud_score": 0.07,
   "fraud_flags": [],
-  "doc_hash": "sha256:..."
+  "doc_hash": "sha256:...",
+  "invoice_fingerprint": "sha256:..."
 }
 ```
-`doc_hash` (sha256 of the file bytes) is an addition to the base contract: the registry uses a canonical invoice fingerprint for duplicate checks, see `docs/05`.
+Two hashes, both additions to the base contract: `doc_hash` is sha256 of the file bytes (audit trail); `invoice_fingerprint` is a hash of the normalised content (supplier tax id, buyer tax id, invoice_no, amount, issue date). **Duplicate detection keys on `invoice_fingerprint`**, because re-saving a PDF changes `doc_hash`. See `docs/05`.
 
 ### 4.2 Policy service — `POST /policy/decide`
 Input: `{ "invoice": <4.1 output>, "supplier_profile": {...}, "buyer_profile": {...} }`. Output:
