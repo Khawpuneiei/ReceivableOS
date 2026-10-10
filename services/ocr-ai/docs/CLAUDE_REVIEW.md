@@ -1,7 +1,7 @@
 # OCR service guide review
 
-**Reviewed:** 2026-10-10  
-**Branch checked:** `ocr/evidence-fraud-graph`  
+**Reviewed:** 2026-10-10
+**Branch checked:** `ocr/evidence-fraud-graph`
 **Scope:** OCR service guide, repository ownership rules, product scope, current OCR implementation and the automated demo loop.
 
 ## Assessment
