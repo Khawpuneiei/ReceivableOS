@@ -213,20 +213,28 @@ and versions give the same hash.
 ### 6. Mandate compiler (`app/mandate.py`, `POST /policy/mandate/compile`)
 
 1. **Parser:** deterministic regular expressions read the advance %, APR %, buyer-risk %, the human-review amount,
-   per-transaction and daily caps, currency, payee addresses and validity. The demo sentence compiles with no LLM.
+   per-transaction and daily caps (with k / m / million / thousand / baht / บาท, before or after "per day" /
+   "per invoice"), currency, payee addresses and validity. The demo sentence compiles with no LLM.
 2. **Validation:** every cap must be above 0 and at or under the platform limit in `mandate_limits` (advance ≤ 90%,
    APR ≤ 15%, PD ≤ 20%, THB 1.5m per transaction, THB 3m a day, review ≤ THB 837,500). **Nothing is clamped:** an
    out-of-range value returns 422 with `{field, code, value, limit}`, never the text. Wording that asks for no limit
    ("unlimited", "ignore all limits", "send everything") and unregistered payees also return 422.
-3. **Never looser:** caps the sentence doesn't mention take the platform defaults (70% / 12% / 5% / THB 837,500 /
-   1.5m / 3m), listed in `fields_from_defaults`. So the output is never looser than the platform limits, whatever
-   the input.
-4. **Optional LLM step** (`app/llm_client.py`, off unless configured): asked only for caps the parser missed, never
-   for text that asks for no limit. The sentence is passed as data between random delimiters. Every proposal goes
-   through the same validator, so an LLM can't loosen a mandate. No provider, the placeholder key, a timeout or bad
-   JSON all fall back to the parser. `/policy/decide` never imports it.
-5. **Output:** the `mandate` uses exactly the wallet's field names; the envelope around it carries the provenance
+3. **Never looser than the platform:** caps the sentence doesn't mention take the platform defaults (70% / 12% / 5%
+   / THB 837,500 / 1.5m / 3m), listed in `fields_from_defaults`.
+4. **Never looser than the sentence:** the compiler only expresses maxima, so minimum wording ("at least 80%", "no
+   less than", "minimum", "80% or more") returns 422 `AMBIGUOUS_VALUE` instead of becoming a cap. An amount next to
+   "per day" / "per invoice" that the parser can't read returns 422 `UNPARSED_CAP`, and any other unread number
+   `UNRECOGNISED_NUMBER`, so a stated limit can never silently fall back to a looser default. (Both were review
+   findings on the first version: "2m per day" fell back to the 3m default, and "at least 80%" became a cap.)
+5. **Optional LLM step** (`app/llm_client.py`, off unless configured): asked only when the sentence has numbers the
+   parser couldn't read, never for text that asks for no limit or states a minimum. The sentence is passed as data
+   between random delimiters. An LLM value is used only if it equals one of those unread numbers, in the field its
+   unit phrase names, and then goes through the same validator, so an LLM can neither invent nor loosen a cap. No
+   provider, the placeholder key, a timeout or bad JSON leave the number a 422. `/policy/decide` never imports it.
+6. **Output:** the `mandate` uses exactly the wallet's field names; the envelope around it carries the provenance
    (`source_text_sha256`, `compiler_version`, which fields came from text, LLM or defaults) and warnings.
+   `payee_allowlist` is always the whole payee registry (seller, both lenders, platform fee): a sentence can only
+   name payees that are already registered.
 
 ## Open questions for Finance
 
