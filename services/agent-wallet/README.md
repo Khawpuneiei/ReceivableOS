@@ -19,7 +19,7 @@ Status: stub. The endpoint returns a fixed response that matches the contract so
 | `POST /wallet/approve` | Record the **credit** approval, signed by the risk-oracle key (TX-2) |
 | `POST /wallet/settle` | Settle after the buyer pays (TX-5) |
 | `POST /wallet/mandate/activate`, `GET /wallet/mandate` | Set / show the on-chain guard parameters (owner key) |
-| `POST /wallet/confirm/{tx_id}` | **Human** approval of a `pending_approval` draw (owner token) |
+| `POST /wallet/confirm/{tx_id}` | **Human** approval of a `pending_approval` draw (`X-Approver-Token`, held by the Finance approver, not the mandate owner) |
 | `POST /wallet/pause`, `POST /wallet/unpause` | Emergency stop (owner token) |
 | `GET /wallet/audit/{invoice_id}`, `GET /wallet/tx/{tx_id}` | Audit trail and tx lookup |
 

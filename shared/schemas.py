@@ -155,7 +155,11 @@ class MandateActivateRequest(BaseModel):
 
 
 class WalletConfirmRequest(BaseModel):
-    """Body of POST /wallet/confirm/{tx_id}: human approval of a pending_approval tx (owner token)."""
+    """Body of POST /wallet/confirm/{tx_id}: human approval of a pending_approval tx.
+
+    Authorised by X-Approver-Token, held by the Finance approver, not the mandate owner
+    (the person who sets limits must not also confirm payments).
+    """
 
     approve: bool
 
