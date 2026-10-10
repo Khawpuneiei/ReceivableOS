@@ -1,0 +1,16 @@
+{
+  "case": "A2",
+  "title": "Same invoice uploaded again as a re-saved PDF",
+  "stopped_by": "OCR + Registry",
+  "policy_decision": "reject",
+  "policy_reasons": [
+    "KO.DUPLICATE"
+  ],
+  "step": "A2",
+  "call": "blocked attempt",
+  "tx_id": "tx_a2",
+  "status": "blocked",
+  "chain_ref": "mock:0xe5f1ae107db52035ca854896fee1bc69834fb50ecdcc4bff7e40f079ff0e8d56",
+  "chain": "mock",
+  "block_reason": "DuplicateReceivable"
+}

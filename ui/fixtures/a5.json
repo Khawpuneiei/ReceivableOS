@@ -1,0 +1,16 @@
+{
+  "case": "A5",
+  "title": "Supplier KYB expired",
+  "stopped_by": "Policy",
+  "policy_decision": "reject",
+  "policy_reasons": [
+    "KO.KYC_INVALID"
+  ],
+  "step": "A5",
+  "call": "blocked attempt",
+  "tx_id": "tx_a5",
+  "status": "blocked",
+  "chain_ref": "mock:0xca23d97b45913b7dc42e1434953c442b3ad824170e18bbceeccdd17cd6a0194e",
+  "chain": "mock",
+  "block_reason": "NotApproved"
+}
