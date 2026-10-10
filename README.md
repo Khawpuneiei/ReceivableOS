@@ -2,23 +2,25 @@
 
 **An autonomous receivables-liquidity agent wallet for SME invoices.**
 
-ReceivableOS takes an SME invoice, verifies it, scores its credit and fraud risk, decides how much can be advanced against it, and then pays out through an agent wallet whose spending is limited by deterministic, on-chain policy. The AI proposes; the policy guard decides whether the transaction may run.
+ReceivableOS takes an SME invoice, verifies it, checks it has not been financed before, scores its credit and fraud risk, decides how much can be advanced against it, and then pays out through an agent wallet whose spending is limited by deterministic, on-chain policy. The AI proposes; the policy guard decides whether the transaction may run.
 
 ```
-invoice file -> OCR + fraud check -> policy + credit risk -> agent wallet -> on-chain tx (FISCO BCOS)
+invoice -> OCR + fraud check -> registry duplicate check -> policy + credit risk -> agent wallet -> on-chain tx (FISCO BCOS)
 ```
 
 Built for [FinTechathon 2026](https://fintechathon.g-ican.com/#/en), Agent Wallet track. Submission deadline: **end of 12 Oct 2026**.
 
 ## Team and roles
 
-| Seat | Owns | Folder |
+| Seat | Owns | Where |
 |---|---|---|
-| PM (P) | Scope, shared contracts, end-to-end integration, PR review | `shared/`, `integration/`, `docs/00-scope.md` |
-| Finance | Use cases, pain-point numbers, domain knowledge | `docs/02-finance-domain.md` |
-| Agent AI engineer | Agent wallet, policy guard on chain, agent-injection guardrails | `services/agent-wallet/` |
-| Policy AI engineer | Financing policy, credit risk model | `services/policy-ai/` |
-| OCR AI engineer | Invoice OCR, OCR/document injection defence, fraud detection | `services/ocr-ai/` |
+| PM (P) | Scope, interface spec, orchestrator, registry/vault contracts, demo UI, PR review | `docs/00-scope.md`, `shared/`, `services/orchestrator/`, `contracts/` (registry, vault, token) |
+| Finance | Use cases, pain-point numbers, business model, pitch content | `docs/02-finance-domain.md` |
+| Agent AI engineer | Agent wallet, mandate enforcement, agent-injection guardrails, wallet and guard contracts | `services/agent-wallet/`, `contracts/` (wallet, guard) |
+| Policy AI engineer | Credit policy, credit risk model, mandate schema | `services/policy-ai/` |
+| OCR AI engineer | Invoice OCR, OCR injection defence, fraud detection, demo invoice set | `services/ocr-ai/`, `data/invoices/` |
+
+The scope doc ([docs/00-scope.md](docs/00-scope.md)) is the reference for ownership and interfaces.
 
 ## Module map
 
@@ -28,16 +30,19 @@ ReceivableOS/
 ├── CLAUDE.md            # rules every AI assistant follows in this repo
 ├── .env.example         # copy to .env, never commit .env
 ├── docs/                # design docs, one per topic (index: docs/README.md)
-├── shared/              # shared API contract (Pydantic models), PM-owned
-│   └── schemas.py
+├── shared/schemas.py    # the API contract as Pydantic models (PM)
 ├── services/
-│   ├── ocr-ai/          # POST /ocr/extract     port 8001
-│   ├── policy-ai/       # POST /policy/decide   port 8002
-│   └── agent-wallet/    # POST /wallet/execute  port 8003
-└── integration/         # end-to-end demo script + sample data, PM-owned
+│   ├── orchestrator/    # POST /flow/run, /flow/repay  port 8000 (PM)
+│   ├── ocr-ai/          # POST /ocr/extract            port 8001
+│   ├── policy-ai/       # POST /policy/decide          port 8002
+│   └── agent-wallet/    # POST /wallet/execute         port 8003
+├── contracts/           # Solidity for FISCO BCOS
+└── data/invoices/       # demo invoices, clean and attack cases
 ```
 
-Each service is a small FastAPI app. Services talk JSON over HTTP using the models in `shared/schemas.py`. The chain is FISCO BCOS, with a mock ledger fallback so the demo never blocks on the chain.
+Planned, added by their owners when needed: `ui/` (demo screen, port 3000) and `pitch/` (deck, video, business plan).
+
+Each service is a small FastAPI app talking JSON over HTTP. Money is a decimal string (`"10000.00"`). The chain is FISCO BCOS, with a mock ledger (`CHAIN_MODE=mock`) so the demo never blocks on the chain.
 
 ## How to run
 
@@ -52,20 +57,32 @@ pip install -r requirements-dev.txt
 python -m uvicorn app.main:app --app-dir services/ocr-ai --port 8001 --reload
 python -m uvicorn app.main:app --app-dir services/policy-ai --port 8002 --reload
 python -m uvicorn app.main:app --app-dir services/agent-wallet --port 8003 --reload
+python -m uvicorn app.main:app --app-dir services/orchestrator --port 8000 --reload
 
 # then run the end-to-end flow
-python integration/run_demo.py
+python services/orchestrator/run_demo.py
 ```
 
 Tests and lint (run tests one service at a time):
 
 ```bash
-pytest services/ocr-ai && pytest services/policy-ai && pytest services/agent-wallet
+for s in ocr-ai policy-ai agent-wallet orchestrator; do pytest services/$s; done
 ruff check . && ruff format --check .
 ```
 
-Every service answers `GET /health`. Until a service implements its main endpoint it returns a stub response that still matches the contract, so the end-to-end script runs from day one.
+Every service answers `GET /health`. Until a service implements its main endpoint it returns a stub response that still matches the contract, so the end-to-end flow runs from day one.
 
 ## Docs
 
-Start with [docs/README.md](docs/README.md). Engineers: read [CLAUDE.md](CLAUDE.md) and your service's `CLAUDE.md` before you start prompting.
+| Doc | Topic |
+|---|---|
+| [docs/00-scope.md](docs/00-scope.md) | MVP scope, ownership, interface spec, demo story |
+| [docs/01-architecture.md](docs/01-architecture.md) | Architecture, data flow, trust model |
+| [docs/02-finance-domain.md](docs/02-finance-domain.md) | Receivables finance, use cases, pain-point numbers |
+| [docs/03-agent-wallet.md](docs/03-agent-wallet.md) | Agent wallet, guard, agent-injection guardrails |
+| [docs/04-policy-ai.md](docs/04-policy-ai.md) | Credit policy, credit risk model |
+| [docs/05-ocr-ai.md](docs/05-ocr-ai.md) | Invoice OCR, OCR injection, fraud detection |
+
+Each doc lands by its own PR; see [docs/README.md](docs/README.md). Engineers: read [CLAUDE.md](CLAUDE.md) and your service's `CLAUDE.md` before you start prompting.
+
+Background reading lives outside the repo, in the project files: `ReceivableOS-Idea+Architect.md` (design and research) and `receivableos_specialization_roadmap.md` (learning roadmap, Thai).

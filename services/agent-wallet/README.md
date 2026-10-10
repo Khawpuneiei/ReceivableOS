@@ -1,6 +1,6 @@
 # agent-wallet
 
-Owner: Agent AI engineer. Scope: agent wallet, on-chain policy guard (Solidity in `contracts/`), agent-injection guardrails.
+Owner: Agent AI engineer. Scope: agent wallet, mandate enforcement, `AgentWallet`/`PolicyGuard` contracts (in the root `contracts/` folder), agent-injection guardrails.
 
 Endpoint: `POST /wallet/execute` on port 8003, plus `GET /health`. Request and response models are in [`shared/schemas.py`](../../shared/schemas.py).
 

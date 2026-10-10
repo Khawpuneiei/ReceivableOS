@@ -1,13 +1,15 @@
 # CLAUDE.md — team rules for AI-assisted coding in ReceivableOS
 
-Read this file first, then the `CLAUDE.md` inside the service you are working on (if it exists yet), then the matching doc in `docs/`. These rules apply to every engineer and every AI assistant working in this repo.
+Read this file first, then the `CLAUDE.md` inside the service you are working on (if it exists yet), then the matching doc in `docs/`. `docs/00-scope.md` is the scope and the interface spec; if this file and the scope doc disagree, the scope doc wins and this file should be fixed. These rules apply to every engineer and every AI assistant working in this repo.
 
 ## What we are building
 
 ReceivableOS is a hackathon MVP (FinTechathon 2026, Agent Wallet track, deadline end of 12 Oct 2026). The flow is:
 
 ```
-invoice file -> ocr-ai (extract + injection flags + fraud score)
+invoice file -> orchestrator (POST /flow/run)
+             -> ocr-ai (extract + doc_hash + injection flags + fraud score)
+             -> ReceivableRegistry (duplicate-invoice check)
              -> policy-ai (approve / review / reject, advance rate, limit, fee, risk score)
              -> agent-wallet (guarded execution, on-chain tx on FISCO BCOS or mock ledger)
 ```
@@ -20,8 +22,8 @@ Scope is the MVP only. If a feature is not needed for the live demo or the judgi
 
 - Python 3.11+, FastAPI, Pydantic v2, `uvicorn`. One FastAPI app per service.
 - JSON over HTTP between services. No shared database; each service keeps its own state (files or SQLite are fine).
-- Chain: FISCO BCOS (Solidity contracts + Python SDK). Every chain call sits behind an interface with a **mock ledger** implementation, selected by `LEDGER_MODE=mock|fisco` in `.env`. The demo must work with `mock`.
-- LLM calls go through a thin, pluggable client inside the service (`app/llm.py` or similar) that reads `LLM_PROVIDER` / `LLM_MODEL` / `LLM_API_KEY` from env. No provider SDK calls scattered across the code.
+- Chain: FISCO BCOS (Solidity contracts + Python SDK). Every chain call sits behind an interface with a **mock ledger** implementation, selected by `CHAIN_MODE=mock|fisco` in `.env`. The demo must work with `mock`.
+- LLM calls go through a thin, pluggable client inside the service (`app/llm_client.py`, exposing `complete(messages, schema)`) that reads `LLM_PROVIDER` / `LLM_MODEL` / `LLM_API_KEY` from env. No provider SDK calls scattered across the code.
 - Tests: `pytest`. Lint/format: `ruff` (`ruff check . && ruff format .`).
 
 ## Folder layout and ownership
@@ -30,13 +32,15 @@ Scope is the MVP only. If a feature is not needed for the live demo or the judgi
 |---|---|---|
 | `services/ocr-ai/` | OCR AI engineer | Invoice OCR, document/OCR injection defence, fraud detection |
 | `services/policy-ai/` | Policy AI engineer | Financing policy, credit risk model |
-| `services/agent-wallet/` | Agent AI engineer | Wallet, policy guard, agent-injection guardrails, Solidity contracts in `services/agent-wallet/contracts/` |
+| `services/agent-wallet/` | Agent AI engineer | Wallet, mandate enforcement, agent-injection guardrails |
 | `shared/` | PM | API contract models used by all services |
-| `integration/` | PM | End-to-end demo script and sample invoices |
+| `services/orchestrator/` | PM | End-to-end flow (`/flow/run`, `/flow/repay`), demo script |
+| `contracts/` | Split by file | `AgentWallet`, `PolicyGuard`: Agent AI engineer. `ReceivableRegistry`, `FinancingVault`, `MockStable`: PM. See `contracts/README.md` |
+| `data/invoices/` | OCR AI engineer | Demo invoice set, clean and attack cases |
 | `docs/` | Each doc's author (see `docs/README.md`) | |
 | Root files (`README.md`, `CLAUDE.md`, `.env.example`, `.gitignore`, `requirements-dev.txt`, `ruff.toml`) | PM | |
 
-**Rule: edit only your own service folder.** If your task seems to need a change outside it, stop and open a separate PR for that change (or ask the PM). Never "fix" another service to make yours work.
+**Rule: edit only your own folder (or your own files in `contracts/`).** If your task seems to need a change outside it, stop and open a separate PR for that change (or ask the PM). Never "fix" another service to make yours work.
 
 Inside each service:
 
@@ -52,25 +56,28 @@ services/<name>/
 
 ## How the modules talk (the contract)
 
-The source of truth is `shared/schemas.py`. Summary:
+The spec is section 4 of `docs/00-scope.md`; `shared/schemas.py` is the same contract as code. Summary:
 
 **OCR** — `POST /ocr/extract` (multipart file upload, field `file`) returns `ExtractedInvoice`:
-`invoice_id, supplier, buyer, invoice_no, issue_date, due_date, amount, currency, line_items, confidence, injection_flags, fraud_score, fraud_flags`
+`invoice_id, supplier {name, tax_id}, buyer {name, tax_id}, invoice_no, issue_date, due_date, amount, currency, line_items [{description, qty, unit_price, total}], confidence, injection_flags, fraud_score, fraud_flags, doc_hash`
 
 **Policy** — `POST /policy/decide` takes `{invoice: ExtractedInvoice, supplier_profile, buyer_profile}` and returns `PolicyDecision`:
-`decision (approve | review | reject), advance_rate, limit, fee_rate, risk_score, reasons`
+`decision (approve | review | reject), advance_rate, limit, fee_rate, risk_score, reasons, model_version, policy_version`
+Hard rules before any model: `injection_flags` non-empty → `review`; `fraud_score ≥ 0.30` → `reject`; `confidence < 0.80` → `review`.
 
 **Agent wallet** — `POST /wallet/execute` takes `{decision, payee, amount, currency, invoice_id}` and returns `WalletResult`:
-`tx_id, status, chain_ref, approvals_required, audit_ref`
+`tx_id, status (executed | blocked | pending_approval | failed), chain_ref, approvals_required, audit_ref`
+
+**Orchestrator** — `POST /flow/run` (multipart `file`, form `mandate_id`) runs the whole flow and returns every intermediate result; `POST /flow/repay` simulates "buyer paid".
 
 Conventions:
-- Money is a decimal string or number in major units (e.g. `7000.00`), with an ISO 4217 `currency`. Rates are fractions (`0.70` = 70%).
+- Money and rates are **decimal strings** in JSON (`"7000.00"`, `"0.70"` = 70%), never floats; use `Decimal` in Python. Currency is ISO 4217. On chain, amounts are integers in the stable token's smallest unit; the conversion lives in one wallet helper.
 - Dates are ISO 8601 (`2026-10-12`).
 - Scores are `0.0`–`1.0`, higher means riskier (`fraud_score`, `risk_score`) or more certain (`confidence`).
 - Errors: HTTP 4xx/5xx with `{"detail": "..."}` (FastAPI default).
-- Ports: ocr-ai 8001, policy-ai 8002, agent-wallet 8003. Base URLs come from env (`OCR_URL`, `POLICY_URL`, `WALLET_URL`).
+- Ports: orchestrator 8000, ocr-ai 8001, policy-ai 8002, agent-wallet 8003, UI 3000. Base URLs come from env (`ORCHESTRATOR_URL`, `OCR_URL`, `POLICY_URL`, `WALLET_URL`).
 
-**Changing the contract:** you may *add optional fields* inside your own service's response freely. Renaming, removing or changing the type of any field in `shared/schemas.py` needs its own small PR, tagged `contract:` in the title, reviewed by the PM. Never change a shared model inside a feature PR.
+**Changing the contract:** you may *add optional fields* inside your own service's response freely. Renaming, removing or changing the type of any field needs its own small PR, tagged `contract:` in the title, that edits section 4 of `docs/00-scope.md` first and then `shared/schemas.py`, reviewed by the PM. Never change a shared model inside a feature PR.
 
 ## Security rules (this is 30% of the score)
 
@@ -101,8 +108,8 @@ A task is done when:
 1. The endpoint matches `shared/schemas.py` (request and response).
 2. `GET /health` still returns `{"status": "ok"}`.
 3. `pytest` passes for your service and `ruff check` is clean.
-4. `python integration/run_demo.py` still runs end to end against all three services.
-5. It works with `LEDGER_MODE=mock` and without network access to an LLM (use a deterministic fallback or fixture).
+4. `python services/orchestrator/run_demo.py` still runs end to end against all four services.
+5. It works with `CHAIN_MODE=mock` and without network access to an LLM (use a deterministic fallback or fixture).
 6. Your service `README.md` says how to run and test it.
 7. The PR is reviewed by the PM.
 

@@ -1,7 +1,9 @@
 """Shared API contract for ReceivableOS services.
 
-This file is the source of truth for what the services send each other.
-Owner: PM. Change it only through a dedicated `contract:` PR (see CLAUDE.md).
+Mirrors section 4 of docs/00-scope.md. That section is the spec; this file is its code.
+Owner: PM. To change it, edit docs/00-scope.md section 4 first in a `contract:` PR (see CLAUDE.md).
+
+Money and rates are Decimal, which Pydantic serialises as JSON strings ("10000.00").
 """
 
 from __future__ import annotations
@@ -14,19 +16,24 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class Party(BaseModel):
+    name: str
+    tax_id: str | None = None
+
+
 class LineItem(BaseModel):
     description: str
-    quantity: Decimal = Decimal("1")
+    qty: Decimal = Decimal("1")
     unit_price: Decimal
-    amount: Decimal
+    total: Decimal
 
 
 class ExtractedInvoice(BaseModel):
-    """Response of POST /ocr/extract."""
+    """Response of POST /ocr/extract (scope 4.1)."""
 
     invoice_id: str
-    supplier: str
-    buyer: str
+    supplier: Party
+    buyer: Party
     invoice_no: str
     issue_date: date
     due_date: date
@@ -37,6 +44,7 @@ class ExtractedInvoice(BaseModel):
     injection_flags: list[str] = []
     fraud_score: float = Field(ge=0, le=1)
     fraud_flags: list[str] = []
+    doc_hash: str  # "sha256:<hex of file bytes>"
 
 
 class Decision(str, Enum):
@@ -46,7 +54,7 @@ class Decision(str, Enum):
 
 
 class PolicyRequest(BaseModel):
-    """Body of POST /policy/decide."""
+    """Body of POST /policy/decide (scope 4.2)."""
 
     invoice: ExtractedInvoice
     supplier_profile: dict[str, Any] = {}
@@ -54,18 +62,20 @@ class PolicyRequest(BaseModel):
 
 
 class PolicyDecision(BaseModel):
-    """Response of POST /policy/decide."""
+    """Response of POST /policy/decide (scope 4.2)."""
 
     decision: Decision
-    advance_rate: float = Field(ge=0, le=1)
+    advance_rate: Decimal = Field(ge=0, le=1)
     limit: Decimal
-    fee_rate: float = Field(ge=0)
+    fee_rate: Decimal = Field(ge=0)
     risk_score: float = Field(ge=0, le=1)
     reasons: list[str] = []
+    model_version: str
+    policy_version: str
 
 
 class WalletRequest(BaseModel):
-    """Body of POST /wallet/execute."""
+    """Body of POST /wallet/execute (scope 4.3)."""
 
     decision: PolicyDecision
     payee: str
@@ -76,15 +86,16 @@ class WalletRequest(BaseModel):
 
 class TxStatus(str, Enum):
     executed = "executed"
+    blocked = "blocked"
     pending_approval = "pending_approval"
-    rejected = "rejected"
+    failed = "failed"
 
 
 class WalletResult(BaseModel):
-    """Response of POST /wallet/execute."""
+    """Response of POST /wallet/execute (scope 4.3)."""
 
     tx_id: str
     status: TxStatus
-    chain_ref: str | None = None
+    chain_ref: str | None = None  # FISCO BCOS tx hash, or "mock:..."
     approvals_required: int = 0
     audit_ref: str

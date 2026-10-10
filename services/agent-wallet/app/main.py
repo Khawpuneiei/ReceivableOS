@@ -1,4 +1,4 @@
-"""agent-wallet: guarded execution of financing decisions on FISCO BCOS or a mock ledger.
+"""agent-wallet: guarded execution of financing decisions on FISCO BCOS or a mock ledger (CHAIN_MODE).
 
 Stub: never signs anything. Replace the body of `execute` with the guard and ledger calls.
 """
@@ -19,7 +19,7 @@ def health() -> dict:
 
 @app.post("/wallet/execute", response_model=WalletResult)
 def execute(req: WalletRequest) -> WalletResult:
-    status = TxStatus.rejected if req.decision.decision != Decision.approve else TxStatus.pending_approval
+    status = TxStatus.blocked if req.decision.decision != Decision.approve else TxStatus.pending_approval
     return WalletResult(
         tx_id=f"stub-{uuid.uuid4().hex[:12]}",
         status=status,

@@ -20,12 +20,14 @@ def health() -> dict:
 
 @app.post("/policy/decide", response_model=PolicyDecision)
 def decide(req: PolicyRequest) -> PolicyDecision:
-    advance_rate = 0.7
+    advance_rate = Decimal("0.70")
     return PolicyDecision(
         decision=Decision.review,
         advance_rate=advance_rate,
-        limit=(req.invoice.amount * Decimal(str(advance_rate))).quantize(Decimal("0.01")),
-        fee_rate=0.02,
+        limit=(req.invoice.amount * advance_rate).quantize(Decimal("0.01")),
+        fee_rate=Decimal("0.02"),
         risk_score=0.5,
         reasons=["stub: policy not implemented yet"],
+        model_version="stub",
+        policy_version="stub",
     )

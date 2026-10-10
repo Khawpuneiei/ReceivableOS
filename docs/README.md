@@ -4,8 +4,8 @@ One doc per topic. Each is owned by its author and added by its own PR; links be
 
 | Doc | Topic | Owner |
 |---|---|---|
-| [00-scope.md](00-scope.md) | MVP scope, demo story, what is in and out, gap review | PM |
-| [01-architecture.md](01-architecture.md) | System architecture, data flow, trust model | PM (research) |
+| [00-scope.md](00-scope.md) | MVP scope, ownership, interface spec (section 4), demo story | PM |
+| [01-architecture.md](01-architecture.md) | System architecture, data flow, trust model, contracts | PM (research) |
 | [02-finance-domain.md](02-finance-domain.md) | Receivables finance basics, use cases, pain-point numbers | Finance |
 | [03-agent-wallet.md](03-agent-wallet.md) | Agent wallet, policy guard, agent-injection guardrails | Agent AI engineer |
 | [04-policy-ai.md](04-policy-ai.md) | Financing policy, credit risk model | Policy AI engineer |
@@ -13,4 +13,4 @@ One doc per topic. Each is owned by its author and added by its own PR; links be
 
 Service-level assistant prompts live next to the code: `services/<name>/CLAUDE.md`.
 
-The shared API contract is code, not a doc: [`shared/schemas.py`](../shared/schemas.py). Team-wide rules: [`CLAUDE.md`](../CLAUDE.md).
+The interface spec is section 4 of `00-scope.md`; [`shared/schemas.py`](../shared/schemas.py) is the same contract as code. Contracts: [`../contracts/README.md`](../contracts/README.md). Team-wide rules: [`CLAUDE.md`](../CLAUDE.md).

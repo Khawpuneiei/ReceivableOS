@@ -22,7 +22,8 @@ build/
 # data and models
 *.sqlite
 *.db
-data/
+data/*
+!data/invoices/
 models/*.bin
 models/*.pkl
 
@@ -31,6 +32,7 @@ node_modules/
 artifacts/
 cache/
 out/
+contracts/build/
 
 # editors / OS
 .vscode/
