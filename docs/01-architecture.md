@@ -160,7 +160,7 @@ sequenceDiagram
     WAL->>CH: Registry.register(fingerprint, docHash, faceValue, dueDate)  TX-1
     Note over CH: reverts if fingerprint already registered (duplicate financing)
     ORC->>POL: POST /policy/decide (invoice, profiles, mandate)
-    POL-->>ORC: decision, advance_rate, limit, fee_rate, pd, reasons, decision_hash
+    POL-->>ORC: decision, advance_rate, limit, fee_rate, risk_score (PD), reasons, decision_hash
     alt decision != approve
         ORC-->>UI: REJECTED / REVIEW with reasons
     else approve
@@ -304,15 +304,14 @@ Response `200`:
   "advance_rate": 0.70,
   "limit": "524300.00",
   "fee_rate": 0.009,
-  "pd": 0.034,
-  "risk_score": 0.18,
-  "expected_loss": "8021.79",
+  "risk_score": 0.003,
+  "expected_loss": "707.81",
   "reasons": [
     {"code": "BUYER_PAYS_ON_TIME", "message": "Buyer paid 94% of invoices on time", "impact": -0.08},
     {"code": "ADVANCE_CAPPED_BY_MANDATE", "message": "Mandate max advance 70%", "impact": 0.0}
   ],
   "policy_checks": [
-    {"rule": "max_pd", "passed": true, "value": 0.034, "threshold": 0.05},
+    {"rule": "max_predicted_default", "passed": true, "value": 0.003, "threshold": 0.05},
     {"rule": "kyb_valid", "passed": true, "value": "VALID", "threshold": "VALID"},
     {"rule": "no_injection_flags", "passed": true, "value": 0, "threshold": 0}
   ],
@@ -322,10 +321,10 @@ Response `200`:
   "decision_hash": "0x9a7b..."
 }
 ```
-Skeleton `PolicyDecision` has `decision, advance_rate, limit, fee_rate, risk_score, reasons` (reasons as strings); scope adds `model_version`, `policy_version`. **[proposed]** `decision_id`, `pd`, `expected_loss`, `policy_checks`, `mandate_id`, `decision_hash`, and reasons as objects. `fee_rate` is the discount fee per 30 days, as in the Finance primer (`docs/02`); 0.009 per 30 days ≈ 10.95% APR. Lender quotes and the on-chain guard work in APR (`apr = fee_rate × 365 / 30`), converted in `shared/money.py`. `decision_hash` = keccak256 of the canonical JSON of the response without `decision_hash` (sorted keys, no spaces); it is written on-chain at TX‑2. Hard rules before any model (from scope, fail closed): `injection_flags` non-empty → `review`; `fraud_score ≥ 0.30` → `reject`; `confidence < 0.80` → `review`; plus KYB not `VALID` or expired → `reject`.
+Skeleton `PolicyDecision` has `decision, advance_rate, limit, fee_rate, risk_score, reasons` (reasons as strings); scope adds `model_version`, `policy_version`. **[proposed]** `decision_id`, `expected_loss`, `policy_checks`, `mandate_id`, `decision_hash`, and reasons as objects. `risk_score` is the buyer's probability of default (PD) over the invoice tenor, as the Policy thread defines it (about 0.003 on the happy path); fraud risk stays in OCR's `fraud_score`. `expected_loss` = PD × LGD × limit (example uses an assumed LGD of 0.45). `fee_rate` is the discount fee per 30 days, as in the Finance primer (`docs/02`); 0.009 per 30 days ≈ 10.95% APR. Lender quotes and the on-chain guard work in APR (`apr = fee_rate × 365 / 30`), converted in `shared/money.py`. `decision_hash` = keccak256 of the canonical JSON of the response without `decision_hash` (sorted keys, no spaces); it is written on-chain at TX‑2. Hard rules before any model (from scope, fail closed): `injection_flags` non-empty → `review`; `fraud_score ≥ 0.30` → `reject`; `confidence < 0.80` → `review`; plus KYB not `VALID` or expired → `reject`.
 
 Mandate endpoints (Policy AI owns compile, Agent Wallet owns activation on-chain):
-- `POST /policy/mandate/compile` `{ "text": "never above 70% advance..." }` → `{ "mandate": {max_advance_rate, max_apr, max_pd, max_amount_per_tx, daily_cap, allowed_currency, require_kyb, duplicate_policy, human_review_above, expires_at}, "warnings": [] }`. Values outside hard bounds (for example max_apr > 0.30) are rejected, never clamped silently. Demo mandate (from `docs/02`): max advance 0.70, max APR 0.12, max PD 0.05, human review above THB 837,500.
+- `POST /policy/mandate/compile` `{ "text": "never above 70% advance..." }` → `{ "mandate": {max_ltv, max_apr, max_predicted_default, max_amount_per_tx, daily_cap, allowed_currency, require_kyb, duplicate_policy, human_review_above, expires_at}, "warnings": [] }`. Values outside hard bounds (for example max_apr > 0.30) are rejected, never clamped silently. Demo mandate (from `docs/02`): `max_ltv` 0.70, `max_apr` 0.12, `max_predicted_default` 0.05, `human_review_above` THB 837,500.
 - `GET /policy/mandate/{mandate_id}`.
 
 ### 5.3 Agent Wallet · `POST /wallet/*`
