@@ -2,7 +2,7 @@
 
 > **Read this first.** This is the PM's source of truth for what we build before the internal deadline (end of Oct 12, Bangkok time).
 > Paste this whole file into your AI assistant together with your module doc (`docs/03`, `04` or `05`) before you start coding.
-> Status: **v0.1 draft, 2026-10-10.** Lines marked **[OPEN]** are waiting on a decision from P (PM). When P decides, this file is updated and the decision moves to the Decision log at the bottom.
+> Status: **v0.2, 2026-10-10** (chain, lender side, policy split, token and rate conventions confirmed by P). Lines marked **[OPEN]** are waiting on a decision from P (PM). When P decides, this file is updated and the decision moves to the Decision log at the bottom.
 
 ---
 
@@ -77,7 +77,7 @@ Terminology fix, because two things are called "policy":
 
 ## 4. Interfaces (the contract between modules)
 
-All services: Python 3.11, FastAPI, JSON over HTTP. LLM calls go through a thin pluggable client (`llm_client.complete(messages, schema)`), never a vendor SDK called directly from business logic. Money is a **string decimal** in JSON (`"749000.00"`) to avoid float errors; currency is ISO 4217 (`"THB"` for the demo, per `docs/02`). `fee_rate` is per 30 days; `risk_score` is the buyer's **probability of default (PD)**, 0 to 1, compared directly with the mandate's 5% cap; fraud risk is carried separately in OCR's `fraud_score` (default, pending P). Lender quotes and the guard compare **APR**; the wallet converts `fee_rate` to APR with the shared helper in `shared/money.py`, never with its own formula. On chain, amounts are integers in **tTHB with 2 decimals** (THB 1.00 = 100 units) everywhere, no USD/6-decimal placeholders; the conversion lives in one helper owned by the wallet (see `docs/03`).
+All services: Python 3.11, FastAPI, JSON over HTTP. LLM calls go through a thin pluggable client (`llm_client.complete(messages, schema)`), never a vendor SDK called directly from business logic. Money is a **string decimal** in JSON (`"749000.00"`) to avoid float errors; currency is ISO 4217 (`"THB"` for the demo, per `docs/02`). `fee_rate` is per 30 days; `risk_score` is the buyer's **probability of default (PD)**, 0 to 1, compared directly with the mandate's 5% cap; fraud risk is carried separately in OCR's `fraud_score`. Lender quotes and the guard compare **APR**; the wallet converts `fee_rate` to APR with the shared helper in `shared/money.py`, never with its own formula. On chain, amounts are integers in **tTHB with 2 decimals** (THB 1.00 = 100 units) everywhere, no USD/6-decimal placeholders; the conversion lives in one helper owned by the wallet (see `docs/03`).
 
 ### 4.1 OCR service — `POST /ocr/extract`
 Input: multipart `file` (PDF/PNG/JPG). Output:
@@ -280,14 +280,15 @@ Target slide: 5 green tx hashes (register, create position, lender funds vault, 
 | Date | Decision | By |
 |---|---|---|
 | 2026-10-10 | Stack: Python 3.11 + FastAPI per service, JSON over HTTP, pluggable LLM client | coordinator default |
-| 2026-10-10 | Chain: FISCO BCOS for the required real tx hashes, mock ledger only for development; Base Sepolia optional after Oct 12 for bonus points | Architect default, [OPEN] P to confirm |
+| 2026-10-10 | Chain: FISCO BCOS for the required real tx hashes, mock ledger only for development; Base Sepolia optional after Oct 12 for bonus points | P |
 | 2026-10-10 | Official deadline 20 Oct 23:59 Beijing (22:59 Bangkok), from the rules P uploaded; Oct 12 noon stays the internal MVP freeze | rules |
-| 2026-10-10 | Lender quotes, settlement trigger and KYC mock live in the orchestrator (PM) | [OPEN] P to confirm |
+| 2026-10-10 | Lender quotes, settlement trigger and KYC mock live in the orchestrator (PM) | P |
+| Policy split: Policy AI eng owns the mandate schema and NL → JSON compiler; Agent AI eng owns enforcement (off-chain check + on-chain `PolicyGuard`) | P |
 | 2026-10-10 | Agent AI eng owns the whole on-chain layer (all contracts, in `services/agent-wallet/contracts/`) | P |
 | 2026-10-10 | Integration: PM. Demo data: each engineer for their module, PM rechecks. Demo UI design: Policy AI eng. Pitch pack: PM + Policy AI eng + Finance. Controls/compliance research: PM (`docs/06`) | P |
-| 2026-10-10 | Settlement token on chain: simulated THB token `tTHB` (Finance doc) instead of USDC (architecture doc) | [OPEN] P to confirm |
-| 2026-10-10 | `fee_rate` is per 30 days; wallet converts to APR via `shared/money.py` | coordinator default, [OPEN] P |
-| 2026-10-10 | `risk_score` = buyer PD (0 to 1), fraud risk stays in `fraud_score` | coordinator default, [OPEN] P |
+| 2026-10-10 | Settlement token on chain: simulated THB token `tTHB` (Finance doc) instead of USDC (architecture doc), 2 decimals | P |
+| 2026-10-10 | `fee_rate` is per 30 days; wallet converts to APR via `shared/money.py` | P |
+| 2026-10-10 | `risk_score` = buyer PD (0 to 1), fraud risk stays in `fraud_score` | P |
 | 2026-10-10 | Code freeze for every module is Oct 12 12:00 (Policy brief said 18:00) | scope default, [OPEN] P |
 | 2026-10-10 | Demo tax IDs: seller 0105559000000, buyer 0107559000001 (valid Thai checksum) | final |
 | 2026-10-10 | Demo scenario and numbers come from `docs/02` (THB, Siam Fresh Pack → Mekong Basket Retail PCL) | Finance thread; Finance teammate to approve by Oct 11 10:00 |
