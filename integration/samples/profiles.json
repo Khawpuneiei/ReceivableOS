@@ -1,0 +1,13 @@
+{
+  "supplier_profile": {
+    "name": "Demo Supplier Co., Ltd.",
+    "wallet_address": "0xSUPPLIER",
+    "years_trading": 4,
+    "kyc_valid": true
+  },
+  "buyer_profile": {
+    "name": "Demo Buyer Plc.",
+    "credit_rating": "BBB",
+    "on_time_payment_rate": 0.94
+  }
+}
