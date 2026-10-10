@@ -364,9 +364,9 @@ Past FinTechathon winners submitted a business plan alongside the code. The pitc
 | **Sat 11 Oct 20:00** | Pain-point slide | Pick 4 numbers from §7, re-check each link opens and says what we claim, mark estimates | Pitch pack |
 | **Sat 11 Oct 22:00** | Business-plan draft (Finance sections of §11.1) | Problem, market, business model, competition, risk/compliance; 2–3 pages | Pitch pack (PM + Policy AI eng + Finance) |
 | **Sun 12 Oct 10:00** | Business-model slide + judge Q&A sheet | §11 table on one slide; 8–10 likely judge questions with answers (legal assignment, why not just use NITMX TDR, who bears default, why ~16% all-in is fair, regulation) | Pitch pack |
-| **Sun 12 Oct 14:00** | Demo walk-through check | Watch the end-to-end demo and confirm every amount on screen matches §10 (demo data is integrated by PM; §10 is its finance source) | Whole team |
+| **Sun 12 Oct 11:00** | Demo walk-through check | Watch the end-to-end demo and confirm every amount on screen matches §10 (demo data is integrated by PM; §10 is its finance source) | Whole team |
 
-These dates assume the team's own MVP date of 12 Oct. The competition's preliminary round reportedly closes 2 Nov, so if P moves the internal deadline, shift the dates but keep the order.
+These dates fit the team's internal freeze at **noon, Sun 12 Oct**. The official submission deadline is **20 Oct, 22:59 Bangkok time**, so 13–20 Oct is for polishing the deck and business plan, not for changing demo numbers. The rules ask for everything in **English**, a presentation of **at most 10 minutes**, and an optional demo video of at most 5 minutes; Finance's part of the deck should take about 2 of those 10 minutes (problem, market, business model).
 
 If anything slips, the order of importance is: demo-number sign-off → sample documents → policy thresholds → pain-point slide → the rest.
 
