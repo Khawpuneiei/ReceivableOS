@@ -421,8 +421,10 @@ The compiler shows this JSON (field names from P's architecture doc, as Finance'
 }
 ```
 
-**This shape is a proposal.** The Agent Wallet thread defines the JSON its guard consumes; when the coordinator
-relays it, rename fields to match and keep this section in sync. Keep it flat and small. `/policy/decide` reads only
+**Agreed with Agent Wallet:** the wallet reads `max_advance_rate`, `max_apr`, `max_pd`, `human_review_above`,
+`expires_at`, `max_amount_per_tx`, `daily_cap`, and accepts `max_ltv` / `max_predicted_default` as aliases, so these
+names stand. The compiler **always emits `expires_at`** (the stated validity, else platform default of 30 days from
+compile time, listed in `fields_from_defaults`). Keep it flat and small. `/policy/decide` reads only
 `max_ltv`, `max_apr`, `max_predicted_default`, `human_review_above` and `max_amount_per_tx` from it.
 
 Semantics: `human_review_above` triggers when amount **≥** its value (inclusive, as the Controls and Compliance doc
@@ -639,7 +641,9 @@ amount_paid}`; proposed `POST /flow/attack/{case}` (A1–A6, `DEMO_MODE=1`). Unt
 │                   (10.95% APR) · PD 0.3% gauge vs 5% mandate line · reasons list (rule ids) ·     │
 │                   "Why?" expander: top model drivers bar chart + rule trace                       │
 │ 4. Offers         table of lender quotes; chosen row green, out-of-mandate rows red with reason   │
-│ 5. On-chain       timeline TX-1…TX-5 with short hash, status, receipt link; [Buyer paid] button   │
+│ 5. On-chain       timeline TX-1…TX-5 with short hash, status, receipt link; [Approve] shown when  │
+│                   the wallet returns pending_approval (calls the orchestrator path that forwards  │
+│                   to POST /wallet/confirm/{tx_id}); [Buyer paid] button                           │
 │ 6. Attacks        buttons A1–A6; each appends a red BLOCKED row: who stopped it (OCR / Policy /   │
 │                   Wallet / PolicyGuard) + revert reason + tx hash                                │
 │ Footer: policy_version · model_version · decision_hash · audit link                               │
