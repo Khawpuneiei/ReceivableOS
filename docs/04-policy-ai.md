@@ -33,7 +33,7 @@ Two jobs, both deterministic where money is concerned:
 | `fee_rate` | Discount fee **per 30 days** on the advance (0.009 = 0.90%/30d ≈ 10.95% APR) | Adopted from Finance. Policy returns the risk-based maximum; the wallet takes quotes at or below it and within the mandate APR. |
 | `risk_score` | **Calibrated probability of default over the tenor**, 0–1, higher = riskier | Differs from Finance's "combined fraud + credit, 0.18". A composite would trip the mandate's 5% default cap and isn't a probability. Happy path ⇒ ≈ 0.003. |
 | Money and rates | Decimal strings (`"524300.00"`, `"0.009"`) | Per `shared/schemas.py`; `model_version` and `policy_version` are contract fields. |
-| Mandate field names | `max_ltv`, `max_apr`, `max_predicted_default`, `human_review_above`… (from your architecture doc) | Proposal; will match whatever the Agent Wallet guard consumes. |
+| Mandate field names | `max_ltv`, `max_apr`, `max_predicted_default`, `human_review_above` (inclusive ≥), `max_amount_per_tx` 1.5m, `daily_cap` 3m… (from your architecture doc + Controls doc) | Proposal; will match whatever the Agent Wallet guard consumes. |
 
 ## How a decision is made
 
@@ -43,7 +43,7 @@ Two jobs, both deterministic where money is concerned:
    price above the 15% APR legal ceiling.
 3. **Credit model ⇒ PD:** PD > 15% rejects; PD above the mandate's max (5%) sends to review.
 4. **Review triggers:** buyer hasn't confirmed, other fraud flags, line items don't sum (± 7% VAT), new seller,
-   above the human-review amount (THB 837,500), concentration > 30% of the pool, no buyer rating, price above the
+   at or above the human-review amount (THB 837,500), concentration > 30% of the pool, no buyer rating, price above the
    mandate APR.
 5. **Terms:** base advance by buyer tier (A 80%, B 75%, C 65%) minus haircuts (unconfirmed −20 pts, long tenor,
    old invoice, high dilution, PD > 3%), floor 50%, capped by the mandate and facility limits.

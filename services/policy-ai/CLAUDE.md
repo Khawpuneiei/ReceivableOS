@@ -314,7 +314,7 @@ review_triggers:                       # outcome: review
   - {id: REVIEW.FRAUD_FLAGS,          message: "OCR raised fraud flags"}   # any flag not handled by a KO
   - {id: REVIEW.LINE_ITEMS_MISMATCH,  param: {tolerance: 0.01, vat_rates: [0.0, 0.07]}, message: "Line items (± VAT) don't sum to the total"}
   - {id: REVIEW.NEW_SUPPLIER,         param: {min_financed: 3}, message: "Fewer than 3 invoices financed before"}
-  - {id: REVIEW.LARGE_TICKET,         message: "Above the human-review amount"}
+  - {id: REVIEW.LARGE_TICKET,         message: "At or above the human-review amount"}   # amount >= human_review_above
   - {id: REVIEW.CONCENTRATION,        param: {max_buyer_share: 0.30, max_supplier_share: 0.30}}
   - {id: REVIEW.THIN_PROFILE,         message: "Buyer has no tier or rating"}
   - {id: REVIEW.MANDATE_APR,          message: "Risk price above the seller's APR mandate"}
@@ -343,7 +343,8 @@ mandate_limits:                        # platform maxima for the mandate compile
   max_ltv: 0.90
   max_apr: 0.15
   max_predicted_default: 0.20
-  defaults: {max_ltv: 0.70, max_apr: 0.12, max_predicted_default: 0.05}
+  defaults: {max_ltv: 0.70, max_apr: 0.12, max_predicted_default: 0.05,
+             max_amount_per_tx: {THB: "1500000.00"}, daily_cap: {THB: "3000000.00"}}   # FINANCE-TBD
 ```
 
 **Terms algorithm (deterministic, use `Decimal` for money):**
@@ -355,7 +356,8 @@ limit   = advance × amount
 limit   = min(limit,
               buyer_limit − buyer.current_exposure,          (if buyer_limit known)
               facility_limit − supplier.current_exposure,    (if known)
-              max_single_invoice_limit[currency])
+              max_single_invoice_limit[currency],
+              mandate.max_amount_per_tx)                     (if a mandate is passed)
 limit <= 0 ⇒ KO.NO_HEADROOM
 advance_rate (reported) = round(limit / amount, 4)            so advance_rate × amount == limit
 money → 2 dp (ROUND_DOWN for limit), rates → 4 dp
@@ -406,6 +408,8 @@ The compiler shows this JSON (field names from P's architecture doc, as Finance'
   "max_apr": 0.12,
   "max_predicted_default": 0.05,
   "human_review_above": "837500.00",
+  "max_amount_per_tx": "1500000.00",
+  "daily_cap": "3000000.00",
   "currency": "THB",
   "allowed_settlement_asset": "tTHB",
   "allowed_payees": ["0xSUPPLIER"],
@@ -419,7 +423,12 @@ The compiler shows this JSON (field names from P's architecture doc, as Finance'
 
 **This shape is a proposal.** The Agent Wallet thread defines the JSON its guard consumes; when the coordinator
 relays it, rename fields to match and keep this section in sync. Keep it flat and small. `/policy/decide` reads only
-`max_ltv`, `max_apr`, `max_predicted_default` and `human_review_above` from it.
+`max_ltv`, `max_apr`, `max_predicted_default`, `human_review_above` and `max_amount_per_tx` from it.
+
+Semantics: `human_review_above` triggers when amount **≥** its value (inclusive, as the Controls and Compliance doc
+specifies). `max_amount_per_tx` (THB 1.5m) and `daily_cap` (THB 3m) are FINANCE-TBD defaults; `daily_cap` is
+enforced only by the wallet guard. The Controls doc also asks for review on any injection flag or fraud_score ≥ 0.5;
+both are already covered by the hard rules (injection ⇒ review; fraud ≥ 0.30 ⇒ reject), so they aren't mandate fields.
 
 Pipeline:
 1. **Deterministic parser first** (`app/mandate.py`): regexes for "N% advance/LTV", "N% APR", "risk/PD above N%",
