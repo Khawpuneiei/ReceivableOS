@@ -130,6 +130,8 @@ def build_features(
         **{f"sector_{s}": 1.0 if buyer.sector == s else 0.0 for s in SECTORS},
     }
     imputed = frozenset(name for name, value in raw.items() if value is None)
+    if buyer.credit_tier is MISSING:
+        imputed |= {"buyer_tier_ord"}  # scored with the missing tier
     tier_medians = medians["tiers"][tier] if medians and tier is not None else {}
     values = {
         name: (raw[name] if raw[name] is not None else float(tier_medians.get(name, math.nan)))

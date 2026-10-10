@@ -22,7 +22,7 @@ from app import model
 from app.engine import build_ctx, evaluate, merge_outcome
 from app.hashing import canonical_json, decision_hash, sha256_hex
 from app.rules import RuleSet, active_rules
-from app.schemas import Mandate, PolicyDecisionExt, PolicyRequestExt, ReasonDetail
+from app.schemas import FeatureContribution, Mandate, PolicyDecisionExt, PolicyRequestExt, ReasonDetail
 from app.terms import CENT, fmt_rate
 from shared.schemas import Decision
 
@@ -106,6 +106,8 @@ def decide(
     for r in results:
         if r.status == "hit" and r.outcome is not None:
             details.append(ReasonDetail(code=r.id, message=r.message, source="rule", effect=r.outcome))
+    prediction = ctx.prediction or model.predict(ctx)
+    details += _model_details(prediction)
     zero = Decimal(0)
     if outcome == Decision.reject or ctx.terms is None or ctx.price is None:
         advance_rate, limit, fee_rate, apr = zero, zero.quantize(CENT), zero, zero
@@ -124,7 +126,7 @@ def decide(
     versions = {
         "request_hash": request_hash,
         "policy_version": rules.version,
-        "model_version": model.MODEL_VERSION,
+        "model_version": prediction.version,
     }
     pd = float(ctx.pd) if ctx.pd is not None else 0.0
     decision = PolicyDecisionExt(
@@ -136,10 +138,14 @@ def decide(
         risk_score=pd,
         pd=pd,
         reasons=[_reason_text(d) for d in details],
-        model_version=model.MODEL_VERSION,
+        model_version=prediction.version,
         policy_version=rules.version,
         decision_id="dec_" + sha256_hex(canonical_json(versions))[2:26],
         expected_loss=expected_loss,
+        top_features=[
+            FeatureContribution(feature=d.feature, value=d.value, contribution=d.contribution)
+            for d in prediction.drivers
+        ],
         tenor_days=ctx.tenor_days,
         fee_amount=fee_amount,
         reason_details=details,
@@ -149,6 +155,23 @@ def decide(
         request_hash=request_hash,
     )
     return decision.model_copy(update={"decision_hash": decision_hash(decision)})
+
+
+def _model_details(prediction: model.Prediction) -> list[ReasonDetail]:
+    """MODEL.PD plus one MODEL.* line per top driver (fixed labels and numbers only)."""
+    details = [
+        ReasonDetail(
+            code="MODEL.PD",
+            message=f"Predicted buyer default {prediction.pd:.2%} ({prediction.version})",
+            source="model",
+            effect=f"pd {prediction.pd:.6f}",
+        )
+    ]
+    for driver in prediction.drivers:
+        code, message = model.describe(driver)
+        effect = f"{driver.contribution:+.4f} log-odds"
+        details.append(ReasonDetail(code=code, message=message, source="model", effect=effect))
+    return details
 
 
 def _reason_text(d: ReasonDetail) -> str:
