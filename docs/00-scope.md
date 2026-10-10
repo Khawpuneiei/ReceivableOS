@@ -77,7 +77,7 @@ Terminology fix, because two things are called "policy":
 
 ## 4. Interfaces (the contract between modules)
 
-All services: Python 3.11, FastAPI, JSON over HTTP. LLM calls go through a thin pluggable client (`llm_client.complete(messages, schema)`), never a vendor SDK called directly from business logic. Money is a **string decimal** in JSON (`"749000.00"`) to avoid float errors; currency is ISO 4217 (`"THB"` for the demo, per `docs/02`). `fee_rate` is per 30 days; `risk_score` is 0 to 1, higher is riskier (both pending Policy confirmation). Lender quotes and the guard compare **APR**; the wallet converts `fee_rate` to APR with the shared helper in `shared/money.py`, never with its own formula. On chain, amounts are integers in the mock stable token's smallest unit; the conversion lives in one helper owned by the wallet (see `docs/03`).
+All services: Python 3.11, FastAPI, JSON over HTTP. LLM calls go through a thin pluggable client (`llm_client.complete(messages, schema)`), never a vendor SDK called directly from business logic. Money is a **string decimal** in JSON (`"749000.00"`) to avoid float errors; currency is ISO 4217 (`"THB"` for the demo, per `docs/02`). `fee_rate` is per 30 days; `risk_score` is the buyer's **probability of default (PD)**, 0 to 1, compared directly with the mandate's 5% cap; fraud risk is carried separately in OCR's `fraud_score` (default, pending P). Lender quotes and the guard compare **APR**; the wallet converts `fee_rate` to APR with the shared helper in `shared/money.py`, never with its own formula. On chain, amounts are integers in the mock stable token's smallest unit; the conversion lives in one helper owned by the wallet (see `docs/03`).
 
 ### 4.1 OCR service — `POST /ocr/extract`
 Input: multipart `file` (PDF/PNG/JPG). Output:
@@ -110,7 +110,7 @@ Input: `{ "invoice": <4.1 output>, "supplier_profile": {...}, "buyer_profile": {
   "advance_rate": "0.70",
   "limit": "524300.00",
   "fee_rate": "0.009",
-  "risk_score": 0.18,
+  "risk_score": 0.003,
   "reasons": ["buyer PD below 5% cap", "fraud_score 0.07 below 0.30 cap"],
   "model_version": "credit-v0.1",
   "policy_version": "mandate-v0.1"
@@ -242,7 +242,7 @@ The canonical scenario, numbers and the eight attack variants live in **`docs/02
 1. Siam Fresh Pack (SME supplier) uploads a THB 749,000 invoice to Mekong Basket Retail (buyer), due in 45 days.
 2. Mandate in plain language: max 70% advance (LTV), APR at most 12%, buyer PD at most 5%, human review above THB 837,500. The compiler shows the JSON.
 3. OCR extracts fields; no injection; fraud score low. Registry confirms the invoice is not financed elsewhere.
-4. Credit decision: approve, advance_rate 0.70, limit THB 524,300, fee_rate 0.009 per 30 days, risk_score 0.18.
+4. Credit decision: approve, advance_rate 0.70, limit THB 524,300, fee_rate 0.009 per 30 days, risk_score (PD) about 0.003, under the 5% cap.
 5. Two mock lenders quote: Lender A 70% at 10.95% APR, Lender B 65% at 9.13% APR. The wallet picks Lender A (highest advance within the APR cap).
 6. Guard passes, wallet draws on chain. Tx hash shown.
 7. "Buyer paid" → wallet settles the lender automatically. Tx hash shown.
@@ -263,5 +263,8 @@ Target slide: 5 green tx hashes (register, create position, lender funds vault, 
 | 2026-10-10 | Agent AI eng owns the whole on-chain layer (all contracts, in `services/agent-wallet/contracts/`) | P |
 | 2026-10-10 | Integration: PM. Demo data: each engineer for their module, PM rechecks. Demo UI design: Policy AI eng. Pitch pack: PM + Policy AI eng + Finance. Controls/compliance research: PM (`docs/06`) | P |
 | 2026-10-10 | Settlement token on chain: simulated THB token `tTHB` (Finance doc) instead of USDC (architecture doc) | [OPEN] P to confirm |
-| 2026-10-10 | `fee_rate` is per 30 days; `risk_score` is 0 to 1, higher is riskier | [OPEN] Policy eng to confirm |
+| 2026-10-10 | `fee_rate` is per 30 days; wallet converts to APR via `shared/money.py` | coordinator default, [OPEN] P |
+| 2026-10-10 | `risk_score` = buyer PD (0 to 1), fraud risk stays in `fraud_score` | coordinator default, [OPEN] P |
+| 2026-10-10 | Code freeze for every module is Oct 12 12:00 (Policy brief said 18:00) | scope default, [OPEN] P |
+| 2026-10-10 | Demo tax IDs: seller 0105559000000, buyer 0107559000001 (valid Thai checksum) | final |
 | 2026-10-10 | Demo scenario and numbers come from `docs/02` (THB, Siam Fresh Pack → Mekong Basket Retail) | Finance thread; Finance teammate to approve by Oct 11 10:00 |
