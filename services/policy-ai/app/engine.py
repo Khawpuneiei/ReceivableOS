@@ -26,7 +26,7 @@ from app import model
 from app.profiles import MISSING, BuyerProfile, SupplierProfile, normalise_buyer, normalise_supplier
 from app.rules import Haircut, Rule, RuleSet, active_rules, check_registry
 from app.schemas import Mandate, PolicyRequestExt, Portfolio
-from app.terms import CENT, Price, Terms, compute_terms, price
+from app.terms import CENT, Price, Terms, compute_terms, fmt_rate, price
 from shared.money import DAYS_PER_YEAR, FEE_PERIOD_DAYS
 from shared.schemas import Decision, ExtractedInvoice
 
@@ -138,7 +138,9 @@ def _dec(value: float | Decimal) -> Decimal:
 @rule("HARD.FRAUD_SCORE")
 def _fraud_score(ctx: Ctx, p: Any) -> Verdict:
     score = _dec(ctx.invoice.fraud_score)
-    return hit(f"fraud_score {score} >= {p.min_fraud_score}") if score >= p.min_fraud_score else PASS
+    return (
+        hit(f"fraud_score {score} >= {fmt_rate(p.min_fraud_score)}") if score >= p.min_fraud_score else PASS
+    )
 
 
 @rule("HARD.INJECTION")
@@ -150,7 +152,11 @@ def _injection(ctx: Ctx, p: Any) -> Verdict:
 @rule("HARD.LOW_CONFIDENCE")
 def _low_confidence(ctx: Ctx, p: Any) -> Verdict:
     confidence = _dec(ctx.invoice.confidence)
-    return hit(f"confidence {confidence} < {p.min_confidence}") if confidence < p.min_confidence else PASS
+    return (
+        hit(f"confidence {confidence} < {fmt_rate(p.min_confidence)}")
+        if confidence < p.min_confidence
+        else PASS
+    )
 
 
 @rule("HARD.KYC_UNKNOWN")
@@ -230,7 +236,7 @@ def _dates_invalid(ctx: Ctx, p: Any) -> Verdict:
 def _pd_too_high(ctx: Ctx, p: Any) -> Verdict:
     if ctx.pd is None:
         return SKIP_MISSING
-    return hit(f"PD {ctx.pd} > {p.reject_above}") if ctx.pd > p.reject_above else PASS
+    return hit(f"PD {ctx.pd} > {fmt_rate(p.reject_above)}") if ctx.pd > p.reject_above else PASS
 
 
 @rule("REVIEW.PD_ABOVE_CAP")
@@ -240,7 +246,7 @@ def _pd_above_cap(ctx: Ctx, p: Any) -> Verdict:
         return SKIP_MISSING
     mandate_cap = ctx.mandate.max_predicted_default if ctx.mandate else None
     cap = min(p.review_above, ctx.rules.defaults.max_pd if mandate_cap is None else mandate_cap)
-    return hit(f"PD {ctx.pd} > cap {cap}") if ctx.pd > cap else PASS
+    return hit(f"PD {ctx.pd} > cap {fmt_rate(cap)}") if ctx.pd > cap else PASS
 
 
 # --- Review triggers evaluated before terms (section 6.1 step 6) ---
@@ -352,7 +358,7 @@ def _pricing(ctx: Ctx, p: Any) -> Verdict:
     if ctx.price is None:
         return SKIP_MISSING
     annual = ctx.price.annual
-    return hit(f"annual risk price {annual:.4f} > {p.max_apr}") if annual > p.max_apr else PASS
+    return hit(f"annual risk price {annual:.4f} > {fmt_rate(p.max_apr)}") if annual > p.max_apr else PASS
 
 
 @rule("REVIEW.MANDATE_APR", after_terms=True)

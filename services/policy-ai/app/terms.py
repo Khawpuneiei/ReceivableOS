@@ -146,7 +146,5 @@ def price(rules: RuleSet, *, pd: Decimal, tenor_days: int, confirmed: bool, limi
         CENT, rounding=ROUND_HALF_UP
     )
     expected_loss = (pd * rules.lgd * limit).quantize(CENT, rounding=ROUND_HALF_UP)
-    effect = (
-        f"fee_rate {fmt_rate(fee_rate)} per 30 days (APR {fmt_rate(apr)}; annual risk price {annual:.4f})"
-    )
+    effect = f"fee_rate {fmt_rate(fee_rate)}, APR {fmt_rate(apr)}, annual risk price {annual:.4f}"
     return Price(annual, fee_rate, apr, fee_amount, expected_loss, (Step(p.id, p.message, effect),))
