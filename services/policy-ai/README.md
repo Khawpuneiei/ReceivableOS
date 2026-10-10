@@ -23,3 +23,10 @@ python -m uvicorn app.main:app --app-dir services/policy-ai --port 8002 --reload
 pytest services/policy-ai
 ruff check services/policy-ai
 ```
+
+## Implementation progress
+
+Built feature by feature; the endpoint above stays the stub until the decision engine is wired in.
+
+- `app/schemas.py`: `PolicyRequestExt` and `PolicyDecisionExt` subclass the shared contract and only add optional request fields (`mandate`, `portfolio`, `as_of_date`) and extra response fields. The input `Mandate` uses the agent wallet's key names, accepts their aliases (`max_advance_rate`, `max_pd`, `human_review_above_thb`, `currency`) and ignores wallet-only keys.
+- `app/profiles.py`: turns the free-form `supplier_profile` / `buyer_profile` dicts into typed profiles (aliases, rating to tier A-D). Absent fields stay `MISSING` so rules skip them instead of guessing; malformed values raise `ValueError`.
