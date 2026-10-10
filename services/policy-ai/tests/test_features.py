@@ -39,6 +39,7 @@ def test_demo_feature_vector():
         "amount_to_buyer_limit": 0.0749,
         "ocr_confidence": 0.95,
         "fraud_score": 0.07,
+        "buyer_tier_x_tenor_30d": 0.0,  # tier A
         "sector_retail": 1.0,
         "sector_manufacturing": 0.0,
         "sector_food": 0.0,
@@ -53,7 +54,8 @@ def test_column_order_is_stable():
     fv = _features(happy_body())
     assert list(fv.values) == list(FEATURES)
     assert fv.row() == [fv.values[name] for name in FEATURES]
-    assert len(FEATURES) == 16 + len(SECTORS)  # brief 8.2: 16 numeric features plus the sector one-hot
+    # brief 8.2: 16 numeric features, the tier x tenor interaction and the sector one-hot
+    assert len(FEATURES) == 16 + 1 + len(SECTORS)
     assert set(MONOTONE) == set(FEATURES)
 
 
@@ -74,7 +76,18 @@ def test_a_buyer_with_no_tier_is_scored_with_the_missing_tier():
     del body["buyer_profile"]["on_time_payment_rate"]
     fv = _features(body)
     assert fv.values["buyer_tier_ord"] == 2.0  # tier C
+    assert fv.values["buyer_tier_x_tenor_30d"] == pytest.approx(2.0 * 34 / 30)
+    assert {"buyer_tier_ord", "buyer_tier_x_tenor_30d"} <= fv.imputed
     assert fv.values["buyer_late_payment_rate"] == MEDIANS["tiers"]["C"]["buyer_late_payment_rate"]
+
+
+def test_tier_x_tenor_grows_with_tier_and_tenor():
+    body = happy_body()
+    body["buyer_profile"]["internal_rating"] = "BBB"  # tier B
+    fv = _features(body)
+    assert fv.values["buyer_tier_x_tenor_30d"] == pytest.approx(1.0 * 34 / 30)
+    body["invoice"]["due_date"] = "2026-12-11"  # 60 days
+    assert _features(body).values["buyer_tier_x_tenor_30d"] == pytest.approx(2.0)
 
 
 def test_without_medians_a_gap_is_nan_for_the_trainer():

@@ -53,16 +53,13 @@ def test_the_model_card_selection_is_served():
 
 
 def test_demo_pd_windows_with_the_served_model():
-    """Plan C20. Scenario 1 must stay at fee 0.009 and scenario 8 must stay approved.
-
-    V3 (unconfirmed buyer) should sit in (0.0036, 0.0058] for Finance's fee 0.012. The served scorecard
-    estimates 0.00339 (latent truth 0.0044), so V3 prices at 0.0115; see fixtures/expected/03 and the PR.
-    Only the upper bound and the ordering are asserted here.
-    """
+    """Plan C20. Scenario 1 must stay at fee 0.009, V3 (unconfirmed buyer) at Finance's 0.012 and
+    scenario 8 approved. Latent truths: 0.0027, 0.0044 and 0.0034 (training/README.md)."""
     demo, v3, s8 = _pd(happy_body()), _pd(_v3()), _pd(_s8())
     assert demo <= 0.00347
+    assert 0.0036 < v3 <= 0.0058
     assert s8 <= 0.0057
-    assert demo < v3 <= 0.0058
+    assert demo < v3
 
 
 def test_served_decision_carries_drivers_and_model_reasons():
