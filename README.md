@@ -14,11 +14,13 @@ Built for [FinTechathon 2026](https://fintechathon.g-ican.com/#/en), Agent Walle
 
 | Seat | Owns | Where |
 |---|---|---|
-| PM (P) | Scope, interface spec, orchestrator, registry/vault contracts, demo UI, PR review | `docs/00-scope.md`, `shared/`, `services/orchestrator/`, `contracts/` (registry, vault, token) |
-| Finance | Use cases, pain-point numbers, business model, pitch content | `docs/02-finance-domain.md` |
-| Agent AI engineer | Agent wallet, mandate enforcement, agent-injection guardrails, wallet and guard contracts | `services/agent-wallet/`, `contracts/` (wallet, guard) |
-| Policy AI engineer | Credit policy, credit risk model, mandate schema | `services/policy-ai/` |
-| OCR AI engineer | Invoice OCR, OCR injection defence, fraud detection, demo invoice set | `services/ocr-ai/`, `data/invoices/` |
+| PM (P) | Scope, interface spec, integration (orchestrator), PR review, wallet-safety research (spending limits, human approval, audit log, KYC/AML and privacy stance) | `docs/00-scope.md`, `shared/`, `services/orchestrator/` |
+| Finance | Use cases, pain-point numbers, business model | `docs/02-finance-domain.md` |
+| Agent AI engineer | Agent wallet, mandate enforcement, agent-injection guardrails, the whole on-chain layer | `services/agent-wallet/` (contracts in `services/agent-wallet/contracts/`) |
+| Policy AI engineer | Credit policy, credit risk model, mandate schema, demo UI | `services/policy-ai/`, `ui/` |
+| OCR AI engineer | Invoice OCR, OCR injection defence, fraud detection | `services/ocr-ai/` |
+
+Shared work: **demo data** (`data/`) is built by the Agent, OCR and Policy engineers, each adding their own cases, and rechecked by the PM. The **pitch pack** (`pitch/`) belongs to PM, Policy AI engineer and Finance.
 
 The scope doc ([docs/00-scope.md](docs/00-scope.md)) is the reference for ownership and interfaces.
 
@@ -35,12 +37,12 @@ ReceivableOS/
 │   ├── orchestrator/    # POST /flow/run, /flow/repay  port 8000 (PM)
 │   ├── ocr-ai/          # POST /ocr/extract            port 8001
 │   ├── policy-ai/       # POST /policy/decide          port 8002
-│   └── agent-wallet/    # POST /wallet/execute         port 8003
-├── contracts/           # Solidity for FISCO BCOS
+│   └── agent-wallet/    # POST /wallet/*               port 8003
+│       └── contracts/   # Solidity for FISCO BCOS
 └── data/invoices/       # demo invoices, clean and attack cases
 ```
 
-Planned, added by their owners when needed: `ui/` (demo screen, port 3000) and `pitch/` (deck, video, business plan).
+Planned, added by their owners when needed: `ui/` (demo screen, port 3000, Policy AI engineer) and `pitch/` (deck, video, business plan).
 
 Each service is a small FastAPI app talking JSON over HTTP. Money is a decimal string (`"10000.00"`). The chain is FISCO BCOS, with a mock ledger (`CHAIN_MODE=mock`) so the demo never blocks on the chain.
 

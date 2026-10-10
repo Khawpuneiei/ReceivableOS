@@ -13,4 +13,4 @@ One doc per topic. Each is owned by its author and added by its own PR; links be
 
 Service-level assistant prompts live next to the code: `services/<name>/CLAUDE.md`.
 
-The interface spec is section 4 of `00-scope.md`; [`shared/schemas.py`](../shared/schemas.py) is the same contract as code. Contracts: [`../contracts/README.md`](../contracts/README.md). Team-wide rules: [`CLAUDE.md`](../CLAUDE.md).
+The interface spec is section 4 of `00-scope.md`; [`shared/schemas.py`](../shared/schemas.py) is the same contract as code. Contracts: [`../services/agent-wallet/contracts/README.md`](../services/agent-wallet/contracts/README.md). Team-wide rules: [`CLAUDE.md`](../CLAUDE.md).

@@ -32,15 +32,16 @@ Scope is the MVP only. If a feature is not needed for the live demo or the judgi
 |---|---|---|
 | `services/ocr-ai/` | OCR AI engineer | Invoice OCR, document/OCR injection defence, fraud detection |
 | `services/policy-ai/` | Policy AI engineer | Financing policy, credit risk model |
-| `services/agent-wallet/` | Agent AI engineer | Wallet, mandate enforcement, agent-injection guardrails |
+| `services/agent-wallet/` | Agent AI engineer | Wallet, mandate enforcement, agent-injection guardrails, and the whole on-chain layer: all Solidity lives in `services/agent-wallet/contracts/` |
 | `shared/` | PM | API contract models used by all services |
-| `services/orchestrator/` | PM | End-to-end flow (`/flow/run`, `/flow/repay`), demo script |
-| `contracts/` | Split by file | `AgentWallet`, `PolicyGuard`: Agent AI engineer. `ReceivableRegistry`, `FinancingVault`, `MockStable`: PM. See `contracts/README.md` |
-| `data/invoices/` | OCR AI engineer | Demo invoice set, clean and attack cases |
+| `services/orchestrator/` | PM | Integration: end-to-end flow (`/flow/run`, `/flow/repay`), demo script |
+| `ui/` | Policy AI engineer | Demo screen, port 3000 (added when started) |
+| `data/` | Agent, OCR and Policy AI engineers, PM rechecks | Demo data, clean and attack cases. Each engineer adds their own files; don't edit someone else's |
+| `pitch/` | PM, Policy AI engineer, Finance | Deck, video, business plan (added when started) |
 | `docs/` | Each doc's author (see `docs/README.md`) | |
 | Root files (`README.md`, `CLAUDE.md`, `.env.example`, `.gitignore`, `requirements-dev.txt`, `ruff.toml`) | PM | |
 
-**Rule: edit only your own folder (or your own files in `contracts/`).** If your task seems to need a change outside it, stop and open a separate PR for that change (or ask the PM). Never "fix" another service to make yours work.
+**Rule: edit only your own folder (or your own files in `data/`).** If your task seems to need a change outside it, stop and open a separate PR for that change (or ask the PM). Never "fix" another service to make yours work.
 
 Inside each service:
 
@@ -65,7 +66,7 @@ The spec is section 4 of `docs/00-scope.md`; `shared/schemas.py` is the same con
 `decision (approve | review | reject), advance_rate, limit, fee_rate, risk_score, reasons, model_version, policy_version`
 Hard rules before any model: `injection_flags` non-empty → `review`; `fraud_score ≥ 0.30` → `reject`; `confidence < 0.80` → `review`.
 
-**Agent wallet** — `POST /wallet/execute` takes `{decision, payee, amount, currency, invoice_id}` and returns `WalletResult`:
+**Agent wallet** — `POST /wallet/execute` (more `/wallet/*` endpoints are proposed in `docs/01-architecture.md` section 5.3) takes `{decision, payee, amount, currency, invoice_id}` and returns `WalletResult`:
 `tx_id, status (executed | blocked | pending_approval | failed), chain_ref, approvals_required, audit_ref`
 
 **Orchestrator** — `POST /flow/run` (multipart `file`, form `mandate_id`) runs the whole flow and returns every intermediate result; `POST /flow/repay` simulates "buyer paid".

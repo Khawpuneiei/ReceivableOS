@@ -8,7 +8,7 @@ Status: stub. Calls ocr-ai, then an in-memory duplicate check standing in for th
 
 - `run_demo.py` posts an invoice to `/flow/run` and prints every step.
 - `samples/profiles.json` holds the demo supplier and buyer profiles.
-- Demo invoices (clean and attack cases) live in `data/invoices/`, owned by the OCR AI engineer.
+- Demo invoices (clean and attack cases) live in `data/invoices/`, built by the AI engineers and rechecked by the PM.
 
 ## Run
 
