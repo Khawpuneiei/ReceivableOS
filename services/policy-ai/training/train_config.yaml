@@ -15,3 +15,22 @@ scorecard:                 # points = offset + factor x ln(good:bad odds)
   base_score: 600
   base_odds: 50
   pdo: 20
+lightgbm:                  # brief 8.4: small, monotone trees
+  params:
+    objective: binary
+    learning_rate: 0.03
+    num_leaves: 15
+    max_depth: 4
+    min_data_in_leaf: 50
+    lambda_l2: 1.0
+    feature_fraction: 0.9
+    monotone_constraints_method: advanced
+    seed: 7
+    deterministic: true
+    num_threads: 1
+    verbose: -1
+  max_rounds: 2000
+  early_stopping_rounds: 100
+calibration:
+  methods: [platt, isotonic]   # fitted on the validation split; the better validation Brier is kept
+  min_pd: 0.000001             # floor for isotonic steps so no PD is exactly 0
