@@ -1,0 +1,21 @@
+{
+  "scenario": "V6/V7 repeat seller after a late and a partial payment",
+  "decision": "approve",
+  "advance_rate": "0.70",
+  "limit": "524300.00",
+  "fee_rate": "0.009",
+  "apr": "0.1095",
+  "risk_score": {
+    "max": 0.0057
+  },
+  "must_contain": [
+    "TERMS.HAIRCUT_DILUTION",
+    "TERMS.MANDATE_CAP",
+    "TERMS.HEADROOM"
+  ],
+  "effects": {
+    "TERMS.HAIRCUT_DILUTION": "advance_rate 0.80 -> 0.75",
+    "TERMS.HEADROOM": "facility headroom 2475700.00"
+  },
+  "note": "the dilution haircut takes the advance to 0.75 before the 0.70 mandate cap binds"
+}

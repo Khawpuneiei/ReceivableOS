@@ -1,0 +1,17 @@
+{
+  "scenario": "V3 buyer has not confirmed",
+  "decision": "review",
+  "advance_rate": "0.60",
+  "limit": "449400.00",
+  "fee_rate": "0.012",
+  "apr": "0.146",
+  "risk_score": {
+    "min": 0.0036,
+    "max": 0.0058
+  },
+  "must_contain": [
+    "REVIEW.UNCONFIRMED_BUYER",
+    "REVIEW.MANDATE_APR",
+    "TERMS.HAIRCUT_UNCONFIRMED"
+  ]
+}
