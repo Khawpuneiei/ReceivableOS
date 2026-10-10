@@ -9,7 +9,7 @@
 
 **What we are building.** ReceivableOS is an AI agent wallet for small businesses (SMEs). An SME uploads an unpaid invoice. The system reads it, checks it is not fake or already financed, decides how much money the SME can safely borrow against it, picks the best lender offer, and then the agent wallet pays out on the blockchain. When the SME's customer pays the invoice, the wallet automatically pays the lender back.
 
-**Why it wins.** The competition topic (FinTechathon 2026 International Track, Topic F "Agent Wallet") asks for an AI that acts as a financial participant and moves money on-chain, and it asks for real transaction hashes as proof. Scoring is reported as 40% task completion, 30% security and compliance, 30% innovation and interaction. Our story hits all three:
+**Why it wins.** The competition topic (FinTechathon 2026 International Track, Topic F "Agent Wallet") asks for an AI that acts as a financial participant and moves money on-chain, and it asks for real transaction hashes as proof. Scoring (official rules) is 40% task completion, 30% security and compliance, 30% innovation and interaction, plus a 0–5 point challenge bonus for on-chain exploration that only Topic F can earn. Our story hits all three:
 
 | Score bucket | What the judges see |
 |---|---|
@@ -38,29 +38,37 @@
 5. The agent wallet draws THB 524,300 in tTHB (a simulated on-chain baht token) through the on-chain guard (TX‑4).
 6. We click "buyer paid"; the wallet settles the lender automatically (TX‑5). Then we replay with a 19% APR or a duplicate invoice and show the guard rejecting it in red.
 
-**Deadlines.** Team build deadline is end of 12 Oct. The public timeline for the International Track says the preliminary round closes 2 Nov 2026 and finals are 21–23 Nov in Shenzhen ([IEEE CIS Shenzhen announcement](https://r10.ieee.org/shenzhen-cis/blog/2026/06/17/2026-shenzhen-international-fintech-competition-international-track/)), so 12 Oct is our MVP freeze, with room afterwards for polish, video and deck.
+**Deadlines (official rules).** Registration and submission close **20 Oct 2026, 23:59 Beijing time (22:59 Bangkok)**; submissions can be updated until then and the latest version counts. Online review by WeBank experts and academics is in late October, finalists are announced by 31 Oct, and the Grand Final is 21–23 Nov in Shenzhen (at least one member must attend in person). Our 12 Oct freeze is the team's MVP date, which leaves 13–20 Oct for hardening, the security report, deck and video.
 
 ---
 
 ## Part 2 · Research findings
 
-### 2.1 Competition rules (what we could verify)
+### 2.1 Competition rules (official International Track rules, provided by P)
 
-The official site (fintechathon.g-ican.com) is a JavaScript app that could not be read from our build environment, so these come from P's rules summary already in `ReceivableOS-Idea+Architect.md`, the IEEE announcement, and other public 2026 entries. **P: please confirm the two open points at the end of this section against the official rules PDF.**
-
-| Item | Finding | Source |
+| Item | Rule | What it means for us |
 |---|---|---|
-| Topic | Topic F "Agent Wallet – AI Agent Digital Wallet": AI agent that autonomously executes on-chain asset management, transaction execution and risk control | Rules summary in idea doc; IEEE page |
-| Challenge bonus | Topic F may receive a 0–5 point challenge bonus | Rules summary in idea doc |
-| Hard requirement | Submission must include **real on-chain transaction hashes** | Rules summary in idea doc |
-| Scoring | Task completion 40%, security and compliance 30%, innovation and interaction 30% | Idea doc; also quoted by public entry DuitDuit (Topic E) |
-| Deliverables (as other 2026 teams list them) | Technical documentation (README + design spec), presentation deck, demo video (MP4 plus a mirror reachable from mainland China), source code with deployment instructions and tests, security self-assessment, execution evidence (tx hashes / evaluation report) | DuitDuit README (team's own summary, not the rulebook) |
-| Timeline | Registration 31 Aug; preliminary closes 2 Nov; finalists 10 Nov; finals 21–23 Nov 2026 | IEEE page |
-| Chain used by another Topic F entry | Solidity on **Base Sepolia** (Hardhat), no FISCO BCOS | `sucsage/agentic-wallet` README |
+| Theme | "AI as a Financial Participant": an AI agent that completes real tasks in a financial scenario | Our pitch line. |
+| Topic F | "Agent Wallet — Autonomous On-chain Wallet": AI wallet agent that autonomously executes on-chain operations (asset management, transaction execution, risk control); ambitious ideas encouraged | The draw, settle and guard flow is exactly this. |
+| Scoring | Task completion 40%, security & compliance 30%, innovation & interaction 30%; same for all six topics | See the Part 1 table. |
+| Challenge bonus | 0–5 points for on-chain exploration | Earned by the on-chain guard reverts, fingerprint registry and (optionally) a second chain. |
+| Chain | **No chain is named.** The only on-chain rule is that execution evidence must be **real on-chain transaction hashes** | FISCO BCOS stays the default (see §4); a mock ledger alone does not satisfy the rules. |
+| Team | 2–5 full-time students at universities outside China (incl. HK, Macao, Taiwan); at least 60% non-Chinese nationals; one team per person | P to confirm all five members are registered on one team. |
+| Language | English for submissions, presentations and review | All docs, UI text, deck and video in English. |
+| Deadline | Registration **and** submission: **20 Oct 2026 23:59 Beijing (UTC+8)**; updates allowed until then, none after | Register the team now; submit an early version, then update. |
+| Review | Online review late Oct by WeBank experts and scholars; finalists by 31 Oct; finals 21–23 Nov Shenzhen, in person | The reviewers know FISCO BCOS. |
+| IP | Original work; third-party code and data must be properly licensed | Record licences of any dataset or library in the README. |
 
-**Open points for P to confirm in the rulebook:**
-1. Is a specific chain required for Topic F (FISCO BCOS, or any public chain)? This decides the default in §4.
-2. Exact submission format (repo link vs upload, video length, deck page limit).
+**Submission checklist (from the rules) and where each item comes from:**
+
+| # | Required item | Our source | Owner |
+|---|---|---|---|
+| 1 | Technical documentation: system architecture, core algorithm description, security design | This doc + `docs/03`–`05` (algorithms: OCR fraud scoring, PD model, guard logic) + security section | P, each engineer for their algorithm |
+| 2 | Presentation deck, final presentation ≤ 10 minutes | `pitch/` | P + Policy AI eng + Finance |
+| 3 | Demo video, optional, ≤ 5 minutes | `pitch/` (recommended: record it; it is our backup if the live demo fails) | P |
+| 4 | Source code: README, GitHub repo link, deployment instructions, test cases | This repo; root README + per-service READMEs and tests | Repo owner P, everyone |
+| 5 | Security self-assessment: **permission-tier implementation** and **known-risk list** | `pitch/security-self-assessment.md`: owner / risk-oracle / agent / lender key tiers (§5.5), mandate limits, human confirmation, and risks from §3.3 and §3.6 | Agent Wallet eng + P |
+| 6 | Execution evidence: for the on-chain topic, **real on-chain transaction hashes** | `pitch/tx-evidence.md`: TX‑1 to TX‑5 plus the blocked attempts, each with receipt | Agent Wallet eng |
 
 ### 2.2 What past FISCO BCOS FinTechathon entries looked like
 
@@ -216,11 +224,11 @@ For the stage, the wallet service has a demo-only flag `skip_offchain_checks=tru
 
 **Default: tTHB**, a simulated baht token deployed by us, because the Finance scenario is priced in THB and a Thai SME borrows in baht. **Alternative: a mock USDC** (the idea notes' choice), which reads as more "Web3-native" to international judges. Only the token name, decimals and the `currency` value change; contracts and services are the same.
 
-### Chain default (P to confirm)
+### Chain default
 
-**Default: FISCO BCOS**, with the mock ledger for local work. WeBank co-organises FinTechathon and every past entry in `FISCO-BCOS/hackathon` deployed Solidity on FISCO BCOS, documented with console or python-sdk screenshots, so it is the safest reading of "real on-chain transaction hashes" for this competition. FISCO BCOS has no Safe or ERC‑4337, which is why the wallet and guard are our own small contracts.
+**Default: FISCO BCOS**, with the mock ledger for local work. The official rules name no chain; they only require real on-chain transaction hashes. FISCO BCOS is the stronger choice for this panel: the reviewers are WeBank experts, WeBank builds FISCO BCOS, and every past FinTechathon blockchain entry in `FISCO-BCOS/hackathon` used it, documented with console or python-sdk screenshots. FISCO BCOS has no Safe or ERC‑4337, which is why the wallet and guard are our own small contracts.
 
-**Alternative: Base Sepolia** (the plan in P's design notes; another public Topic F entry uses it). Gains: judges can click a public explorer link, Safe/4337 become available, no node to run. Cost: departs from the organiser's ecosystem. Because contracts are pinned to solc 0.8.11 and all chain calls go through the ledger interface, switching later is a config change plus one backend file, so the three engineers are not blocked either way.
+**Alternative or addition: Base Sepolia** (the plan in P's design notes; another public Topic F entry uses it). After the 12 Oct freeze and before 20 Oct, deploying the same contracts there too is a cheap "on-chain exploration" bonus item and gives reviewers clickable explorer links. Gains: judges can click a public explorer link, Safe/4337 become available, no node to run. Cost: departs from the organiser's ecosystem. Because contracts are pinned to solc 0.8.11 and all chain calls go through the ledger interface, switching later is a config change plus one backend file, so the three engineers are not blocked either way.
 
 What FISCO needs on day 1: one person runs `build_chain.sh` for a local 4-node chain (or uses a provided test chain), creates the owner, agent, risk-oracle and lender accounts, and writes addresses to `services/agent-wallet/contracts/deployments.json`. Note: for the submission, a hash from a local chain is only verifiable through our screenshots and receipts, so `pitch/tx-evidence.md` must include the receipt JSON for each tx.
 
@@ -436,9 +444,9 @@ ReceivableOS/
 | 11 Oct am | Real extraction + `doc_hash` + `invoice_fingerprint` + duplicate check | Synthetic dataset (with Finance), PD model v1 + calibration, UI v1 | `Vault`, `PolicyGuard`, `AgentWallet` + forge tests for every revert | Orchestrator runs end to end on stubs; recheck demo data | Validate realistic advance rates, APRs, PD ranges |
 | 11 Oct pm | Injection detector + fraud flags; attack fixtures A1, A2 | Hard rules, reasons, `decision_hash`; mandate compiler | Deploy to FISCO; `fisco` backend; register/approve/execute/settle endpoints | First full run on FISCO with real hashes | Pain-point slide + sources |
 | 12 Oct, until 12:00 freeze | Image fallback; accuracy check on demo set | Metrics (AUROC, Brier) in README; UI attack buttons A1–A6 and audit view | Demo-mode bypass for on-chain revert; Base Sepolia deploy only if P chose it | Wire UI to orchestrator; spending-limit, approval, audit and KYC/privacy notes | Review all numbers on screen |
-| 12 Oct 12:00–18:00 (after freeze) | README only | README only | Contracts README with console / python-sdk call screenshots | Tx evidence page, security self-assessment, 3-minute video, deck (`pitch/`) | Deck finance section |
+| 12 Oct 12:00–18:00 (after freeze) | README only | README only | Contracts README with console / python-sdk call screenshots | Tx evidence page, security self-assessment draft, deck draft, demo video (≤ 5 min) (`pitch/`) | Deck finance section |
 
-Freeze rule (from `docs/00-scope.md`): code freeze is **12 Oct 12:00**, tagged `v0.1-freeze`; after that only bug fixes P approves merge, and the afternoon is for the submission pack.
+Freeze rule (from `docs/00-scope.md`): code freeze is **12 Oct 12:00**, tagged `v0.1-freeze`; after that only bug fixes P approves merge, and the afternoon is for the submission pack. 13–20 Oct: hardening, security self-assessment, deck, video and an early submission, then updates until 20 Oct 23:59 Beijing (22:59 Bangkok).
 
 ---
 
