@@ -1,0 +1,52 @@
+{
+  "fixtureId": "04-bilingual",
+  "title": "Arabic / English bilingual invoice",
+  "tests": "Mixed directionality and bilingual product fields.",
+  "language": "ar-en",
+  "direction": "ltr",
+  "supplier": {
+    "name": "Fictional Gulf Foods LLC / شركة الخليج الغذائية التجريبية ذ.م.م",
+    "legalName": "Fictional Gulf Foods LLC",
+    "address": "Warehouse 12, Al Quoz, Dubai / المستودع 12، القوز، دبي",
+    "taxRegistration": null
+  },
+  "billTo": "Example Grocery Trading LLC / شركة البقالة النموذجية",
+  "invoiceNumber": "INV-2026-004",
+  "invoiceDate": "2026-08-04",
+  "currency": "AED",
+  "taxLabel": "VAT 5% / ضريبة 5%",
+  "taxRate": 0.05,
+  "subtotal": 96,
+  "discount": 0,
+  "tax": 4.8,
+  "freight": 0,
+  "duty": 0,
+  "total": 100.8,
+  "notes": [],
+  "lines": [
+    {
+      "description": "Sparkling Water 330ml",
+      "descriptionArabic": "مياه غازية 330 مل",
+      "supplierSku": "SUP-WAT-330",
+      "barcode": "6290000000016",
+      "quantity": 24,
+      "unit": "EA",
+      "unitPrice": 2.5,
+      "discount": 0,
+      "tax": 0,
+      "lineTotal": 60
+    },
+    {
+      "description": "Medjool Dates 1kg",
+      "descriptionArabic": "تمر مجهول 1 كجم",
+      "supplierSku": "SUP-DAT-1KG",
+      "barcode": "6290000000115",
+      "quantity": 8,
+      "unit": "EA",
+      "unitPrice": 4.5,
+      "discount": 0,
+      "tax": 0,
+      "lineTotal": 36
+    }
+  ]
+}

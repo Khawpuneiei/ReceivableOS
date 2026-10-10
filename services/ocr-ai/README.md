@@ -90,6 +90,20 @@ services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/benchmark_engines.py
 
 Generation is offline with the checked-in SIL OFL Noto Thai font. There are 32 labeled documents: 28 PDFs, four scans, plus five demo aliases. Evaluations use temporary stores and ephemeral secrets; they never reset operational history. [EVALUATION.json](docs/EVALUATION.json) reports extraction by language/type, injection twins, independent pair checks, and planted duplicate/graph sequences. Engine results separately report scanned-document failures and latency. All results are synthetic-only, with no independent real-world holdout and no fraud precision/recall claim.
 
+## External fictional invoice challenge set
+
+For broader layout challenges, [the local fixture pack](../../data/invoices/external/shopify_invoice_test_pack/) contains 15 fictional scenarios from [SalorWorks' Synthetic Shopify Invoice Test Pack](https://github.com/SalorWorks/shopify-invoice-test-pack), version 1.0.0 under CC BY 4.0. The copied `LICENSE`, `CITATION.cff`, `SOURCE.md`, and `SHA256SUMS` preserve attribution and provenance. Scenarios cover multipage invoices, UAE VAT, SAR, KWD at three decimal places, USD/AED, discounts, freight/duty, case packs, free goods, a poor scan, and a dense Arabic/English table. The publisher explicitly says all supplier identities, registrations, addresses, barcodes, and amounts are invented; these files are not real tax documents.
+
+Run the local extraction-only benchmark with staged English Paddle models:
+
+```bash
+services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/evaluate_external_invoices.py
+```
+
+It tests all 15 PDFs and the 14 single-page PNGs. The multipage PNG is only page one, so it is excluded from whole-document scoring. Qwen is disabled for this measurement; the evaluator does not call the HTTP compatibility endpoint or record observations. The first run matched 29/232 header fields (currency only), extracted 0/66 expected lines, and raised no parser/OCR exceptions. That exposes a format-coverage gap in the current role labels and table parser; it does not show Paddle misread those 29 records. The unresolved party, reference, totals, and line fields would prevent the required shared invoice projection. Discounts, freight/duty, tax rates, barcodes, unit/pack conversions and free quantities also exceed the current OCR-local schema.
+
+This small author-labeled synthetic pack is a supplemental challenge set, not a production benchmark or independent human-annotated holdout. After using it to change parsing rules, keep it classified as development data and obtain a separate holdout before claiming generalized performance. See [the measured records and limitations](docs/EXTERNAL_INVOICE_EVALUATION.json).
+
 ## English-primary global reliability workstreams
 
 The [80-document corpus specification](docs/RELIABILITY_CORPUS.md) covers English (48), experimental Simplified Chinese (16), and Thai (16), with four synthetic layouts and family-separated development/holdout partitions. The [workstream report](docs/RELIABILITY_REVIEW.md) records all six workstreams, model failures, the disposable grounding prototype, safety regressions and the [consumer review packet](docs/CONSUMER_REVIEW.md).

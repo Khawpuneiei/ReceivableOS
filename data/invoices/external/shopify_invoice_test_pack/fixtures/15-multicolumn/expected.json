@@ -1,0 +1,66 @@
+{
+  "fixtureId": "15-multicolumn",
+  "title": "Difficult multi-column layout",
+  "tests": "SKU, barcode, qty, discount, tax and total in one dense table.",
+  "language": "ar-en",
+  "direction": "ltr",
+  "supplier": {
+    "name": "Fictional Gulf Foods LLC / شركة الخليج الغذائية التجريبية ذ.م.م",
+    "legalName": "Fictional Gulf Foods LLC",
+    "address": "Warehouse 12, Al Quoz, Dubai",
+    "taxRegistration": "100123456700003"
+  },
+  "billTo": "Example Grocery Trading LLC, Dubai",
+  "invoiceNumber": "INV-2026-015",
+  "invoiceDate": "2026-08-15",
+  "currency": "AED",
+  "taxLabel": "VAT 5%",
+  "taxRate": 0.05,
+  "subtotal": 237,
+  "discount": 9,
+  "tax": 11.85,
+  "freight": 0,
+  "duty": 0,
+  "total": 248.85,
+  "notes": [
+    "Line 2 includes a 10% line discount. Line tax amounts are shown in the table and must still reconcile to the invoice tax."
+  ],
+  "lines": [
+    {
+      "description": "Green Tea 25 bags",
+      "descriptionArabic": "شاي أخضر 25 كيس",
+      "supplierSku": "SUP-MC-01",
+      "barcode": "6290000000801",
+      "quantity": 12,
+      "unit": "EA",
+      "unitPrice": 8,
+      "discount": 0,
+      "tax": 4.8,
+      "lineTotal": 96
+    },
+    {
+      "description": "Olive Oil Soap 150g",
+      "descriptionArabic": "صابون زيت الزيتون 150 جم",
+      "supplierSku": "SUP-MC-02",
+      "barcode": "6290000000818",
+      "quantity": 6,
+      "unit": "EA",
+      "unitPrice": 15,
+      "discount": 9,
+      "tax": 4.05,
+      "lineTotal": 81
+    },
+    {
+      "description": "Sparkling Water 330ml",
+      "descriptionArabic": "مياه غازية 330 مل",
+      "supplierSku": "SUP-MC-03",
+      "barcode": "6290000000825",
+      "quantity": 24,
+      "unit": "EA",
+      "unitPrice": 2.5,
+      "discount": 0,
+      "tax": 3,
+      "lineTotal": 60
+    }
+  ]
+}

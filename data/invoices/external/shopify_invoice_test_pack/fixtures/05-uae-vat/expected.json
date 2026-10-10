@@ -1,0 +1,53 @@
+{
+  "fixtureId": "05-uae-vat",
+  "title": "UAE AED + VAT invoice",
+  "tests": "AED, TRN-style fields and a 5% VAT example.",
+  "language": "en",
+  "direction": "ltr",
+  "supplier": {
+    "name": "Fictional Gulf Foods LLC",
+    "legalName": "Fictional Gulf Foods LLC",
+    "address": "Warehouse 12, Al Quoz, Dubai, United Arab Emirates",
+    "taxRegistration": "100123456700003"
+  },
+  "billTo": "Example Grocery Trading LLC, Dubai",
+  "invoiceNumber": "INV-2026-005",
+  "invoiceDate": "2026-08-05",
+  "currency": "AED",
+  "taxLabel": "VAT 5%",
+  "taxRate": 0.05,
+  "subtotal": 1000,
+  "discount": 0,
+  "tax": 50,
+  "freight": 0,
+  "duty": 0,
+  "total": 1050,
+  "notes": [
+    "TRN values in this dataset are invented and must not be treated as real registrations.",
+    "5% is an example VAT line for extraction tests, not tax advice."
+  ],
+  "lines": [
+    {
+      "description": "Extra Virgin Olive Oil 1L",
+      "supplierSku": "SUP-OIL-1L",
+      "barcode": "6290000000108",
+      "quantity": 40,
+      "unit": "EA",
+      "unitPrice": 18,
+      "discount": 0,
+      "tax": 0,
+      "lineTotal": 720
+    },
+    {
+      "description": "Medjool Dates 1kg",
+      "supplierSku": "SUP-DAT-1KG",
+      "barcode": "6290000000115",
+      "quantity": 20,
+      "unit": "EA",
+      "unitPrice": 14,
+      "discount": 0,
+      "tax": 0,
+      "lineTotal": 280
+    }
+  ]
+}

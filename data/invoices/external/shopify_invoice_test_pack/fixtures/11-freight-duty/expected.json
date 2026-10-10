@@ -1,0 +1,53 @@
+{
+  "fixtureId": "11-freight-duty",
+  "title": "Freight + duty",
+  "tests": "Separate freight and customs lines for landed-cost tests.",
+  "language": "en",
+  "direction": "ltr",
+  "supplier": {
+    "name": "Fictional Atlantic Imports Inc.",
+    "legalName": "Fictional Atlantic Imports Inc.",
+    "address": "200 Example Avenue, Newark, NJ, USA",
+    "taxRegistration": null
+  },
+  "billTo": "Example Grocery Trading LLC, Dubai",
+  "invoiceNumber": "INV-2026-011",
+  "invoiceDate": "2026-08-11",
+  "currency": "AED",
+  "taxLabel": "VAT 5% on goods",
+  "taxRate": 0.05,
+  "subtotal": 620,
+  "discount": 0,
+  "tax": 31,
+  "freight": 35,
+  "duty": 18,
+  "total": 704,
+  "notes": [
+    "Freight and duty are separate from product lines.",
+    "Whether they enter Shopify Cost per item is a merchant policy, not something to infer automatically."
+  ],
+  "lines": [
+    {
+      "description": "Ceramic Bowl 18cm",
+      "supplierSku": "SUP-BWL-01",
+      "barcode": "6290000000504",
+      "quantity": 40,
+      "unit": "EA",
+      "unitPrice": 8,
+      "discount": 0,
+      "tax": 0,
+      "lineTotal": 320
+    },
+    {
+      "description": "Serving Tray 40cm",
+      "supplierSku": "SUP-TRY-01",
+      "barcode": "6290000000511",
+      "quantity": 20,
+      "unit": "EA",
+      "unitPrice": 15,
+      "discount": 0,
+      "tax": 0,
+      "lineTotal": 300
+    }
+  ]
+}
