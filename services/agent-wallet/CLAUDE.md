@@ -389,9 +389,10 @@ class LedgerAdapter(Protocol):
 
 ## 6. API
 
-Request/response models come from `shared/schemas.py`. The architecture (Part 5.3) proposes the wallet additions
-below; until P's `contract:` PR merges them, define them in `app/models.py` with exactly these names and fields, keep
-the stub's `WalletRequest`/`WalletResult` accepted, and swap to the shared models when they land.
+Request/response models come from `shared/schemas.py` (PR #2): `WalletRequest` (execute), `WalletRegisterRequest`,
+`WalletApproveRequest`, `WalletSettleRequest`, `MandateActivateRequest`, `WalletConfirmRequest`, `WalletResult`,
+`TxStatus`, `GuardCheck`. Import them; don't redeclare. Only wallet-internal types (Mandate, intents, GuardResult)
+live in `app/models.py`.
 
 ### 6.1 Endpoints
 
@@ -400,7 +401,7 @@ the stub's `WalletRequest`/`WalletResult` accepted, and swap to the shared model
 | `POST` | `/wallet/register` | `{idempotency_key, invoice_id, invoice_fingerprint, doc_hash, face_value, currency, due_date, seller}` (`seller` = registry id; if absent, the only `SELLER:` entry in the mandate) | TX‑1 `AgentWallet.execute → Registry.register` |
 | `POST` | `/wallet/approve` | `{idempotency_key, decision_id, decision_hash, invoice_fingerprint, limit, fee_rate, model_version, policy_version}` (+ optional full `decision` so L1 can recompute the hash) | TX‑2 `Registry.approve` (riskOracle) |
 | `POST` | `/wallet/execute` | 6.2 | TX‑4 draw |
-| `POST` | `/wallet/settle` | `{idempotency_key, invoice_id, invoice_fingerprint, amount_paid, paid_at?}` | TX‑5 repay + waterfall |
+| `POST` | `/wallet/settle` | `{idempotency_key, invoice_id, invoice_fingerprint, doc_hash?, amount_paid, paid_at? (date)}` | TX‑5 repay + waterfall |
 | `POST` | `/wallet/mandate/activate` | `{mandate_id, mandate}` + `X-Owner-Token` | `PolicyGuard.setMandate` (+ payees/targets) |
 | `GET` | `/wallet/mandate` | — | shows active mandate, on-chain `mandateHash`, mismatch warning |
 | `POST` | `/wallet/confirm/{tx_id}` | `{approve: bool}` + `X-Approver-Token` | `AgentWallet.confirm` |
@@ -737,11 +738,12 @@ Prepend the architecture's "Everyone" block (docs/01 Part 9), then paste one ste
 ```
 Read CLAUDE.md, docs/00-scope.md, docs/01-architecture.md Parts 3 and 5, and services/agent-wallet/CLAUDE.md.
 Work only inside services/agent-wallet/. Keep the stub's shared.schemas WalletRequest/WalletResult working.
-In app/models.py define (exactly as services/agent-wallet/CLAUDE.md 5.2, 6.1, 6.2): Mandate (with input aliases
-max_advance_rate, max_pd, human_review_above_thb, allowed_settlement_asset, duplicate_invoice_policy; Decimal
-money; mandate_hash = keccak256 of canonical JSON), WalletRegister, WalletApprove, WalletExecute (extends
-WalletRequest with the proposed fields and the DEMO_MODE-only skip_offchain_checks), WalletSettle, TxResult,
-Check, GuardResult, and internal intents (RegisterIntent, ApproveIntent, DrawIntent, SettleIntent).
+Import the request/response models from shared/schemas.py (WalletRequest, WalletRegisterRequest,
+WalletApproveRequest, WalletSettleRequest, MandateActivateRequest, WalletConfirmRequest, WalletResult, TxStatus,
+GuardCheck); never redeclare them. In app/models.py define only internal types: Mandate (CLAUDE.md 5.2, input
+aliases max_advance_rate, max_pd, human_review_above_thb, allowed_settlement_asset, duplicate_invoice_policy;
+Decimal money; mandate_hash = keccak256 of canonical JSON), GuardResult, and intents (RegisterIntent,
+ApproveIntent, DrawIntent, SettleIntent).
 If shared/money.py exists use it; otherwise create app/money.py with to_units/from_units (token decimals, reject
 excess precision), apr_from_fee_rate (fee_rate*365/30) and apr_to_bps rounding up. Add app/settings.py
 (pydantic-settings, env in 8.3) and config/mandate.demo.json + config/payees.json with the Siam Fresh Pack values.
