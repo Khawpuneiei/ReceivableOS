@@ -15,7 +15,7 @@
 3. The financier's real questions are: *Is the invoice real? Has it been financed already? Will the buyer pay, in full, on time?*
 4. Those questions are slow and expensive to answer today (paper evidence, manual checks, no shared view of who financed what), so most SMEs are rejected or never apply.
 5. **ReceivableOS** answers them with AI (OCR + fraud check + credit model), writes the result and the invoice fingerprint **on chain** (so a second financing of the same invoice is visible), and lets an **agent wallet** take the money, within limits the SME set, and settle automatically when the buyer pays.
-6. Demo: **Siam Fresh Pack** (SME) invoices **Mekong Basket Retail** (buyer) **THB 749,000, net 45**; ReceivableOS approves a **70% advance (THB 524,300)** at **0.90% per 30 days**, and the wallet settles the lender when the buyer pays. Full numbers in §10.
+6. Demo: **Siam Fresh Pack** (SME) invoices **Mekong Basket Retail PCL** (buyer) **THB 749,000, net 45**; ReceivableOS approves a **70% advance (THB 524,300)** at **0.90% per 30 days**, and the wallet settles the lender when the buyer pays. Full numbers in §10.
 
 ---
 
@@ -218,7 +218,7 @@ All names are **fictional**. Any resemblance to a real company is unintended.
 
 | Role | Name | Details |
 |---|---|---|
-| Seller (SME, wallet owner) | **Siam Fresh Pack Co., Ltd.** (บริษัท สยามเฟรชแพ็ค จำกัด) | Food-packaging maker, Samut Prakan; 48 staff; revenue THB 62 m/yr; tax ID `0105559000000` (fake); supplies Mekong Basket for 3 years, paid on time 34/36 invoices |
+| Seller (SME, wallet owner) | **Siam Fresh Pack Co., Ltd.** (บริษัท สยามเฟรชแพ็ค จำกัด) | Food-packaging maker, Samut Prakan; 48 staff; revenue THB 62 m/yr; tax ID `0105559000000` (fake); supplies Mekong Basket Retail PCL for 3 years, paid on time 34/36 invoices |
 | Buyer (debtor) | **Mekong Basket Retail PCL** (บริษัท แม่โขงบาสเก็ต รีเทล จำกัด (มหาชน)) | Large supermarket chain; revenue THB 18 bn/yr (so the 45-day rule applies); internal rating **A-**; tax ID `0107559000001` (fake) |
 | Lender A | **Andaman Factoring Co., Ltd.** | Quotes 70% advance at 0.90% per 30 days |
 | Lender B | **Isan Growth Credit Fund** | Quotes 65% advance at 0.75% per 30 days |
