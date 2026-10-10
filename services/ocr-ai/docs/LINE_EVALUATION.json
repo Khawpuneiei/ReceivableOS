@@ -1,0 +1,2074 @@
+{
+  "data_origin": "synthetic-only",
+  "summary": {
+    "en": {
+      "documents": 48,
+      "expected_lines": 88,
+      "correct_lines": 68,
+      "expected_line_fields": 440,
+      "correct_line_fields": 352
+    },
+    "zh": {
+      "documents": 16,
+      "expected_lines": 28,
+      "correct_lines": 0,
+      "expected_line_fields": 140,
+      "correct_line_fields": 0
+    },
+    "th": {
+      "documents": 16,
+      "expected_lines": 28,
+      "correct_lines": 22,
+      "expected_line_fields": 140,
+      "correct_line_fields": 110
+    }
+  },
+  "records": [
+    {
+      "file": "invoice-en-stacked-0.pdf",
+      "sha256": "850f2b530ffc8d1c3a73ed6684e963f8e7fb23b2616da81c92d1fef13f8a9675",
+      "language": "en",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-stacked-0.pdf",
+      "sha256": "546d4b3818788193221f9691a490f669dc1688e5bf0bdbb0335ebd703b6295cd",
+      "language": "en",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-stacked-1.png",
+      "sha256": "7661b1af38355058029c7b43b82c62c008f8101978ce16588c86d52afd64fdcb",
+      "language": "en",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-stacked-1.png",
+      "sha256": "f0a5d3178e08c4031ddadc34432e691b84e61a41c367a2e1e1564874d17879b4",
+      "language": "en",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-stacked-2.pdf",
+      "sha256": "7ab5a964a27bf9f8afe1bcba9f1e7fdfec0b6da9f4cdb4c11f42a74cbd299051",
+      "language": "en",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-stacked-2.pdf",
+      "sha256": "ed7b1bc3552f7e5ed4f39fc114026a76dc42e5a6721fccd4b28c29cd3827367f",
+      "language": "en",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-stacked-3.png",
+      "sha256": "5f4f311e5cada49cc7570519df739dc54656be4a17de07c054132309c9252f98",
+      "language": "en",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-stacked-3.png",
+      "sha256": "f7fe4d4a3bc8be979aec214316536d4aacfb2e38d3b77cd6d8f96b3bcda19f56",
+      "language": "en",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-stacked-4.pdf",
+      "sha256": "a03be44c379d80a7b1189b0a891a1ee60298c90828c308a02169918265a78c74",
+      "language": "en",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-stacked-4.pdf",
+      "sha256": "dbc2d4c525c7bc9988f97111aa69cfcba0bc53f00fdee79d9239eb4c1ed5080a",
+      "language": "en",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-stacked-5.pdf",
+      "sha256": "f3561cb3dec6bcdcade9e46bfb49d285462fcee0714b0df3004a34a9d9ba5b25",
+      "language": "en",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-stacked-5.pdf",
+      "sha256": "2e04ae419517a3fd6abf1eb4ff819240930ca0c5f30724f8816a2a949b367951",
+      "language": "en",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-split_values-0.pdf",
+      "sha256": "b07c0691b6e4a04711f67795fe3c3fb291978373ca07e38d1c997a02274cf24b",
+      "language": "en",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-split_values-0.pdf",
+      "sha256": "f998609f42f87299b89c268ba4096daa2b46d9bd87b1968ae98fab68a2a5be15",
+      "language": "en",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-split_values-1.png",
+      "sha256": "c5d874be9efb3d67a90edb506640aa3df98d02fcbd76c1dead537e7efdd7c716",
+      "language": "en",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-split_values-1.png",
+      "sha256": "79d5e8402475313a9bc2ddd53edcdc0d2bd1ce44894b07af3649ed72bc7965d4",
+      "language": "en",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-split_values-2.pdf",
+      "sha256": "4498cae00b68579f08dec31013f4cb72564b5800685a323218617d3e8b8c355b",
+      "language": "en",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-split_values-2.pdf",
+      "sha256": "a12f4a2165801b06d097a2ed3b3a893497ed98d0e7c1a33a55af82c1c5a3ab64",
+      "language": "en",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-split_values-3.png",
+      "sha256": "729ab2d6e4e70fdc0efbd50a05dca7426f9578f0f7b7d153974d4802770f3441",
+      "language": "en",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-split_values-3.png",
+      "sha256": "e0dfa23a4b89e571f41a36508aa716f4192cc0d75e1b0bd9388cd4a99c5ebbe7",
+      "language": "en",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-split_values-4.pdf",
+      "sha256": "5de5041877d18006a63abd174757a8439e46cd0650569ca9e3f19a91db5770ec",
+      "language": "en",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-split_values-4.pdf",
+      "sha256": "9b596f53b8e30dc80fc7b609043c9e20b2ab4f4833daf365f58dfe4874bb7c80",
+      "language": "en",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-split_values-5.pdf",
+      "sha256": "4232c8cf1be5a10a5fce2d84cd0f6c07cc13030bba7fa86af07319b027a00efc",
+      "language": "en",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-split_values-5.pdf",
+      "sha256": "0e76893e27106de3481278912d2d000c8d9f0fe50c3cf1d53f11da167117925d",
+      "language": "en",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-two_panels-0.pdf",
+      "sha256": "018146fb75ea2844273d8e3f95e9f6cda7a716339589b1d08503f455016f93e5",
+      "language": "en",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-two_panels-0.pdf",
+      "sha256": "f656911acdde3467b93834a3f2375ea0d249c833b71c8534627845b2b0303522",
+      "language": "en",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-two_panels-1.png",
+      "sha256": "ee30559da0d34650adda53fe1215b945aa370282e853723b010b03d15259d5a7",
+      "language": "en",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-two_panels-1.png",
+      "sha256": "3ce1ac907060905d638dc719c59a1d97533c6a3db6758b2071d78a018d438eb1",
+      "language": "en",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-two_panels-2.pdf",
+      "sha256": "497db803bee2ffe8c14c8e37dd556355cf7c46197ba55bb9fe35bd61e5caf5b9",
+      "language": "en",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-two_panels-2.pdf",
+      "sha256": "21679dcae63809c0c8774e85d62550c487513104a5ec399d8ae74878f6d0c868",
+      "language": "en",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-two_panels-3.png",
+      "sha256": "27b80755cf31ca56e0bbd2ab02a999c72cb63f15331fce34ac9036dee967a649",
+      "language": "en",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-two_panels-3.png",
+      "sha256": "22989f02cd375de46dec47a1b195f7c377000f6053e2ff840f61bbf982040932",
+      "language": "en",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-two_panels-4.pdf",
+      "sha256": "b9d0c4ec562dcc7c9ab2e721d7ea021347d987589663d37bf914ed1f732fae7e",
+      "language": "en",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-two_panels-4.pdf",
+      "sha256": "70962a2a1713160dc17aff6a6c44ddf3571603c371a8d866d7d8f3c12e7fc82b",
+      "language": "en",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-two_panels-5.pdf",
+      "sha256": "0de11ec9cee6157e15fd7fcc9fc30f68b8330326412ca65861b7e26331cfb617",
+      "language": "en",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-two_panels-5.pdf",
+      "sha256": "122934b35421db6ff725f9e142e1577a7c6056d3e5837c05bc5e3cbba3a2b9c0",
+      "language": "en",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-commercial_table-0.pdf",
+      "sha256": "206095366ea812c466ed80b7d5e3df2619b9838b380b56d9094f0fe3a7a76a4c",
+      "language": "en",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-commercial_table-0.pdf",
+      "sha256": "4eed942141f288918718505f483fb9c55037c9ee721e5ec944957d49c92f373b",
+      "language": "en",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-commercial_table-1.png",
+      "sha256": "a9e9cf3439a2284bbe00a7dcfda50d081b6bfa04298656c662277e5628e668ca",
+      "language": "en",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 0,
+      "parsed_lines": 0,
+      "line_field_matches": [],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-commercial_table-1.png",
+      "sha256": "2ec96653130d308e398264e38ff3e226f4c4fe0630d29f9a6097db490e47de11",
+      "language": "en",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 0,
+      "parsed_lines": 0,
+      "line_field_matches": [],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-commercial_table-2.pdf",
+      "sha256": "f6290fed37eddeba3c678e4251abca0310ae3fae1026689da5dd23f208a1a2c2",
+      "language": "en",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-commercial_table-2.pdf",
+      "sha256": "7dcbc43aceb7fc397b3171a89c186c637378229d19f6325ca7eaf3999088fa18",
+      "language": "en",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-commercial_table-3.png",
+      "sha256": "3e1a6567b26f14fbf47bc1dcd5d534b53aec25c5c006c6abfae7177a95026eaf",
+      "language": "en",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 0,
+      "parsed_lines": 0,
+      "line_field_matches": [],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-commercial_table-3.png",
+      "sha256": "201551eaf2505ddc5ba6c4b0b33d9efdcae1fdb426761a837a925af2fa25b7b8",
+      "language": "en",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 0,
+      "parsed_lines": 0,
+      "line_field_matches": [],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-commercial_table-4.pdf",
+      "sha256": "0836a3227ce0d8bfdb24779004fabce03165599306c02da55c27af8d0b431bd0",
+      "language": "en",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-commercial_table-4.pdf",
+      "sha256": "2db46c7852a9d2207604cdbd4a722c9a0d6dd6a63d1b6313e0fa41724a99a18a",
+      "language": "en",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-en-commercial_table-5.pdf",
+      "sha256": "55c9386eb007bf03cb9d3da728570402319fc8a0cba755609f739b96e488cf80",
+      "language": "en",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-en-commercial_table-5.pdf",
+      "sha256": "5278328d4014420b11a1184c25c0c9c70101fa977146078eb8bf8157c7f56a90",
+      "language": "en",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-zh-stacked-0.pdf",
+      "sha256": "dd1d0076589030d53b7995462dbc6e4301b484aa18db2464af9b9d2109cb79b3",
+      "language": "zh",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-zh-stacked-0.pdf",
+      "sha256": "e3adbebb2761d94ffce76f9a0f4696fa4958216463436e86f326c6e97b382bb1",
+      "language": "zh",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-zh-stacked-1.png",
+      "sha256": "3ce192fffe0974ece377fe09127085ed2450686ee8024696115b2dbdc72cbf5e",
+      "language": "zh",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-zh-stacked-1.png",
+      "sha256": "45326b97fe5f1cd3524050e3b2fcec5e6f54dd005c94ab40c3b635ab305a15b0",
+      "language": "zh",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-zh-split_values-0.pdf",
+      "sha256": "9b6c1c8294e75d246db9a9dd351f0026d2ab720a7226d213007809b8326c2042",
+      "language": "zh",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-zh-split_values-0.pdf",
+      "sha256": "b2ee65e7bc1ce652a889ab4bae640cbc80fd11cfe68c67c1fef9841c7ccd7fb4",
+      "language": "zh",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-zh-split_values-1.png",
+      "sha256": "e058731e02f29c753ff6a4efb626ad6ed5b3b4a914234d0640a6a4aa2821467a",
+      "language": "zh",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-zh-split_values-1.png",
+      "sha256": "db0bb5d0aeae4085f17a5d7ac861811f1948c46aaaa6020c70ee33eb68e14917",
+      "language": "zh",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-zh-two_panels-0.pdf",
+      "sha256": "8dfd8d49766b2b68d7122513448559d731f811b0d6987fe7ed2a1b73b907c214",
+      "language": "zh",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-zh-two_panels-0.pdf",
+      "sha256": "b42898b3a213daa03312ab9c7531eee311627246b75b49abc3f87635225bf5e4",
+      "language": "zh",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-zh-two_panels-1.png",
+      "sha256": "f9a66e296378e55a6cd55dae44ae96dfcef7455b8bb7a26dbe42f7ab526b25e2",
+      "language": "zh",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-zh-two_panels-1.png",
+      "sha256": "dbe36fc6c251a2e8fade4a3aa713a79589df29d6a6948912287844dff60f8de5",
+      "language": "zh",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-zh-commercial_table-0.pdf",
+      "sha256": "5f58bbad61f372a694e0828b15069c7767c2545067b758035d9a49adaa63ddd0",
+      "language": "zh",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-zh-commercial_table-0.pdf",
+      "sha256": "1bcb7b1c3e28b430b5ce0a4d2995833e32d8c8cf316ee8a7f51166ab7b7c80fc",
+      "language": "zh",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-zh-commercial_table-1.png",
+      "sha256": "c86173df3843418fbad4499573dfead714116dbd5f693927f3a54c5c7d082b0d",
+      "language": "zh",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 0,
+      "parsed_lines": 0,
+      "line_field_matches": [],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-zh-commercial_table-1.png",
+      "sha256": "1eab19ac4423e44ffd2b443d498222f4489b6a07f7170c50a8f7ea67d912b7f4",
+      "language": "zh",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 0,
+      "parsed_lines": 0,
+      "line_field_matches": [],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-th-stacked-0.pdf",
+      "sha256": "dbad3479d6a7438e91936f57173f27ca4da6c04bedffa28e3fbbca3424062db3",
+      "language": "th",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-th-stacked-0.pdf",
+      "sha256": "0f16e3a49ef8c927b44536555e2835ed0fd5e272c2bf9750cb1d0e85f546a4a5",
+      "language": "th",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-th-stacked-1.png",
+      "sha256": "56ba87b9e8cdf48c5ebbfc071d197d676d238e9171ea602eb3c6d344c2c13e2e",
+      "language": "th",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 1,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-th-stacked-1.png",
+      "sha256": "f2c126a644010ba256b83f88fe8755f69f1d92de182a1be0ab9f3e4c2cd87762",
+      "language": "th",
+      "split": "development",
+      "layout": "stacked",
+      "expected_lines": 2,
+      "parsed_lines": 1,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-th-split_values-0.pdf",
+      "sha256": "044cbe38b906592b1daf01c9eb22676b0231431f6be970043f8833cd0b4a0d43",
+      "language": "th",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-th-split_values-0.pdf",
+      "sha256": "f081ec6187047dc189007ddb57558bc71c65ff4f45f2b387050720ceaa3e4ebd",
+      "language": "th",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-th-split_values-1.png",
+      "sha256": "8e6a5b4e7b257ed19437a41b4315a4c16485e8d4758ef5cee8e4e8624c764ee0",
+      "language": "th",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-th-split_values-1.png",
+      "sha256": "8aec26dc878fb293a1da93e5fbff5002daf21fb6a4fb1a5d8e27bcb48d361f0e",
+      "language": "th",
+      "split": "development",
+      "layout": "split_values",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-th-two_panels-0.pdf",
+      "sha256": "457c852083dbec39409d5450856220ac5e0a20edcba05303bd24c29a004fdce1",
+      "language": "th",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-th-two_panels-0.pdf",
+      "sha256": "4dd80dc5d97ba0be17774c7d01ece3b8f4298c6005d9b6463079571dd5430bd8",
+      "language": "th",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-th-two_panels-1.png",
+      "sha256": "b9a574437475105b2bdcbffc2ff75dc4be6d81bf22ff50726e31f47219d6aeec",
+      "language": "th",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-th-two_panels-1.png",
+      "sha256": "9b172ee932d32192eeadc9b3aebae3ab9630ff1d1f1cd7982e0507a6ee3b3ad3",
+      "language": "th",
+      "split": "development",
+      "layout": "two_panels",
+      "expected_lines": 2,
+      "parsed_lines": 2,
+      "line_field_matches": [
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        },
+        {
+          "sku": true,
+          "description": true,
+          "quantity": true,
+          "unit_price": true,
+          "total": true
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-th-commercial_table-0.pdf",
+      "sha256": "b2e4dbdd05e05869da444b1cc6cfc204b937b06f1c538ff185784d35b764e55a",
+      "language": "th",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-th-commercial_table-0.pdf",
+      "sha256": "4c593b403983e65f41bf0237210cfa43e4bd1dbdf49ab9ba1be26e5bd46dce9c",
+      "language": "th",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 2,
+      "parsed_lines": 0,
+      "line_field_matches": [
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        },
+        {
+          "sku": false,
+          "description": false,
+          "quantity": false,
+          "unit_price": false,
+          "total": false
+        }
+      ],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "invoice-th-commercial_table-1.png",
+      "sha256": "be87025aff6c9c638839cd24b92b1b31cab924acca8137c268aa2b9f315d74a3",
+      "language": "th",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 0,
+      "parsed_lines": 0,
+      "line_field_matches": [],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    },
+    {
+      "file": "purchase_order-th-commercial_table-1.png",
+      "sha256": "487afece69a172c5c3084ac610a89602f93662618893851609be6ac4895a33dc",
+      "language": "th",
+      "split": "holdout",
+      "layout": "commercial_table",
+      "expected_lines": 0,
+      "parsed_lines": 0,
+      "line_field_matches": [],
+      "unexpected_skus": [],
+      "duplicate_or_missing_skus": false
+    }
+  ],
+  "limitations": [
+    "Generated ordered SKU line labels, not independent vendor annotations",
+    "Thai scan spans replay final OCR diagnostics with rounded confidence; other scans use fresh staged recognition",
+    "Header-only commercial PNGs have zero annotated lines; they do not demonstrate line extraction",
+    "Qwen schema does not extract line items; no Qwen line accuracy is claimed"
+  ]
+}

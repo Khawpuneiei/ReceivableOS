@@ -1,0 +1,928 @@
+{
+  "data_origin": "synthetic-only",
+  "rules_version": "spatial-rules-v2",
+  "code_hashes": {
+    "app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/compare.py": "d382592ae9d7f2a7d0b76dd04785f04a42d34de8d053e40a261e9e0048b762e6",
+    "app/config.py": "a60bbd9b5e9ee2a0b0cded800a52aa1339d68bd039a8b8af12b7ccc4f9b05c99",
+    "app/extract.py": "d1c1e2d597eb2ec1bca1bdeedd603f244e2920e477ca44aa209b65a10a8733e0",
+    "app/fingerprint.py": "cdfdcb10d09a43ec3e45c8eb28ca84196ce675740f93189ddc54c67f6d1e0cd0",
+    "app/fraud.py": "ec319b138f04edd6f13cab26754b458a941e049453e47f7ee74e65e4db44d42a",
+    "app/graph.py": "ed7e9d3d09b59e3cafa1f81f6e34f3ad9e1a271bcb0169b1aaa9e67a61a4e9de",
+    "app/history.py": "0fcaf6ecbddf285971d8eb256af3fd58473456b41fdc80b0e7fb3e7df23194a6",
+    "app/ingest.py": "f1f3026a75f3e2ab3eab4a7d5cb1a1cfaaa41114e73f2896e7f6ce718697a5d7",
+    "app/layout.py": "905dfdb71b98e08819c7cd10421e815c27dd26d42f6babc3d5adcca756befb2c",
+    "app/main.py": "56aa3f8b7181c34642546eb7e4ae8a125517a5274b4fd9969dd000f52bdd3dea",
+    "app/models.py": "06c3cdc07e0fe4080c515c509f4f584a54da10ce8bd4dc32422b6eae162c7f5f",
+    "app/normalize.py": "7583dff86155e31bff8fa3f1a0218bda3a99c838817d217e1b564c20b99a55d7",
+    "app/pipeline.py": "8287cc2ed133743885c9d147f6a4e3cddc651e33275260533878f4bf9f4ba199",
+    "app/qwen.py": "79123ff98372697d5cbc5fe58c56c9f98ad470efc912a89e5a4c0e58ee605967",
+    "app/validate.py": "c578f5f077eaf97fa3e59b012176cc607d6ca6adb138ba54038d61bd87cc41ab",
+    "app/worker.py": "8bae6847283278f1bc20c3109a3e37b906cb48592033e4fe3c7f5b0134f2a56f",
+    "scripts/eval.py": "7244cbb2f5b1094c4068ca0b3f2e6ae5e8453ac8482fc09d1fa1460b7febf6d4"
+  },
+  "groups": [
+    {
+      "language": "en",
+      "document_type": "invoice",
+      "documents": 13,
+      "correct": 91,
+      "total": 91,
+      "fully_correct": 13
+    },
+    {
+      "language": "en",
+      "document_type": "purchase_order",
+      "documents": 1,
+      "correct": 7,
+      "total": 7,
+      "fully_correct": 1
+    },
+    {
+      "language": "th",
+      "document_type": "invoice",
+      "documents": 13,
+      "correct": 91,
+      "total": 91,
+      "fully_correct": 13
+    },
+    {
+      "language": "th",
+      "document_type": "purchase_order",
+      "documents": 1,
+      "correct": 7,
+      "total": 7,
+      "fully_correct": 1
+    }
+  ],
+  "extraction_records": [
+    {
+      "file": "en_invoice_clean.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "clean",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2363
+    },
+    {
+      "file": "en_invoice_changed.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "changed",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2415
+    },
+    {
+      "file": "en_invoice_duplicate_render.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "duplicate_render",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2344
+    },
+    {
+      "file": "en_invoice_shared_account.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "shared_account",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2197
+    },
+    {
+      "file": "en_invoice_cluster_math.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "cluster_math",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.223
+    },
+    {
+      "file": "en_invoice_cluster_currency.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "cluster_currency",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2405
+    },
+    {
+      "file": "en_invoice_incomplete.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "incomplete",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2273
+    },
+    {
+      "file": "en_invoice_amount_mismatch.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "amount_mismatch",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2292
+    },
+    {
+      "file": "en_invoice_currency_mismatch.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "currency_mismatch",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2254
+    },
+    {
+      "file": "en_invoice_partial.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "partial",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2244
+    },
+    {
+      "file": "en_invoice_visible_injection.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "visible_injection",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": true,
+      "elapsed_seconds": 0.254
+    },
+    {
+      "file": "en_invoice_hidden_injection.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "hidden_injection",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": true,
+      "elapsed_seconds": 0.2321
+    },
+    {
+      "file": "en_invoice_benign_note.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "benign_note",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2247
+    },
+    {
+      "file": "en_po_clean.pdf",
+      "language": "en",
+      "document_type": "purchase_order",
+      "case": "clean",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2287
+    },
+    {
+      "file": "th_invoice_clean.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "clean",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2347
+    },
+    {
+      "file": "th_invoice_changed.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "changed",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.241
+    },
+    {
+      "file": "th_invoice_duplicate_render.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "duplicate_render",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2277
+    },
+    {
+      "file": "th_invoice_shared_account.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "shared_account",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2421
+    },
+    {
+      "file": "th_invoice_cluster_math.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "cluster_math",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.242
+    },
+    {
+      "file": "th_invoice_cluster_currency.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "cluster_currency",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2303
+    },
+    {
+      "file": "th_invoice_incomplete.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "incomplete",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2218
+    },
+    {
+      "file": "th_invoice_amount_mismatch.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "amount_mismatch",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2367
+    },
+    {
+      "file": "th_invoice_currency_mismatch.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "currency_mismatch",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2335
+    },
+    {
+      "file": "th_invoice_partial.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "partial",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.253
+    },
+    {
+      "file": "th_invoice_visible_injection.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "visible_injection",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": true,
+      "elapsed_seconds": 0.2375
+    },
+    {
+      "file": "th_invoice_hidden_injection.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "hidden_injection",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": true,
+      "elapsed_seconds": 0.2304
+    },
+    {
+      "file": "th_invoice_benign_note.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "benign_note",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2403
+    },
+    {
+      "file": "th_po_clean.pdf",
+      "language": "th",
+      "document_type": "purchase_order",
+      "case": "clean",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2459
+    }
+  ],
+  "verification_records": [
+    {
+      "file": "en_invoice_clean.pdf",
+      "status": "matched",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "en_invoice_changed.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "en_invoice_duplicate_render.pdf",
+      "status": "matched",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "en_invoice_shared_account.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 2
+    },
+    {
+      "file": "en_invoice_cluster_math.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "en_invoice_cluster_currency.pdf",
+      "status": "mismatch",
+      "unknown_checks": 4,
+      "mismatch_checks": 3
+    },
+    {
+      "file": "en_invoice_incomplete.pdf",
+      "status": "review",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "en_invoice_amount_mismatch.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "en_invoice_currency_mismatch.pdf",
+      "status": "mismatch",
+      "unknown_checks": 4,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "en_invoice_partial.pdf",
+      "status": "review",
+      "unknown_checks": 5,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "en_invoice_visible_injection.pdf",
+      "status": "review",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "en_invoice_hidden_injection.pdf",
+      "status": "review",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "en_invoice_benign_note.pdf",
+      "status": "matched",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_clean.pdf",
+      "status": "matched",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_changed.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "th_invoice_duplicate_render.pdf",
+      "status": "matched",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_shared_account.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 2
+    },
+    {
+      "file": "th_invoice_cluster_math.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "th_invoice_cluster_currency.pdf",
+      "status": "mismatch",
+      "unknown_checks": 4,
+      "mismatch_checks": 3
+    },
+    {
+      "file": "th_invoice_incomplete.pdf",
+      "status": "review",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_amount_mismatch.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "th_invoice_currency_mismatch.pdf",
+      "status": "mismatch",
+      "unknown_checks": 4,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "th_invoice_partial.pdf",
+      "status": "review",
+      "unknown_checks": 5,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_visible_injection.pdf",
+      "status": "review",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_hidden_injection.pdf",
+      "status": "review",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_benign_note.pdf",
+      "status": "matched",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    }
+  ],
+  "risk_sequences": [
+    {
+      "language": "en",
+      "case": "exact_duplicate",
+      "expected_codes": [
+        "duplicate_fingerprint",
+        "duplicate_invoice_hash"
+      ],
+      "observed_codes": [
+        "duplicate_fingerprint",
+        "duplicate_invoice_hash"
+      ],
+      "all_expected_found": true,
+      "document_duplicate_rules_score": 0.96,
+      "with_graph_score": 0.96,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "en",
+      "case": "semantic_duplicate",
+      "expected_codes": [
+        "duplicate_fingerprint"
+      ],
+      "observed_codes": [
+        "duplicate_fingerprint"
+      ],
+      "all_expected_found": true,
+      "document_duplicate_rules_score": 0.8,
+      "with_graph_score": 0.8,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "en",
+      "case": "near_duplicate",
+      "expected_codes": [
+        "math_inconsistent",
+        "near_duplicate"
+      ],
+      "observed_codes": [
+        "math_inconsistent",
+        "near_duplicate"
+      ],
+      "all_expected_found": true,
+      "document_duplicate_rules_score": 0.4,
+      "with_graph_score": 0.49,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "en",
+      "case": "benign_shared_account",
+      "expected_codes": [
+        "shared_bank_token"
+      ],
+      "observed_codes": [
+        "shared_bank_token"
+      ],
+      "all_expected_found": true,
+      "document_duplicate_rules_score": 0,
+      "with_graph_score": 0.15,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "en",
+      "case": "independent_cluster",
+      "expected_codes": [
+        "po_currency_mismatch",
+        "shared_bank_token",
+        "suspicious_cluster"
+      ],
+      "observed_codes": [
+        "po_currency_mismatch",
+        "po_party_mismatch",
+        "shared_bank_token",
+        "suspicious_cluster"
+      ],
+      "all_expected_found": true,
+      "document_duplicate_rules_score": 0.75,
+      "with_graph_score": 0.819,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "th",
+      "case": "exact_duplicate",
+      "expected_codes": [
+        "duplicate_fingerprint",
+        "duplicate_invoice_hash"
+      ],
+      "observed_codes": [
+        "duplicate_fingerprint",
+        "duplicate_invoice_hash"
+      ],
+      "all_expected_found": true,
+      "document_duplicate_rules_score": 0.96,
+      "with_graph_score": 0.96,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "th",
+      "case": "semantic_duplicate",
+      "expected_codes": [
+        "duplicate_fingerprint"
+      ],
+      "observed_codes": [
+        "duplicate_fingerprint"
+      ],
+      "all_expected_found": true,
+      "document_duplicate_rules_score": 0.8,
+      "with_graph_score": 0.8,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "th",
+      "case": "near_duplicate",
+      "expected_codes": [
+        "math_inconsistent",
+        "near_duplicate"
+      ],
+      "observed_codes": [
+        "math_inconsistent",
+        "near_duplicate"
+      ],
+      "all_expected_found": true,
+      "document_duplicate_rules_score": 0.4,
+      "with_graph_score": 0.49,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "th",
+      "case": "benign_shared_account",
+      "expected_codes": [
+        "shared_bank_token"
+      ],
+      "observed_codes": [
+        "shared_bank_token"
+      ],
+      "all_expected_found": true,
+      "document_duplicate_rules_score": 0,
+      "with_graph_score": 0.15,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "th",
+      "case": "independent_cluster",
+      "expected_codes": [
+        "po_currency_mismatch",
+        "shared_bank_token",
+        "suspicious_cluster"
+      ],
+      "observed_codes": [
+        "po_currency_mismatch",
+        "po_party_mismatch",
+        "shared_bank_token",
+        "suspicious_cluster"
+      ],
+      "all_expected_found": true,
+      "document_duplicate_rules_score": 0.75,
+      "with_graph_score": 0.819,
+      "evidence_paths_present": true
+    }
+  ],
+  "injection": {
+    "alerts": 4,
+    "injected_documents": 4,
+    "unchanged_grounded_fields": 4,
+    "negative_alerts": 0,
+    "negative_documents": 6
+  },
+  "latency_seconds": {
+    "p50": 0.23395,
+    "p95": 0.2459
+  },
+  "limitations": [
+    "Generated label templates only; no held-out real-world document distribution",
+    "Missing expected due date counts as correct explicit null, not full extraction",
+    "Graph sequences evaluate planted rule conditions; no real-world accuracy claim",
+    "Paddle/Qwen scans are evaluated separately in ENGINE_BENCHMARK.json",
+    "Latency is local pipeline extraction with isolated parser startup, excludes HTTP and models"
+  ]
+}

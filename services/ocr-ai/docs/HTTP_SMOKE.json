@@ -1,0 +1,46 @@
+{
+  "data_origin": "synthetic-only",
+  "engine_mode": "PaddleOCR plus Qwen Instruct",
+  "records": [
+    {
+      "case": "en_digital_pair_both_engines",
+      "http_status": 200,
+      "status": "review",
+      "all_comparison_checks_match": true,
+      "reasons": [
+        "DOCUMENT_INJECTION_ALERT"
+      ],
+      "injection_flags": [],
+      "elapsed_seconds": 20.22
+    },
+    {
+      "case": "th_digital_pair_both_engines",
+      "http_status": 200,
+      "status": "review",
+      "all_comparison_checks_match": true,
+      "reasons": [
+        "DOCUMENT_INJECTION_ALERT",
+        "QWEN_DISAGREEMENT:amount"
+      ],
+      "injection_flags": [
+        "LLM_REPORTED"
+      ],
+      "elapsed_seconds": 33.529
+    },
+    {
+      "case": "th_scan_pair_both_engines",
+      "http_status": 200,
+      "status": "review",
+      "compatible_invoice": null,
+      "reasons": [
+        "DOCUMENT_INJECTION_ALERT",
+        "MISSING_OR_UNRESOLVED:issue_date",
+        "MISSING_OR_UNRESOLVED:buyer.name",
+        "QWEN_DISAGREEMENT:amount",
+        "MISSING_OR_UNRESOLVED:document_number",
+        "PO_REFERENCE_UNKNOWN",
+        "PARTY_NAME_TEXT_UNKNOWN"
+      ]
+    }
+  ]
+}
