@@ -17,6 +17,15 @@ Per-item status is in the table in [`docs/03-agent-wallet.md`](../../docs/03-age
 
 ## Run (mock ledger)
 
+Install the service's dependencies into a virtual environment first:
+
+```bash
+python -m venv .venv
+.venv/bin/pip install -r services/agent-wallet/requirements.txt
+```
+
+On Windows, use `.venv\Scripts\pip` in place of `.venv/bin/pip`.
+
 From the repo root:
 
 ```bash
@@ -44,6 +53,7 @@ ruff check services/agent-wallet
 cd services/agent-wallet/contracts && FOUNDRY_SOLC=/path/to/solc-0.8.11 forge test --offline
 ```
 
+The tests need `pytest`, `ruff` and `httpx` on top of the service requirements (`pip install pytest ruff httpx`).
 The two classifier model tests run only when `INJECTION_MODEL_DIR` points at the pinned model.
 
 The red-team eval: `python services/agent-wallet/eval/run_eval.py` (default cases, mock ledger). Reports are in `eval/report*.md`.

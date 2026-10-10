@@ -78,8 +78,11 @@ match the Python mock's numbers, and `AprAboveMandate` and `AlreadyDrawn` are re
 Demo: `scripts/demo.py` runs end to end against a plain `uvicorn app.main:app` start, with no seeding step. The mock
 mandate and lender liquidity are set at startup.
 
-Clean-clone demo: a fresh clone, a fresh virtual environment, run twice. The transcripts are identical. This was
-measured before the PM-review fixes; run it again before the freeze.
+Clean-clone demo, at commit `b7445e4` on `wallet/mock-ledger-guard`: a fresh clone, a fresh virtual environment with the
+service's requirements, the server started with only the documented environment, and `scripts/demo.py` run twice with a
+fresh server each time. Both transcripts are identical and both exit 0. The first attempt failed because `httpx`, which
+the demo and the tests import, was not in `requirements.txt`. The fix is the commit that adds `httpx` to
+`requirements.txt`. In the clean clone, the test suite passes (122 passed, 2 skipped) and ruff is clean.
 
 ## 4. Test evidence
 
