@@ -17,6 +17,30 @@ From the repo root, `streamlit run ui/app.py --server.port 3000` also works, wit
 `UI_MODE=fixtures` (the default) renders saved responses from `ui/fixtures/` and calls nothing, so the screen
 works with no backend. A blue "FIXTURE MODE" banner says so on screen.
 
+## Live mode (`UI_MODE=live`)
+
+```bash
+UI_MODE=live ORCHESTRATOR_URL=http://localhost:8000 streamlit run ui/app.py --server.port 3000
+```
+
+The screen talks **only** to the orchestrator, through `ui/client.py`. [Use demo invoice] (or an uploaded file)
+posts to `POST /flow/run`, and `client.to_view` maps the response onto the view model. It reads both today's
+flat `{mandate_id, ocr, registry, policy, wallet, outcome}` and the brief's `{flow_id, state, steps: [...]}`.
+Nothing crashes when the orchestrator is missing something:
+
+| Need | Orchestrator route the UI calls | Today | What the screen does |
+|---|---|---|---|
+| Run the flow | `POST /flow/run` (file, `mandate_id`) | served | live OCR, policy and wallet results; a duplicate shows STOPPED with a red registry row |
+| Compiled mandate | `POST /flow/mandate/compile` `{text}` | missing | saved mandate, labelled FIXTURE |
+| Lender quotes | an `offers` / `quotes` step in `/flow/run` | missing | saved quotes, labelled FIXTURE |
+| Human approval | `POST /flow/confirm/{tx_id}` | missing | amber notice; the button is marked done |
+| Buyer paid | `POST /flow/repay` (JSON `{flow_id, amount_paid}` when there is a `flow_id`, else form `invoice_id`) | stub reply | shows the stub's status as a grey TX-5 row |
+| Attacks A1–A6 | `POST /flow/attack/{case}` | missing | saved attack row, labelled "fixture: orchestrator has no attack route" |
+| Audit link | `audit_ref` from the wallet result | served (stub ref) | shown in the footer |
+
+An unreachable orchestrator gives an amber "Orchestrator unavailable … showing fixtures" banner and the fixture
+screen. A live attack response that was **not** stopped is shown with its real status, never relabelled BLOCKED.
+
 ## What is on screen, and where the numbers come from
 
 | Section | Content | Source in fixture mode |
@@ -46,4 +70,7 @@ ruff check ui
 
 - `tests/test_format.py`: THB and rate formatting, state colours, short hashes, mandate field sources.
 - `tests/test_app_smoke.py`: Streamlit's `AppTest` renders the screen in fixture mode with sockets blocked,
-  clicks A1–A6 and [Buyer paid], and checks that the rows appear.
+  clicks A1–A6 and [Buyer paid], and checks that the rows appear; in live mode with no orchestrator it checks
+  the amber banner and the labelled fixture fallback.
+- `tests/test_client.py`: the adapter on both response shapes, a duplicate that stops before policy, 404/405 as
+  unsupported, 5xx and refused connections as unavailable, the repay body, and attack rows.
