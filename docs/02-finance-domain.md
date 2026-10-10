@@ -278,7 +278,7 @@ Seller's facility limit (total outstanding at any time): THB 3,000,000. The sell
 }
 ```
 
-(`human_review_above_thb` = USD 25,000 × 33.5, **est.** rate.) The policy module may approve an advance_rate *up to* what risk allows; the mandate's `max_ltv` 0.70 is the seller's own ceiling, and the wallet takes the lower of the two.
+(`human_review_above_thb` = USD 25,000 × 33.5, **est.** rate; despite the key name, the guard requires human approval when the amount is **at or above** (≥) THB 837,500.) Wallet spending caps proposed by the controls doc, **est.**, for Finance to confirm: **THB 1,500,000 per transaction** and **THB 3,000,000 per day**. The policy module may approve an advance_rate *up to* what risk allows; the mandate's `max_ltv` 0.70 is the seller's own ceiling, and the wallet takes the lower of the two.
 
 **Offer selection:** Lender A = 70% at 10.95% APR; Lender B = 65% at 9.13% APR. Both are under 12% APR, so the mandate "maximise advance subject to APR ≤ 12%" picks **Lender A**. This mirrors the "6,500 at 9.5% vs 7,000 at 11%" example in P's architecture doc.
 
@@ -357,7 +357,7 @@ Past FinTechathon winners submitted a business plan alongside the code. The pitc
 
 | Due | Deliverable | Detail | Who uses it |
 |---|---|---|---|
-| **Sat 11 Oct 10:00** | Sign-off on §10 demo numbers | Confirm or change: advance 70%, 0.90% per 30 d, platform fee 0.30%, buyer rating A-, the 8 variants. After sign-off the numbers are frozen. | Policy AI, OCR AI, Agent wallet |
+| **Sat 11 Oct 10:00** | Sign-off on §10 demo numbers | Confirm or change: advance 70%, 0.90% per 30 d, platform fee 0.30%, buyer rating A-, the 8 variants, human-approval threshold ≥ THB 837,500, and the wallet caps THB 1.5 m per transaction / THB 3 m per day (est.). After sign-off the numbers are frozen. | Policy AI, OCR AI, Agent wallet |
 | **Sat 11 Oct 12:00** | Policy thresholds table | advance_rate and fee_rate by buyer rating (A/B/C) × confirmed/unconfirmed; reject rules (duplicate, PO mismatch > 5%, tenor > 120 d, overdue); review rules | Policy AI |
 | **Sat 11 Oct 15:00** | Sample documents | Invoice, PO and delivery note for the happy path plus V1, V2, V4 (Thai + English text, realistic layout, PDF/PNG) | OCR AI |
 | **Sat 11 Oct 18:00** | Credit features list + sanity ranges | Features for buyer and seller (payment history, rating, tenor, amount vs history, dilution rate) with realistic ranges for synthetic data | Policy AI (credit model) |
