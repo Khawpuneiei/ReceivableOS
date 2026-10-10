@@ -24,18 +24,18 @@
 | Seat | Owns | Delivers to the demo |
 |---|---|---|
 | OCR AI engineer | Invoice reading, prompt-injection detection in documents, fraud signals | "Here is the invoice as data, and here is why it looks safe or suspicious." |
-| Policy AI engineer | Credit risk model, financing decision, mandate (rules) compiler | "Approve 70% at 11% APR, and here are the reasons." |
+| Policy AI engineer | Credit risk model, financing decision, mandate (rules) compiler | "Approve 70% (THB 524,300) at 0.9% per 30 days, and here are the reasons." |
 | Agent Wallet engineer | Smart contracts, on-chain guard, wallet service, agent guardrails | "Paid. Here is the transaction hash." or "Blocked, and here is why." |
 | PM (P) | Orchestrator that chains the steps, the demo UI, seed data, mock lenders, submission package | The single screen the judges watch and the story around it. |
 | Finance | Realistic numbers, demo invoices and company profiles, the pain-point slide | Credible inputs and the "why this matters" numbers. |
 
 **The demo in six steps.**
 
-1. SME uploads an invoice for 10,000 USD due in 60 days.
+1. Siam Fresh Pack uploads an invoice to Mekong Basket Retail for THB 749,000, due in 45 days.
 2. OCR reads it, flags nothing suspicious, fraud score low. The invoice fingerprint is committed on-chain (TX‑1).
 3. Policy model scores the buyer, approves up to 70%, and the approval is written on-chain (TX‑2).
-4. Two mock lenders quote; the agent picks the one that fits the SME's mandate. The lender has funded the vault (TX‑3).
-5. The agent wallet draws 7,000 mock USDC through the on-chain guard (TX‑4).
+4. Two mock lenders quote (A: 70% at 10.95% APR, B: 65% at 9.13% APR); the agent picks A, the bigger advance still under the mandate's 12% APR cap. The lender has funded the vault (TX‑3).
+5. The agent wallet draws THB 524,300 in tTHB (a simulated on-chain baht token) through the on-chain guard (TX‑4).
 6. We click "buyer paid"; the wallet settles the lender automatically (TX‑5). Then we replay with a 19% APR or a duplicate invoice and show the guard rejecting it in red.
 
 **Deadlines.** Team build deadline is end of 12 Oct. The public timeline for the International Track says the preliminary round closes 2 Nov 2026 and finals are 21–23 Nov in Shenzhen ([IEEE CIS Shenzhen announcement](https://r10.ieee.org/shenzhen-cis/blog/2026/06/17/2026-shenzhen-international-fintech-competition-international-track/)), so 12 Oct is our MVP freeze, with room afterwards for polish, video and deck.
@@ -94,7 +94,7 @@ flowchart LR
       REG[ReceivableRegistry]
       VAULT[FinancingVault]
       AW[AgentWallet + PolicyGuard]
-      USDC[MockStable]
+      TTHB[tTHB token]
     end
     FB --- On-chain
     EVM -.- On-chain
@@ -117,7 +117,7 @@ flowchart LR
 | Invoice fingerprint `doc_hash` (sha256 of the file bytes) and status | The invoice file and all extracted text |
 | Approval: limit, max APR, `decisionHash`, model and policy version | Supplier and buyer profiles, PD features, model weights |
 | Mandate parameters: per-tx cap, daily cap, max APR, expiry, allowed targets, pause | The natural-language mandate text and LLM prompts |
-| Money movements: lender deposit, draw, repayment, settlement (MockStable) | Fraud and injection evidence detail |
+| Money movements: lender deposit, draw, repayment, settlement (tTHB) | Fraud and injection evidence detail |
 | Events: `ReceivableRegistered`, `ReceivableApproved`, `Drawn`, `Settled`, `DecisionExecuted` | Orchestrator audit log (links every step to its tx hash) |
 
 Rule: no personal or company data on-chain, only hashes, amounts and statuses. A hash proves the file did not change, not that its content is true; say so in the security doc.
@@ -201,7 +201,7 @@ For the stage, the wallet service has a demo-only flag `skip_offchain_checks=tru
 | Python 3.11 + FastAPI per service | Whole team writes Python; FastAPI gives typed request/response and free OpenAPI docs. |
 | Pydantic v2 models in `shared/schemas` | One source of truth for the contract; services import, never re-declare. |
 | JSON over HTTP, fixed ports | Simplest thing that lets each engineer run alone with fixtures. |
-| Money as decimal **strings** (`"10000.00"`), rates as floats (`0.11`), on-chain as 6-decimal integers | Avoids float rounding on amounts; one conversion helper in `shared/money.py`. |
+| Money as decimal **strings** (`"749000.00"`), rates as fractions (`0.70`), on-chain as tTHB integers with 2 decimals (satang) | Avoids float rounding on amounts; one conversion helper in `shared/money.py`. |
 | Solidity `0.8.11` exactly, OpenZeppelin 4.9.x (or no OZ at all) | 0.8.11 is the newest solc the FISCO BCOS 3.x console ships (verify on the node you use); OZ 5 needs 0.8.20. The same source then also deploys to any EVM chain. |
 | Foundry for contract tests, FISCO console / python-sdk for deployment | `forge test` covers every revert case in seconds on a local EVM; deployment and the submission screenshots go through FISCO's own tooling, which is what past entries showed. |
 | FISCO BCOS python-sdk in the wallet service | Same language as the rest; web3.py only if we switch to the EVM alternative. Both sit behind one ledger interface. |
@@ -211,6 +211,10 @@ For the stage, the wallet service has a demo-only flag `skip_offchain_checks=tru
 | OCR: PDF text layer first (pdfplumber), vision LLM or Tesseract fallback for images | Deterministic where possible, LLM only for layout-hard cases. |
 | LLM behind `shared/llm_client.py` (`complete(messages, schema) -> dict`) | Provider is swappable via env; every call has a JSON schema and timeout. |
 | Streamlit UI on port 3000 | One person can build the full demo screen in hours; Next.js only if time remains. |
+
+### Settlement token (P to confirm)
+
+**Default: tTHB**, a simulated baht token deployed by us, because the Finance scenario is priced in THB and a Thai SME borrows in baht. **Alternative: a mock USDC** (the idea notes' choice), which reads as more "Web3-native" to international judges. Only the token name, decimals and the `currency` value change; contracts and services are the same.
 
 ### Chain default (P to confirm)
 
@@ -228,7 +232,7 @@ This section starts from `shared/schemas.py` in the repo skeleton (PR #2) and `d
 
 Common rules for every service:
 - Ports: orchestrator `:8000`, OCR `:8001`, policy `:8002`, wallet `:8003`, UI `:3000`. Base URLs from env (`OCR_URL`, `POLICY_URL`, `WALLET_URL`).
-- Money is a decimal string in JSON (`"10000.00"`), parsed as `Decimal`; rates are fractions (`0.70`). On-chain amounts are integers in the mock stable token's smallest unit, converted in one wallet-owned helper.
+- Money is a decimal string in JSON (`"749000.00"`), parsed as `Decimal`; rates are fractions (`0.70`). On-chain amounts are integers in the mock stable token's smallest unit, converted in one wallet-owned helper.
 - Every service has `GET /health` → `{"status":"ok","version":"x.y.z"}`.
 - **[proposed]** Every response body carries `"schema_version": "1"`.
 - Errors: HTTP 4xx/5xx with `{"error": {"code": "STRING_CODE", "message": "...", "details": {}}}`.
@@ -245,15 +249,15 @@ Response `200`:
   "schema_version": "1",
   "invoice_id": "inv_01J9Z4...",
   "doc_hash": "sha256:3f1c...e9",
-  "supplier": {"name": "Siam Parts Co., Ltd.", "tax_id": "0105556000001", "address": "...", "bank_account": "TH12-3456-7890"},
-  "buyer":    {"name": "Bangkok Retail PCL", "tax_id": "0107537000002", "address": "..."},
+  "supplier": {"name": "Siam Fresh Pack Co., Ltd.", "tax_id": "0105556000001", "address": "...", "bank_account": "TH12-3456-7890"},
+  "buyer":    {"name": "Mekong Basket Retail Co., Ltd.", "tax_id": "0107537000002", "address": "..."},
   "invoice_no": "INV-2026-0142",
   "po_no": "PO-991",
   "issue_date": "2026-10-01",
-  "due_date": "2026-11-30",
-  "amount": "10000.00",
-  "currency": "USD",
-  "line_items": [{"description": "Brake pads", "quantity": "100", "unit_price": "100.00", "total": "10000.00"}],
+  "due_date": "2026-11-15",
+  "amount": "749000.00",
+  "currency": "THB",
+  "line_items": [{"description": "Packaged fresh produce, 1 lot", "quantity": "1", "unit_price": "749000.00", "total": "749000.00"}],
   "confidence": 0.93,
   "field_confidence": {"amount": 0.99, "due_date": 0.95, "buyer.name": 0.9},
   "injection_flags": [
@@ -275,7 +279,7 @@ Request:
 {
   "invoice": { "...": "the OCR response object, unchanged" },
   "supplier_profile": {
-    "entity_id": "sup_001", "name": "Siam Parts Co., Ltd.", "kyb_status": "VALID", "kyb_expires_at": "2027-01-01",
+    "entity_id": "sup_001", "name": "Siam Fresh Pack Co., Ltd.", "kyb_status": "VALID", "kyb_expires_at": "2027-01-01",
     "years_in_business": 6, "annual_revenue": "1200000.00", "on_time_payment_rate": 0.94,
     "avg_days_late": 3.5, "dispute_rate": 0.01, "prior_invoices": 48, "sector": "auto_parts", "country": "TH"
   },
@@ -292,11 +296,11 @@ Response `200`:
   "decision_id": "dec_01J9Z5...",
   "decision": "approve",
   "advance_rate": 0.70,
-  "limit": "7000.00",
-  "fee_rate": 0.11,
+  "limit": "524300.00",
+  "fee_rate": 0.009,
   "pd": 0.034,
-  "risk_score": 0.21,
-  "expected_loss": "107.10",
+  "risk_score": 0.18,
+  "expected_loss": "8021.79",
   "reasons": [
     {"code": "BUYER_PAYS_ON_TIME", "message": "Buyer paid 94% of invoices on time", "impact": -0.08},
     {"code": "ADVANCE_CAPPED_BY_MANDATE", "message": "Mandate max advance 70%", "impact": 0.0}
@@ -312,10 +316,10 @@ Response `200`:
   "decision_hash": "0x9a7b..."
 }
 ```
-Skeleton `PolicyDecision` has `decision, advance_rate, limit, fee_rate, risk_score, reasons` (reasons as strings); scope adds `model_version`, `policy_version`. **[proposed]** `decision_id`, `pd`, `expected_loss`, `policy_checks`, `mandate_id`, `decision_hash`, and reasons as objects. `fee_rate` is the annualised maximum APR the SME accepts for this invoice. `decision_hash` = keccak256 of the canonical JSON of the response without `decision_hash` (sorted keys, no spaces); it is written on-chain at TX‑2. Hard rules before any model (from scope, fail closed): `injection_flags` non-empty → `review`; `fraud_score ≥ 0.30` → `reject`; `confidence < 0.80` → `review`; plus KYB not `VALID` or expired → `reject`.
+Skeleton `PolicyDecision` has `decision, advance_rate, limit, fee_rate, risk_score, reasons` (reasons as strings); scope adds `model_version`, `policy_version`. **[proposed]** `decision_id`, `pd`, `expected_loss`, `policy_checks`, `mandate_id`, `decision_hash`, and reasons as objects. `fee_rate` is the discount fee per 30 days, as in the Finance primer (`docs/02`); 0.009 per 30 days ≈ 10.95% APR. Lender quotes and the on-chain guard work in APR (`apr = fee_rate × 365 / 30`), converted in `shared/money.py`. `decision_hash` = keccak256 of the canonical JSON of the response without `decision_hash` (sorted keys, no spaces); it is written on-chain at TX‑2. Hard rules before any model (from scope, fail closed): `injection_flags` non-empty → `review`; `fraud_score ≥ 0.30` → `reject`; `confidence < 0.80` → `review`; plus KYB not `VALID` or expired → `reject`.
 
 Mandate endpoints (Policy AI owns compile, Agent Wallet owns activation on-chain):
-- `POST /policy/mandate/compile` `{ "text": "never above 70% advance..." }` → `{ "mandate": {max_advance_rate, max_apr, max_pd, max_amount_per_tx, daily_cap, allowed_currency, require_kyb, duplicate_policy, human_review_above, expires_at}, "warnings": [] }`. Values outside hard bounds (for example max_apr > 0.30) are rejected, never clamped silently.
+- `POST /policy/mandate/compile` `{ "text": "never above 70% advance..." }` → `{ "mandate": {max_advance_rate, max_apr, max_pd, max_amount_per_tx, daily_cap, allowed_currency, require_kyb, duplicate_policy, human_review_above, expires_at}, "warnings": [] }`. Values outside hard bounds (for example max_apr > 0.30) are rejected, never clamped silently. Demo mandate (from `docs/02`): max advance 0.70, max APR 0.12, max PD 0.05, human review above THB 837,500.
 - `GET /policy/mandate/{mandate_id}`.
 
 ### 5.3 Agent Wallet · `POST /wallet/*`
@@ -338,10 +342,10 @@ Mandate endpoints (Policy AI owns compile, Agent Wallet owns activation on-chain
   "invoice_id": "inv_01J9Z4...",
   "doc_hash": "sha256:3f1c...e9",
   "payee": "0xSmeAgentWallet...",
-  "amount": "7000.00",
-  "currency": "USD",
-  "apr": 0.11,
-  "lender_id": "lender_b",
+  "amount": "524300.00",
+  "currency": "THB",
+  "apr": 0.1095,
+  "lender_id": "lender_a",
   "mandate_id": "mdt_001"
 }
 ```
@@ -364,7 +368,7 @@ Tx result (all write endpoints; skeleton `WalletResult` has `tx_id, status, chai
 ### 5.4 Orchestrator (PM)
 
 From scope: `POST /flow/run` (multipart `file`, `mandate_id`, plus `supplier_id`, `buyer_id`) runs the pipeline and returns `{flow_id, state, steps:[...]}` with every intermediate result for the UI; `POST /flow/repay` `{flow_id, amount_paid}` simulates "buyer paid" and triggers settlement. **[proposed]** `GET /flow/{flow_id}` and `POST /flow/attack/{case}` (DEMO_MODE only, replays A1–A6). `integration/run_demo.py` from the skeleton stays as the command-line driver of the same flow.
-- Mock lenders: config file `services/orchestrator/lenders.yaml` with 2 lenders (`lender_a`: 65% at 9.5%, `lender_b`: 70% at 11%). Selection: maximise advance subject to `apr ≤ mandate.max_apr` and `advance ≤ decision.limit`; tie → lower APR.
+- Mock lenders: config file `services/orchestrator/lenders.yaml` with 2 lenders (`lender_a`: 70% at 10.95% APR, `lender_b`: 65% at 9.13% APR, numbers from `docs/02`). Selection: maximise advance subject to `apr ≤ mandate.max_apr` and `advance ≤ decision.limit`; tie → lower APR.
 
 ### 5.5 Smart contracts (Agent Wallet eng)
 
@@ -372,7 +376,7 @@ Source lives in `services/agent-wallet/contracts/` (skeleton layout).
 
 | Contract | Key functions | Reverts |
 |---|---|---|
-| `MockStable` (ERC20, 6 decimals) | `mint(to, amt)` onlyOwner | — |
+| `tTHB` (ERC20-style simulated baht, 2 decimals; contract `MockStable`) | `mint(to, amt)` onlyOwner | — |
 | `ReceivableRegistry` | `register(bytes32 docHash, address seller, uint256 faceValue, uint64 dueDate)`; `approve(bytes32 docHash, uint256 limit, uint16 maxAprBps, bytes32 decisionHash)` onlyRole(RISK_ORACLE); `setStatus` | `DuplicateReceivable`, `NotRegistered` |
 | `FinancingVault` | `deposit(amt)` by lender; `draw(bytes32 docHash, uint256 amt, uint16 aprBps)` only AgentWallet; `repay(bytes32 docHash, uint256 amt)` → pays lender principal + fee; events `Drawn`, `Settled` | `NotApproved`, `AmountAboveLimit`, `AlreadyDrawn` |
 | `PolicyGuard` | `check(address target, bytes4 selector, uint256 amount, uint16 aprBps, bytes32 docHash) view` | `TargetNotAllowed`, `AprAboveMandate`, `AmountAboveLimit`, `DailyCapExceeded`, `MandateExpired`, `Paused` |
