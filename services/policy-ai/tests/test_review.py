@@ -6,7 +6,7 @@ import pytest
 from factories import ctx_for, edited_rules, happy_body, rule_entry
 
 from app import model
-from app.engine import PENDING, merge_outcome, run_pre_terms
+from app.engine import merge_outcome, run_pre_terms
 from shared.schemas import Decision
 
 
@@ -210,8 +210,3 @@ def test_all_review_hits_are_collected():
     _, results = run_pre_terms(ctx_for(body))
     assert {"REVIEW.UNCONFIRMED_BUYER", "REVIEW.FRAUD_FLAGS"} <= {r.id for r in results if r.status == "hit"}
     assert merge_outcome(results) == Decision.review
-
-
-def test_only_terms_and_pricing_rules_are_pending():
-    rest = {"KO.NO_HEADROOM", "KO.PRICING", "REVIEW.CONCENTRATION", "REVIEW.MANDATE_APR"}
-    assert {i for i in PENDING if not i.startswith("TERMS.HAIRCUT_")} == rest

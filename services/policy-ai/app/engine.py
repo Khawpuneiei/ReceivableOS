@@ -9,8 +9,9 @@ Hit messages are built from the YAML message plus numbers, dates and YAML-listed
 echo free text from the invoice or the profiles, because the wallet scans reasons for injection and the
 UI renders them.
 
-Stages so far: hard rules, pre-model knock-outs, PD (placeholder model), PD gates and the pre-terms review
-triggers.
+Stages: hard rules, pre-model knock-outs, PD (placeholder model), PD gates, pre-terms review triggers, then
+haircuts, terms and pricing, and the rules that need them (KO.NO_HEADROOM, KO.PRICING, REVIEW.CONCENTRATION,
+REVIEW.MANDATE_APR).
 """
 
 from __future__ import annotations
@@ -23,8 +24,10 @@ from typing import Any, Literal
 
 from app import model
 from app.profiles import MISSING, BuyerProfile, SupplierProfile, normalise_buyer, normalise_supplier
-from app.rules import Rule, RuleSet, active_rules, check_registry
+from app.rules import Haircut, Rule, RuleSet, active_rules, check_registry
 from app.schemas import Mandate, PolicyRequestExt, Portfolio
+from app.terms import CENT, Price, Terms, compute_terms, price
+from shared.money import DAYS_PER_YEAR, FEE_PERIOD_DAYS
 from shared.schemas import Decision, ExtractedInvoice
 
 Status = Literal["hit", "pass", "skip"]
@@ -42,6 +45,8 @@ class Ctx:
     mandate: Mandate | None = None
     portfolio: Portfolio | None = None
     pd: Decimal | None = None  # set once the model has run
+    terms: Terms | None = None  # set by the terms stage (None when the buyer tier has no base advance)
+    price: Price | None = None
 
     @property
     def tenor_days(self) -> int:
@@ -105,30 +110,18 @@ class RuleResult:
 Predicate = Callable[[Ctx, Any], Verdict]
 RULES: dict[str, Predicate] = {}
 
-# YAML ids whose predicates arrive with the terms and pricing stage. The import-time registry check accepts
-# them until then; that stage removes its ids from this set.
-PENDING: frozenset[str] = frozenset(
-    {
-        "KO.NO_HEADROOM",
-        "KO.PRICING",
-        "REVIEW.CONCENTRATION",
-        "REVIEW.MANDATE_APR",
-        "TERMS.HAIRCUT_UNCONFIRMED",
-        "TERMS.HAIRCUT_TENOR",
-        "TERMS.HAIRCUT_AGE",
-        "TERMS.HAIRCUT_DILUTION",
-        "TERMS.HAIRCUT_PD",
-    }
-)
+AFTER_TERMS: set[str] = set()  # rules that read the terms or the price, run in the last stage
 
 
-def rule(rule_id: str) -> Callable[[Predicate], Predicate]:
-    """Register a predicate under its YAML id."""
+def rule(rule_id: str, *, after_terms: bool = False) -> Callable[[Predicate], Predicate]:
+    """Register a predicate under its YAML id; after_terms=True runs it once terms and price exist."""
 
     def register(fn: Predicate) -> Predicate:
         if rule_id in RULES:
             raise ValueError(f"predicate already registered for {rule_id}")
         RULES[rule_id] = fn
+        if after_terms:
+            AFTER_TERMS.add(rule_id)
         return fn
 
     return register
@@ -309,33 +302,113 @@ def _thin_profile(ctx: Ctx, p: Any) -> Verdict:
     return hit(f"terms use tier {p.terms_tier}") if ctx.buyer.credit_tier is MISSING else PASS
 
 
-check_registry(active_rules(), [*RULES, *PENDING])  # startup fails if the YAML and the predicates disagree
+# --- Haircuts (section 6.2 terms): a hit lowers the advance, it never changes the decision by itself ---
+
+
+@rule("TERMS.HAIRCUT_UNCONFIRMED")
+def _haircut_unconfirmed(ctx: Ctx, p: Any) -> Verdict:
+    return PASS if ctx.buyer.confirmed is True else hit()
+
+
+@rule("TERMS.HAIRCUT_TENOR")
+def _haircut_tenor(ctx: Ctx, p: Any) -> Verdict:
+    return hit(f"tenor {ctx.tenor_days} days > {p.tenor_above}") if ctx.tenor_days > p.tenor_above else PASS
+
+
+@rule("TERMS.HAIRCUT_AGE")
+def _haircut_age(ctx: Ctx, p: Any) -> Verdict:
+    age = ctx.invoice_age_days
+    return hit(f"invoice age {age} days > {p.age_above}") if age > p.age_above else PASS
+
+
+@rule("TERMS.HAIRCUT_DILUTION")
+def _haircut_dilution(ctx: Ctx, p: Any) -> Verdict:
+    dilution = ctx.supplier.dilution_rate
+    if dilution is MISSING:
+        return SKIP_MISSING
+    return hit(f"dilution {dilution} > {p.dilution_above}") if dilution > p.dilution_above else PASS
+
+
+@rule("TERMS.HAIRCUT_PD")
+def _haircut_pd(ctx: Ctx, p: Any) -> Verdict:
+    if ctx.pd is None:
+        return SKIP_MISSING
+    return hit(f"PD {ctx.pd} > {p.pd_above}") if ctx.pd > p.pd_above else PASS
+
+
+# --- Rules that need the terms and the price (section 6.1 steps 7-8) ---
+
+
+@rule("KO.NO_HEADROOM", after_terms=True)
+def _no_headroom(ctx: Ctx, p: Any) -> Verdict:
+    if ctx.terms is None:
+        return SKIP_MISSING
+    return hit(f"remaining limit {ctx.terms.cap.quantize(CENT)}") if ctx.terms.cap <= 0 else PASS
+
+
+@rule("KO.PRICING", after_terms=True)
+def _pricing(ctx: Ctx, p: Any) -> Verdict:
+    """Checked on the unclamped annual price: the clamped fee can never exceed the ceiling."""
+    if ctx.price is None:
+        return SKIP_MISSING
+    annual = ctx.price.annual
+    return hit(f"annual risk price {annual:.4f} > {p.max_apr}") if annual > p.max_apr else PASS
+
+
+@rule("REVIEW.MANDATE_APR", after_terms=True)
+def _mandate_apr(ctx: Ctx, p: Any) -> Verdict:
+    """fee_rate x 365/30, unrounded, against the mandate's max_apr."""
+    if ctx.price is None or ctx.mandate is None or ctx.mandate.max_apr is None:
+        return SKIP_MISSING
+    apr = ctx.price.fee_rate * DAYS_PER_YEAR / FEE_PERIOD_DAYS
+    return hit(f"APR {apr:.4f} > mandate {ctx.mandate.max_apr}") if apr > ctx.mandate.max_apr else PASS
+
+
+@rule("REVIEW.CONCENTRATION", after_terms=True)
+def _concentration(ctx: Ctx, p: Any) -> Verdict:
+    """(current exposure + limit) / pool capacity, for the buyer and for the seller."""
+    if ctx.terms is None:
+        return SKIP_MISSING
+    pool = (
+        ctx.portfolio.pool_capacity
+        if ctx.portfolio
+        else ctx.rules.defaults.pool_capacity.get(ctx.invoice.currency)
+    )
+    if pool is None:
+        return SKIP_MISSING
+    limit = ctx.terms.limit
+    buyer_share = (ctx.buyer.current_exposure + limit) / pool
+    supplier_share = (ctx.supplier.current_exposure + limit) / pool
+    if buyer_share > p.max_buyer_share:
+        return hit(f"buyer share {buyer_share:.4f} > {p.max_buyer_share}")
+    if supplier_share > p.max_supplier_share:
+        return hit(f"seller share {supplier_share:.4f} > {p.max_supplier_share}")
+    return PASS
+
+
+check_registry(active_rules(), RULES)  # startup fails if the YAML and the predicates disagree
 
 
 # --- Evaluation ---
 
 
-def run_rule(ctx: Ctx, r: Rule) -> RuleResult:
+def run_rule(ctx: Ctx, r: Rule | Haircut) -> RuleResult:
     verdict = RULES[r.id](ctx, r.param)
     if verdict.status == "hit":
         message = f"{r.message} ({verdict.detail})" if verdict.detail else r.message
-        return RuleResult(r.id, "hit", r.outcome, message)
+        return RuleResult(r.id, "hit", getattr(r, "outcome", None), message)
     if verdict.status == "skip":
         return RuleResult(r.id, "skip", skip_reason=verdict.detail or "missing")
     return RuleResult(r.id, "pass")
 
 
-def run_stage(ctx: Ctx, section: Iterable[Rule]) -> list[RuleResult]:
-    """Evaluate every registered rule of a section, in YAML order, collecting all results."""
-    return [run_rule(ctx, r) for r in section if r.id in RULES]
+def run_stage(ctx: Ctx, section: Iterable[Rule | Haircut], *, after_terms: bool = False) -> list[RuleResult]:
+    """Evaluate the section's rules of this stage, in YAML order, collecting all results."""
+    return [run_rule(ctx, r) for r in section if (r.id in AFTER_TERMS) == after_terms]
 
 
 def run_pre_model(ctx: Ctx) -> list[RuleResult]:
-    """Section 6.1 steps 2-3: hard rules, then knock-outs.
-
-    KO.NO_HEADROOM and KO.PRICING are still in PENDING; when the terms stage registers them it must also run
-    them after terms instead of here.
-    """
+    """Section 6.1 steps 2-3: hard rules, then the knock-outs that don't need terms."""
     return run_stage(ctx, ctx.rules.hard_rules) + run_stage(ctx, ctx.rules.knockouts)
 
 
@@ -345,6 +418,51 @@ def run_pre_terms(ctx: Ctx) -> tuple[Ctx, list[RuleResult]]:
     ctx = replace(ctx, pd=Decimal(str(model.predict_pd(ctx.buyer, ctx.tenor_days))))
     results += run_stage(ctx, ctx.rules.pd_gates) + run_stage(ctx, ctx.rules.review_triggers)
     return ctx, results
+
+
+def terms_tier(ctx: Ctx) -> str:
+    """The buyer's tier, or the YAML's thin-profile tier when the buyer has none."""
+    tier = ctx.buyer.credit_tier
+    return ctx.rules.rule("REVIEW.THIN_PROFILE").param.terms_tier if tier is MISSING else tier
+
+
+def run_terms(ctx: Ctx) -> tuple[Ctx, list[RuleResult]]:
+    """Section 6.1 steps 7-8: haircuts, terms, pricing, then the rules that need them. Needs ctx.pd.
+
+    A tier with no base advance (D, already knocked out) gets no terms; the rules that need them skip.
+    """
+    haircut_results = run_stage(ctx, ctx.rules.terms.haircuts)
+    tier = terms_tier(ctx)
+    if tier in ctx.rules.terms.base_advance_by_tier and ctx.pd is not None:
+        applied = [ctx.rules.rule(r.id) for r in haircut_results if r.status == "hit"]
+        terms = compute_terms(
+            ctx.rules,
+            tier=tier,
+            amount=ctx.invoice.amount,
+            currency=ctx.invoice.currency,
+            haircuts=applied,
+            buyer=ctx.buyer,
+            supplier=ctx.supplier,
+            mandate=ctx.mandate,
+        )
+        quote = price(
+            ctx.rules,
+            pd=ctx.pd,
+            tenor_days=ctx.tenor_days,
+            confirmed=ctx.buyer.confirmed is True,
+            limit=terms.limit,
+        )
+        ctx = replace(ctx, terms=terms, price=quote)
+    post = run_stage(ctx, ctx.rules.knockouts, after_terms=True)
+    post += run_stage(ctx, ctx.rules.review_triggers, after_terms=True)
+    return ctx, haircut_results + post
+
+
+def evaluate(ctx: Ctx) -> tuple[Ctx, list[RuleResult]]:
+    """The whole rule pipeline (section 6.1 steps 2-8). Returns ctx with PD, terms and price."""
+    ctx, results = run_pre_terms(ctx)
+    ctx, more = run_terms(ctx)
+    return ctx, results + more
 
 
 def merge_outcome(results: Iterable[RuleResult]) -> Decision:
