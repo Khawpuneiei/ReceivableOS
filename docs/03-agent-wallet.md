@@ -19,10 +19,10 @@ and a human approves anything large, so a hijacked or wrong AI produces a red "B
 
 | Tx | Call | Who signs | What it proves |
 |---|---|---|---|
-| setup | deploy, `PolicyGuard.setMandate` | owner (P) | the mandate is on-chain: 70% max advance, 12% max APR, 5% max PD, human review above THB 837,500 |
+| setup | deploy, `PolicyGuard.setMandate` | owner (P) | the mandate is on-chain: 70% max advance, 12% max APR, 5% max PD, per-tx cap 1.5m, daily cap 3m, human review at or above THB 837,500 |
 | TX‑3 | `Vault.deposit` | lenders (setup script) | lender liquidity is in the vault |
-| TX‑1 | `Registry.register(docHash, seller, 749000, dueDate)` | agent via `AgentWallet` | invoice fingerprint is unique (duplicates revert); the seller's payout address is bound now, from the payee registry, never from invoice text |
-| TX‑2 | `Registry.approve(docHash, 524300, 1200 bps, decisionHash)` | risk-oracle key | policy-ai's exact decision (by hash) approved this limit |
+| TX‑1 | `Registry.register(fingerprint, docHash, seller, 749000, dueDate)` | agent via `AgentWallet` | the keyed invoice fingerprint from OCR is unique, so a re-saved PDF of the same invoice still reverts; the seller's payout address is bound now, from the payee registry, never from invoice text |
+| TX‑2 | `Registry.approve(fingerprint, 524300, 1200 bps, decisionHash)` | risk-oracle key | policy-ai's exact decision (by hash) approved this limit |
 | TX‑4 | `AgentWallet.execute → PolicyGuard.check → Vault.draw` | agent | draw 524,300 from Lender A (10.95% APR beats B's 65% advance); seller gets 516,705.14 after fees |
 | TX‑5 | `AgentWallet.execute → Vault.repay` | agent | buyer paid 749,000: lender 524,300, seller reserve 224,700 |
 | anchor | `AgentWallet.anchorAudit(root)` | agent | the off-chain audit log can't be rewritten later |
@@ -35,7 +35,7 @@ and a human approves anything large, so a hijacked or wrong AI produces a red "B
 | L1 Provenance | wallet service | decision not `approve`, stale, or edited after policy-ai produced it (`decision_hash`) |
 | L2 Injection scan | wallet service | instructions hidden in any text field (rules + Llama Prompt Guard 2 classifier + canary), incl. Thai, Chinese, base64, zero-width tricks |
 | L3 Mandate & spending | wallet service | APR, advance vs face value, PD, per-tx and daily caps, payee/target allowlist, duplicate, already drawn, expiry, pause |
-| L4 Human approval | wallet service + `AgentWallet.confirm` | anything above THB 837,500 or carrying risk flags waits for P |
+| L4 Human approval | wallet service + `AgentWallet.confirm` | anything at or above THB 837,500 waits for the approver (the Finance teammate; P sets the rules and can't approve payments) |
 | L5 On-chain guard | `PolicyGuard`, `Vault`, `Registry` | the same limits again, enforced even if the whole Python service is compromised |
 
 On stage, `DEMO_MODE` lets us skip L0–L4 for one request so judges see the **chain itself** revert a 19.5% APR draw
@@ -45,6 +45,10 @@ What binds a fully stolen agent key (be precise if judges ask): contract and fun
 registration, approved limit, advance vs on-chain face value, per-tx and daily caps, expiry, pause, duplicate and
 already-drawn checks. The APR the agent reports is also capped by the risk-oracle's approval, so lying about it takes
 two keys.
+
+**Known limit for the pitch:** in the MVP the risk-oracle key that signs TX‑2 may sit in the same process as the
+agent key, so the wallet could in principle approve its own receivable. The brief asks the engineer to move it to
+the orchestrator or policy-ai process if cheap; the production answer is policy-ai's own signer or an HSM.
 
 ## 4. Threats and the defenses we use
 
@@ -66,10 +70,10 @@ one function; every limit is checked twice (Python and chain).
 
 ## 5. Attack test set and the number for the pitch
 
-`eval/cases.jsonl` holds 49 cases: 39 attacks (A1–A6 from the architecture, Finance's V5 and V8, payee swaps incl. a
+`eval/cases.jsonl` holds 51 cases: 40 attacks (A1–A6 from the architecture, Finance's V5 and V8, payee swaps incl. a
 homoglyph, tampered and stale decisions, injections in English, Thai, Chinese, base64 and zero-width form, canary
-leak, replay, schema abuse, privilege attempts, two agent-loop cases) and 10 benign cases (happy paths, the large
-invoice that should wait for approval, settlement incl. dilution, late and short pay, benign text that mentions
+leak, replay, schema abuse, privilege attempts, the owner trying to approve a payment, two agent-loop cases) and 11 benign cases (happy paths, the large
+invoice that should wait for approval incl. the exact 837,500 boundary, settlement incl. dilution, late and short pay, benign text that mentions
 payments). `eval/run_eval.py` reports:
 
 | Metric | Target |
@@ -81,28 +85,27 @@ payments). `eval/run_eval.py` reports:
 | Benign cases wrongly blocked | ≤ 10% |
 | Benign cases completed | ≥ 90% |
 
-Slide line: *"We attacked our own agent 39 ways. The scanner alone caught X%; the full stack let zero unauthorized
+Slide line: *"We attacked our own agent 40 ways. The scanner alone caught X%; the full stack let zero unauthorized
 payments through, and the APR and over-limit attempts have on-chain revert hashes."*
 
 ## 6. Interfaces (details in the service CLAUDE.md §6)
 
 `POST /wallet/register`, `/wallet/approve`, `/wallet/execute`, `/wallet/settle`, `/wallet/mandate/activate`,
-`/wallet/confirm/{tx_id}` (human approval), `/wallet/pause|unpause`, `GET /wallet/audit/{invoice_id}`, `/health`.
+`/wallet/confirm/{tx_id}` (human approval, approver token only), `/wallet/pause|unpause`, `GET /wallet/audit/{invoice_id}`, `/health`.
 Tx result: `tx_id, status (executed | blocked | pending_approval | failed), chain, chain_ref, approvals_required,
 block_reason, audit_ref`. Mock hashes are prefixed `mock:` so nobody mistakes them for chain hashes.
 
-## 7. Open items for P
+## 7. Decisions so far and what's still open
 
-1. **Token:** tTHB (default, matches Finance's THB scenario) or mock USDC. Only names, decimals and amounts change.
-2. **Contract PR to `shared/schemas.py`:** add the wallet models from architecture §5.3 and `TxStatus` values
-   `blocked`, `failed` (the skeleton still has `rejected`). The wallet returns `rejected` until then.
-3. **Env defaults:** `WALLET_MAX_TX_AMOUNT=10000` and `WALLET_HUMAN_APPROVAL_OVER=5000` in `.env.example` would block
-   the THB 524,300 demo draw; suggest `1000000` and `837500`.
-4. **Human-approval endpoint name:** `POST /wallet/confirm/{tx_id}`, because `/wallet/approve` is the TX‑2 credit
-   approval in the architecture.
-5. **Revert style:** string reverts (`require(…, "AprAboveMandate")`) instead of custom errors, so FISCO receipts and
-   console screenshots show readable reasons. Same names as the architecture.
-6. **Freeze time:** scope says Sun 12:00, architecture says 18:00.
+Settled (via the coordinator): tTHB as default token (P may still switch to mock USDC); `blocked`/`failed` statuses are
+in `shared/schemas.py`; demo caps THB 1,500,000 per transaction and 3,000,000 daily, human review at or above
+837,500, all THB with 2 decimals; `POST /wallet/confirm/{tx_id}` for human approval; readable revert strings;
+freeze Sun 12 Oct 12:00; mandate fields `max_ltv`, `max_apr`, `max_predicted_default`, `human_review_above`,
+`max_amount_per_tx`, `daily_cap` (policy-ai's shape); `risk_score` is the buyer PD; registry dedupes on the keyed
+`invoice_fingerprint` from OCR.
+
+Still open for P: final tTHB vs USDC; who holds the approver key (default: the Finance teammate); whether to move the
+risk-oracle key out of the wallet process before freeze.
 
 ## 8. Status (engineer updates)
 
