@@ -67,8 +67,8 @@ The spec is section 4 of `docs/00-scope.md`; `shared/schemas.py` is the same con
 `decision (approve | review | reject), advance_rate, limit, fee_rate (per 30 days), apr (optional), risk_score, reasons, model_version, policy_version`
 Hard rules before any model: `injection_flags` non-empty → `review`; `fraud_score ≥ 0.30` → `reject`; `confidence < 0.80` → `review`.
 
-**Agent wallet** — `POST /wallet/execute` (more `/wallet/*` endpoints are proposed in `docs/01-architecture.md` section 5.3) takes `{decision, payee, amount, currency, invoice_id}` and returns `WalletResult`:
-`tx_id, status (executed | blocked | pending_approval | failed), chain_ref, approvals_required, audit_ref`
+**Agent wallet** — `POST /wallet/execute` (plus `/wallet/register`, `/approve` for credit approval, `/settle`, `/mandate/activate`, `/confirm/{tx_id}` for human approval, `/audit`; see `services/agent-wallet/README.md`) takes `{decision, payee, amount, currency, invoice_id}` and returns `WalletResult`:
+`tx_id, status (executed | blocked | pending_approval | failed), chain_ref, approvals_required, audit_ref` (+ optional `chain, explorer_url, block_reason, checks`)
 
 **Orchestrator** — `POST /flow/run` (multipart `file`, form `mandate_id`) runs the whole flow and returns every intermediate result; `POST /flow/repay` simulates "buyer paid".
 

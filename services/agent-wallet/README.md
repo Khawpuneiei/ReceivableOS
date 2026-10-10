@@ -15,10 +15,15 @@ Status: stub. The endpoint returns a fixed response that matches the contract so
 | Endpoint | Purpose |
 |---|---|
 | `POST /wallet/register` | Register the invoice fingerprint on chain (TX-1) |
-| `POST /wallet/approve` | Record the credit approval, signed by the risk-oracle key (TX-2) |
+| `GET /wallet/registry/{invoice_fingerprint}` | Is this invoice already registered? |
+| `POST /wallet/approve` | Record the **credit** approval, signed by the risk-oracle key (TX-2) |
 | `POST /wallet/settle` | Settle after the buyer pays (TX-5) |
-| `POST /wallet/mandate/activate` | Set the on-chain guard parameters (owner key) |
-| `GET /wallet/audit/{invoice_id}` | List the tx results for an invoice |
+| `POST /wallet/mandate/activate`, `GET /wallet/mandate` | Set / show the on-chain guard parameters (owner key) |
+| `POST /wallet/confirm/{tx_id}` | **Human** approval of a `pending_approval` draw (owner token) |
+| `POST /wallet/pause`, `POST /wallet/unpause` | Emergency stop (owner token) |
+| `GET /wallet/audit/{invoice_id}`, `GET /wallet/tx/{tx_id}` | Audit trail and tx lookup |
+
+Request models for these are in `shared/schemas.py` (`WalletRegisterRequest`, `WalletApproveRequest`, `WalletSettleRequest`, `MandateActivateRequest`, `WalletConfirmRequest`); every write returns `WalletResult`.
 
 Any new shared field goes through a `contract:` PR first (see the root `CLAUDE.md`).
 
