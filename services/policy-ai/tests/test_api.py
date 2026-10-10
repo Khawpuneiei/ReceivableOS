@@ -4,6 +4,7 @@ import ast
 import json
 import logging
 import socket
+import subprocess
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -212,7 +213,19 @@ def test_decide_makes_no_network_call_and_loads_no_llm_client(monkeypatch):
 
     monkeypatch.setattr(socket.socket, "connect", refuse)
     assert _post(happy_body())["decision"] == "approve"
-    assert not [name for name in sys.modules if name.startswith("app.llm")]
+    code = (
+        "import sys; sys.path[:0] = ['.', '../..', 'tests']\n"
+        "from fastapi.testclient import TestClient\n"
+        "from factories import happy_body\n"
+        "from app.main import app\n"
+        "assert TestClient(app).post('/policy/decide', json=happy_body()).status_code == 200\n"
+        "print(sorted(m for m in sys.modules if 'llm' in m))\n"
+    )
+    service_dir = Path(__file__).resolve().parents[1]
+    out = subprocess.run(
+        [sys.executable, "-c", code], cwd=service_dir, capture_output=True, text=True, check=True
+    )
+    assert out.stdout.strip().splitlines()[-1] == "[]"  # no LLM module is even imported
     app_dir = Path(__file__).resolve().parents[1] / "app"
     for name in ("main.py", "decision.py", "engine.py", "model.py", "terms.py", "rules.py", "profiles.py"):
         tree = ast.parse((app_dir / name).read_text(encoding="utf-8"))
