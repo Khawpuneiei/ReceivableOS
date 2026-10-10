@@ -1,0 +1,48 @@
+{
+  "mandate": {
+    "mandate_id": "mdt_001",
+    "max_ltv": "0.70",
+    "max_apr": "0.12",
+    "max_predicted_default": "0.05",
+    "max_amount_per_tx": "45000.00",
+    "daily_cap": "90000.00",
+    "allowed_currency": "USD",
+    "settlement_asset": "mUSDC",
+    "require_kyb": true,
+    "require_buyer_attestation": true,
+    "duplicate_policy": "DENY",
+    "human_review_above": "25000.00",
+    "payee_allowlist": [
+      "SELLER:siam-fresh-pack",
+      "LENDER:lender_a",
+      "LENDER:lender_b",
+      "PLATFORM:fee"
+    ],
+    "allowed_targets": [
+      "FinancingVault",
+      "ReceivableRegistry"
+    ],
+    "valid_from": "2026-10-09T17:00:00+00:00",
+    "expires_at": "2026-11-08T17:00:00+00:00"
+  },
+  "asset_type": "trade_receivable",
+  "fields_from_text": [
+    "max_ltv",
+    "max_apr",
+    "max_predicted_default",
+    "human_review_above"
+  ],
+  "fields_from_llm": [],
+  "fields_from_defaults": [
+    "max_amount_per_tx",
+    "daily_cap",
+    "expires_at"
+  ],
+  "warnings": [
+    "the agent wallet currently activates THB / tTHB mandates only"
+  ],
+  "parser": "deterministic",
+  "compiler_version": "mandate-compiler-v0.1",
+  "policy_version": "credit-policy-v0.1",
+  "source_text_sha256": "0x75daf4e525e89099f5659359bd016724aed3e42f37a7a23550f8703bf88dcd68"
+}

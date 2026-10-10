@@ -1,0 +1,1 @@
+Finance my approved invoices automatically, but never advance more than 70%, never pay more than 12% APR, stop if buyer risk is above 5%, and ask me above THB 837,500.

@@ -88,7 +88,16 @@ mandate_limits:                        # platform maxima for the mandate compile
   daily_cap: {THB: "3000000.00", USD: "90000.00"}
   human_review_above: {THB: "837500.00", USD: "25000.00"}
   defaults: {max_ltv: 0.70, max_apr: 0.12, max_predicted_default: 0.05,
-             max_amount_per_tx: {THB: "1500000.00", USD: "45000.00"}, daily_cap: {THB: "3000000.00", USD: "90000.00"}}   # FINANCE-TBD
+             max_amount_per_tx: {THB: "1500000.00", USD: "45000.00"}, daily_cap: {THB: "3000000.00", USD: "90000.00"},
+             human_review_above: {THB: "837500.00", USD: "25000.00"}}   # FINANCE-TBD
   default_validity_days: 30
   max_validity_days: 365
-  registered_payees: ["0xSUPPLIER"]
+  # Payees a compiled mandate may allow: the agent wallet's registry ids (its config/payees.json, PR #17),
+  # each with the addresses or placeholders a sentence may use for it. Text can name only these.
+  payee_registry:
+    "SELLER:siam-fresh-pack": ["0xSUPPLIER", "0x00000000000000000000000000000000000000a1"]
+    "LENDER:lender_a": ["0x00000000000000000000000000000000000000a2"]
+    "LENDER:lender_b": ["0x00000000000000000000000000000000000000a3"]
+    "PLATFORM:fee": ["0x00000000000000000000000000000000000000a4"]
+  allowed_targets: [FinancingVault, ReceivableRegistry]   # wallet contract names
+  settlement_assets: {THB: tTHB, USD: mUSDC}
