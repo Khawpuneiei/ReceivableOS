@@ -77,7 +77,7 @@ Terminology fix, because two things are called "policy":
 
 ## 4. Interfaces (the contract between modules)
 
-All services: Python 3.11, FastAPI, JSON over HTTP. LLM calls go through a thin pluggable client (`llm_client.complete(messages, schema)`), never a vendor SDK called directly from business logic. Money is a **string decimal** in JSON (`"749000.00"`) to avoid float errors; currency is ISO 4217 (`"THB"` for the demo, per `docs/02`). `fee_rate` is per 30 days; `risk_score` is the buyer's **probability of default (PD)**, 0 to 1, compared directly with the mandate's 5% cap; fraud risk is carried separately in OCR's `fraud_score` (default, pending P). Lender quotes and the guard compare **APR**; the wallet converts `fee_rate` to APR with the shared helper in `shared/money.py`, never with its own formula. On chain, amounts are integers in the mock stable token's smallest unit; the conversion lives in one helper owned by the wallet (see `docs/03`).
+All services: Python 3.11, FastAPI, JSON over HTTP. LLM calls go through a thin pluggable client (`llm_client.complete(messages, schema)`), never a vendor SDK called directly from business logic. Money is a **string decimal** in JSON (`"749000.00"`) to avoid float errors; currency is ISO 4217 (`"THB"` for the demo, per `docs/02`). `fee_rate` is per 30 days; `risk_score` is the buyer's **probability of default (PD)**, 0 to 1, compared directly with the mandate's 5% cap; fraud risk is carried separately in OCR's `fraud_score` (default, pending P). Lender quotes and the guard compare **APR**; the wallet converts `fee_rate` to APR with the shared helper in `shared/money.py`, never with its own formula. On chain, amounts are integers in **tTHB with 2 decimals** (THB 1.00 = 100 units) everywhere, no USD/6-decimal placeholders; the conversion lives in one helper owned by the wallet (see `docs/03`).
 
 ### 4.1 OCR service — `POST /ocr/extract`
 Input: multipart `file` (PDF/PNG/JPG). Output:
@@ -129,7 +129,7 @@ Input: `{ "decision": <4.2 output>, "payee": "0x...", "amount": "524300.00", "cu
   "audit_ref": "audit_..."
 }
 ```
-`status` ∈ `executed | blocked | pending_approval | failed`. A `blocked` result carries the guard's revert reason in the audit record. Above the mandate's `human_review_above` amount the wallet returns `pending_approval` and `approvals_required: 1`.
+`status` ∈ `executed | blocked | pending_approval | failed`. A `blocked` result carries the guard's revert reason in the audit record. At or above the mandate's `human_review_above` amount (THB 837,500 in the demo) the wallet returns `pending_approval` and `approvals_required: 1`. Proposed hard caps: THB 1.5m per transaction, THB 3m per day (pending Finance, see `docs/06`).
 
 The wallet also exposes `register`, `approve`, `settle`, `mandate/activate` and `audit` endpoints (proposed by the Architect, `docs/01`); their exact shapes are in `shared/schemas.py`.
 
@@ -232,6 +232,8 @@ Copy into each review. A "no" on any **bold** line blocks the merge.
 | Scope creep (GNNs, ZK, ERC-4337) | High | Section 2 table; PR checklist line 1. |
 | Rules require something we did not plan (format, language, chain) | Medium | [OPEN] P confirms the rule PDF details (see Decision log). |
 | A teammate drops out | Low | Each `services/*/CLAUDE.md` lets another engineer continue with their AI. |
+| Wallet service holds the risk-oracle key, so it could approve its own receivable | Certain in MVP | Agent eng separates the key if time allows; otherwise state it on stage as a known limit (`docs/06`). |
+| On-chain fingerprints reveal who trades with whom | Medium | `invoice_fingerprint` is a keyed hash (secret key off chain), per `docs/06`. |
 
 ---
 
