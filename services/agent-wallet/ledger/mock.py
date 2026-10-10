@@ -203,7 +203,8 @@ class MockLedger:
         platform_fee = to_units(d.platform_fee, TOKEN_DECIMALS)
         if amount > to_units(mandate.max_amount_per_tx, TOKEN_DECIMALS):
             raise MockRevert("AmountAboveTxCap")
-        if self._rolling_spend() + amount > to_units(mandate.daily_cap, TOKEN_DECIMALS):
+        # A confirmed draw was charged to the daily cap when it was proposed, so it is not counted again.
+        if not confirmed and self._rolling_spend() + amount > to_units(mandate.daily_cap, TOKEN_DECIMALS):
             raise MockRevert("DailyCapExceeded")
         if d.apr_bps > int(mandate.max_apr * BPS) or d.apr_bps > r.max_apr_bps:
             raise MockRevert("AprAboveMandate")

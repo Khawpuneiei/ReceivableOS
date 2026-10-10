@@ -237,3 +237,18 @@ def test_settle_before_draw_reverts_not_drawn():
     approve(ledger)
     settle = SettleIntent(invoice_id="inv_11", invoice_fingerprint=FP, amount_paid=Decimal("749000.00"))
     assert ledger.settle(settle).revert_reason == "NotDrawn"
+
+
+def test_confirmed_draw_is_not_charged_to_the_daily_cap_twice():
+    """Near a full 3m window: 1.5m is drawn, then a 1.5m held draw is confirmed. Charging the held
+    draw again at confirm would count 4.5m and refuse it. It is charged once, at proposal."""
+    ledger, _ = make_ledger()
+    register(ledger, fp=FP2, face="3000000.00")
+    approve(ledger, fp=FP2, limit="1500000.00")
+    assert ledger.execute(draw(FP2, amount=Decimal("1500000.00"), **NO_FEES)).ok
+    register(ledger, fp=FP, face="3000000.00")
+    approve(ledger, fp=FP, limit="1500000.00")
+    pending = ledger.execute(draw(FP, amount=Decimal("1500000.00"), **NO_FEES))
+    assert pending.pending_id is not None  # 1.5m is at or above the 837,500 review threshold
+    confirmed = ledger.confirm(pending.pending_id)
+    assert confirmed.ok, confirmed.revert_reason
