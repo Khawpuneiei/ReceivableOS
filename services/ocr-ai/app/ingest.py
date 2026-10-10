@@ -32,6 +32,7 @@ class ParsedDocument(LocalModel):
     spans: list[Span]
     images: list[str]  # Private base64 PNGs; never returned in the public evidence contract.
     metadata_text: list[str] = Field(default_factory=list)
+    qr_payloads: list[str] = Field(default_factory=list)  # Private, untrusted; never used to fill fields.
     engine: str
 
 

@@ -15,6 +15,7 @@ from app.fraud import FraudFinding, finding, graph_findings, score
 from app.graph import export_graph
 from app.history import HistoryCapacityError, HistoryConflictError, InvoiceObservation, ObservationStore
 from app.ingest import digest, run_worker
+from app.llm_client import configured, read_hosted_candidates
 from app.models import (
     ConsumerHandoff,
     DocumentExtraction,
@@ -39,6 +40,7 @@ class OcrExtractResponse(ExtractedInvoice):
     model_version: str = "spatial-rules-v2"
     fraud_graph: FraudGraph | None = None
     handoff: ConsumerHandoff | None = None
+    model_checks: list[dict[str, str]] = Field(default_factory=list)
 
 
 def extract(content: bytes, document_type: str, settings: Settings) -> Extraction:
@@ -68,12 +70,18 @@ def extract(content: bytes, document_type: str, settings: Settings) -> Extractio
     doc = result.document
     if missing_page_review:
         doc.review_reasons.append("UNREADABLE_PAGES_REQUIRE_OCR")
+    readers = []
     if settings.qwen_enabled:
         if len(parsed.images) > 1:
             doc.review_reasons.append("QWEN_FIRST_PAGE_ONLY")
-        candidates = read_candidates(parsed.images, settings)
+        readers.append(("QWEN", read_candidates(parsed.images, settings)))
+    if configured():
+        hosted, cache_status = read_hosted_candidates(parsed.images)
+        result.model_checks.append({"provider": "hosted", "cache": cache_status})
+        readers.append(("HOSTED_LLM", hosted))
+    for reader, candidates in readers:
         if candidates is None:
-            doc.review_reasons.append("QWEN_UNAVAILABLE_OR_INVALID")
+            doc.review_reasons.append(f"{reader}_UNAVAILABLE_OR_INVALID")
         else:
             if all(
                 getattr(candidates, name) is None
@@ -87,7 +95,7 @@ def extract(content: bytes, document_type: str, settings: Settings) -> Extractio
                     "due_date",
                 )
             ):
-                doc.review_reasons.append("QWEN_NO_SUPPORTED_CANDIDATES")
+                doc.review_reasons.append(f"{reader}_NO_SUPPORTED_CANDIDATES")
             if candidates.instructions_found:
                 result.injection_flags.append("LLM_REPORTED")
                 doc.review_reasons.append("DOCUMENT_INJECTION_ALERT")
@@ -95,7 +103,7 @@ def extract(content: bytes, document_type: str, settings: Settings) -> Extractio
                 proposed = getattr(candidates, f"{party}_name")
                 observed = getattr(doc, party).name.value
                 if proposed is not None and observed is not None and proposed != observed:
-                    doc.review_reasons.append(f"QWEN_DISAGREEMENT:{party}.name")
+                    doc.review_reasons.append(f"{reader}_DISAGREEMENT:{party}.name")
             for name in ("document_number", "po_reference", "issue_date", "due_date", "amount", "currency"):
                 proposed, observed = getattr(candidates, name), getattr(doc, name)
                 if proposed is None or observed.value is None:
@@ -111,9 +119,9 @@ def extract(content: bytes, document_type: str, settings: Settings) -> Extractio
                     if name in {"issue_date", "due_date"}:
                         normalized = normalize_date(proposed, None)
                     if normalized != observed.value:
-                        doc.review_reasons.append(f"QWEN_DISAGREEMENT:{name}")
+                        doc.review_reasons.append(f"{reader}_DISAGREEMENT:{name}")
                 except (ValueError, ArithmeticError):
-                    doc.review_reasons.append(f"QWEN_UNGROUNDED:{name}")
+                    doc.review_reasons.append(f"{reader}_UNGROUNDED:{name}")
     result.document = validate_document(doc)
     return result
 
@@ -172,6 +180,7 @@ def compatible_invoice(result: Extraction, settings: Settings) -> OcrExtractResp
         validation_flags=list(dict.fromkeys(doc.review_reasons)),
         review_required=bool(doc.review_reasons),
         extractor=doc.extractor,
+        model_checks=result.model_checks,
     )
 
 

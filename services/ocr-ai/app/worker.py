@@ -11,6 +11,7 @@ import warnings
 from contextlib import redirect_stdout
 
 import pymupdf
+import zxingcpp
 from PIL import Image
 
 from app.config import MAX_IMAGE_PIXELS, MAX_PAGES, MAX_TEXT_CHARS, MAX_UPLOAD_BYTES, RENDER_DPI
@@ -19,6 +20,19 @@ from app.ingest import ParsedDocument, Span, detect_format, digest
 
 class LimitExceeded(ValueError):
     pass
+
+
+def white_on_light_background(image: pymupdf.Pixmap, box: tuple) -> bool:
+    """White text on a dark header is visible; sample the surrounding render."""
+    scale = RENDER_DPI / 72
+    x0, y0, x1, y1 = box
+    points = [(x, y) for x in (x0 - 1, (x0 + x1) / 2, x1 + 1) for y in (y0 - 1, (y0 + y1) / 2, y1 + 1)]
+    pixels = [
+        image.pixel(int(x * scale), int(y * scale))
+        for x, y in points
+        if 0 <= int(x * scale) < image.width and 0 <= int(y * scale) < image.height
+    ]
+    return not pixels or sum(min(pixel[:3]) >= 245 for pixel in pixels) / len(pixels) >= 0.75
 
 
 def parse(content: bytes) -> ParsedDocument:
@@ -43,10 +57,12 @@ def parse(content: bytes) -> ParsedDocument:
                     for trace in page.get_texttrace()
                     if trace.get("type") == 3 or trace.get("opacity", 1) < 0.05
                 ]
-                image = page.get_pixmap(dpi=RENDER_DPI, alpha=False)
+                image = page.get_pixmap(dpi=RENDER_DPI, alpha=False, colorspace=pymupdf.csRGB)
                 images.append(base64.b64encode(image.tobytes("png")).decode())
                 for block in page.get_text(
-                    "dict", flags=pymupdf.TEXTFLAGS_DICT & ~pymupdf.TEXT_PRESERVE_IMAGES
+                    "dict",
+                    flags=pymupdf.TEXTFLAGS_DICT & ~pymupdf.TEXT_PRESERVE_IMAGES,
+                    clip=pymupdf.INFINITE_RECT(),
                 )["blocks"]:
                     for line in block.get("lines", []):
                         for raw in line["spans"]:
@@ -58,7 +74,7 @@ def parse(content: bytes) -> ParsedDocument:
                                     and pymupdf.Rect(box).intersects(invisible)
                                     for invisible in invisible_boxes
                                 )
-                                or raw.get("color") == 0xFFFFFF
+                                or (raw.get("color") == 0xFFFFFF and white_on_light_background(image, box))
                                 or raw["size"] < 4
                                 or not page.rect.contains(pymupdf.Rect(box))
                             )
@@ -90,13 +106,23 @@ def parse(content: bytes) -> ParsedDocument:
                 buffer = io.BytesIO()
                 image.convert("RGB").save(buffer, format="PNG")
                 images.append(base64.b64encode(buffer.getvalue()).decode())
-    if sum(len(span.text) for span in spans) + sum(map(len, metadata)) > MAX_TEXT_CHARS:
+    qr_payloads = []
+    for encoded in images:
+        with Image.open(io.BytesIO(base64.b64decode(encoded))) as image:
+            for code in zxingcpp.read_barcodes(image, formats=zxingcpp.BarcodeFormat.QRCode):
+                if len(code.text) > 4096 or len(qr_payloads) >= 32:
+                    raise LimitExceeded()
+                qr_payloads.append(code.text)
+    if (
+        sum(len(span.text) for span in spans) + sum(map(len, metadata)) + sum(map(len, qr_payloads))
+    ) > MAX_TEXT_CHARS:
         raise LimitExceeded()
     return ParsedDocument(
         doc_hash=digest(content),
         spans=spans,
         images=images,
         metadata_text=metadata,
+        qr_payloads=qr_payloads,
         engine="pdf-text" if spans else "image",
     )
 

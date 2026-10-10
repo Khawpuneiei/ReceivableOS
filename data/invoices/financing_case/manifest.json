@@ -1,0 +1,53 @@
+{
+  "profile": "goods_receivable_demo",
+  "documents": [
+    {
+      "filename": "invoice.pdf",
+      "document_type": "invoice"
+    },
+    {
+      "filename": "purchase_order.pdf",
+      "document_type": "purchase_order"
+    },
+    {
+      "filename": "delivery_note.pdf",
+      "document_type": "delivery_note"
+    },
+    {
+      "filename": "goods_receipt.pdf",
+      "document_type": "goods_receipt"
+    },
+    {
+      "filename": "buyer_confirmation.pdf",
+      "document_type": "buyer_confirmation"
+    },
+    {
+      "filename": "credit_note.pdf",
+      "document_type": "credit_note"
+    },
+    {
+      "filename": "remittance_advice.pdf",
+      "document_type": "remittance_advice"
+    },
+    {
+      "filename": "assignment_notice.pdf",
+      "document_type": "assignment_notice"
+    },
+    {
+      "filename": "company_registration.pdf",
+      "document_type": "company_registration"
+    },
+    {
+      "filename": "bank_confirmation.pdf",
+      "document_type": "bank_confirmation"
+    },
+    {
+      "filename": "beneficial_ownership.pdf",
+      "document_type": "beneficial_ownership"
+    },
+    {
+      "filename": "insurance_certificate.pdf",
+      "document_type": "insurance_certificate"
+    }
+  ]
+}

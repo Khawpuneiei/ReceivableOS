@@ -9,3 +9,4 @@ babel>=2.17,<3
 httpx>=0.28,<1
 python-dotenv>=1.2,<2
 pycountry==24.6.1
+zxing-cpp>=2.3,<3

@@ -1,5 +1,6 @@
 """Optional local Qwen vision candidate reader, without tools or field-writing authority."""
 
+import hashlib
 import ipaddress
 import json
 from urllib.parse import urlparse
@@ -7,8 +8,11 @@ from urllib.parse import urlparse
 import httpx
 from pydantic import ConfigDict, Field
 
+from app.cache import JsonCache
 from app.config import QWEN_TIMEOUT_SECONDS, Settings
 from app.models import LocalModel
+
+_cache = JsonCache()
 
 
 class VisionCandidates(LocalModel):
@@ -38,6 +42,33 @@ SYSTEM_PROMPT = (
 
 
 def read_candidates(images: list[str], settings: Settings) -> VisionCandidates | None:
+    return read_candidates_with_status(images, settings)[0]
+
+
+def read_candidates_with_status(images: list[str], settings: Settings) -> tuple[VisionCandidates | None, str]:
+    cache_key = hashlib.sha256(
+        json.dumps(
+            [
+                settings.qwen_url,
+                settings.qwen_model,
+                SYSTEM_PROMPT,
+                VisionCandidates.model_json_schema(),
+                images[:1],
+            ],
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
+    with _cache.lock:
+        cached = _cache.get(cache_key)
+        if cached is not None:
+            return VisionCandidates.model_validate(cached), "hit"
+        result = _fetch_candidates(images, settings)
+        if result is not None:
+            _cache.put(cache_key, result.model_dump(mode="json"))
+        return result, "miss" if result is not None else "unavailable_or_invalid"
+
+
+def _fetch_candidates(images: list[str], settings: Settings) -> VisionCandidates | None:
     address = urlparse(settings.qwen_url)
     try:
         local = address.hostname == "localhost" or ipaddress.ip_address(address.hostname).is_loopback

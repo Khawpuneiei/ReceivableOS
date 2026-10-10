@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import re
+import sys
 import tempfile
 from pathlib import Path
 
 import pymupdf
 
 REPO = Path(__file__).resolve().parents[3]
+sys.path[:0] = [str(Path(__file__).resolve().parents[1]), str(REPO)]
 DATA = REPO / "data" / "invoices"
 DEFAULT_OUTPUT = Path(tempfile.gettempdir()) / "receivableos-ocr-fixtures"
 
@@ -112,7 +115,9 @@ def render_pdf(lines, *, font_path: Path | None = None, hidden=False, layout=0) 
     return data
 
 
-def generate(output: Path = DEFAULT_OUTPUT, *, font_path: Path | None = None) -> list[dict]:
+def generate(
+    output: Path = DEFAULT_OUTPUT, *, font_path: Path | None = None, seed: int = 20261001
+) -> list[dict]:
     output.mkdir(parents=True, exist_ok=True)
     labels = []
     cases = [
@@ -218,16 +223,19 @@ def generate(output: Path = DEFAULT_OUTPUT, *, font_path: Path | None = None) ->
                 and label["case"] == "clean"
             )
             labels.append({**base, "file": name, "case": "scan"})
-    demo = output / "demo"
-    demo.mkdir(exist_ok=True)
-    for target, source in {
-        "01_happy.pdf": "en_invoice_clean.pdf",
-        "02_injected.pdf": "en_invoice_hidden_injection.pdf",
-        "03_inflated.pdf": "en_invoice_amount_mismatch.pdf",
-        "04_duplicate.pdf": "en_invoice_duplicate_render.pdf",
-        "purchase_order.pdf": "en_po_clean.pdf",
-    }.items():
-        (demo / target).write_bytes((output / source).read_bytes())
+    from datagen.showcase_invoices import generate as generate_showcase
+
+    generate_showcase(output / "showcase")
+    from datagen.financing_case import generate as generate_case
+
+    generate_case(output / "financing_case", seed=seed)
+    (output / "generation.json").write_text(
+        json.dumps(
+            {"seed": seed, "dataset": "synthetic-only", "sample_id": random.Random(seed).getrandbits(64)},
+            sort_keys=True,
+        )
+        + "\n"
+    )
     (output / "labels.jsonl").write_text(
         "".join(json.dumps(label, ensure_ascii=False) + "\n" for label in labels)
     )
@@ -238,6 +246,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--font", type=Path)
+    parser.add_argument("--seed", type=int, default=20261001)
     arguments = parser.parse_args()
-    generated = generate(arguments.output, font_path=arguments.font)
+    generated = generate(arguments.output, font_path=arguments.font, seed=arguments.seed)
     print(f"Generated {len(generated)} labeled synthetic documents")

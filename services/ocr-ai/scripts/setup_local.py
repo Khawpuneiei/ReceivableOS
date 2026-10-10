@@ -4,22 +4,29 @@ import os
 import secrets
 from pathlib import Path
 
+from dotenv import dotenv_values
+
 SERVICE = Path(__file__).resolve().parents[1]
 
 
 def main():
     target = SERVICE / ".env.local"
     if target.exists():
+        if "OCR_RESULT_ACCESS_TOKEN" not in dotenv_values(target):
+            with target.open("a") as stream:
+                stream.write("\nOCR_RESULT_ACCESS_TOKEN=" + secrets.token_hex(32) + "\n")
+            print("Added private result-access token; existing settings and HMAC keys preserved")
         print(f"Preserved existing local configuration: {target}")
         return
     cache = SERVICE / ".cache/paddlex/official_models"
     lines = [
         f"FINGERPRINT_HMAC_KEY={secrets.token_hex(32)}",
         f"BANK_TOKEN_HMAC_KEY={secrets.token_hex(32)}",
+        f"OCR_RESULT_ACCESS_TOKEN={secrets.token_hex(32)}",
         f"OCR_STATE_PATH={SERVICE / '.state/observations.sqlite'}",
-        "OCR_PADDLE_ENABLED=1",
+        "OCR_PADDLE_ENABLED=0",
         "OCR_PADDLE_REC_NAME=en_PP-OCRv5_mobile_rec",
-        "OCR_QWEN_ENABLED=1",
+        "OCR_QWEN_ENABLED=0",
         "OCR_QWEN_URL=http://127.0.0.1:11434",
         "OCR_QWEN_MODEL=qwen3-vl:4b-instruct",
         f"OCR_PADDLE_DET_DIR={cache / 'PP-OCRv5_mobile_det'}",

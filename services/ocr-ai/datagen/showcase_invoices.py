@@ -23,7 +23,7 @@ SHOWCASE_PROFILES = (
         "brand": "SIAM FRESH PACK",
         "brand_line": "FOOD-SAFE PACKAGING SUPPLY",
         "strapline": "WHOLESALE PACKAGING  |  THAILAND",
-        "supplier": "Siam Fresh Pack Co., Ltd.",
+        "supplier": "Siam Fresh Pack",
         "supplier_id": "0105559000000",
         "supplier_country": "TH",
         "supplier_scheme": "TAX_ID",
@@ -411,7 +411,7 @@ def build_pdf(profile: dict, *, kind: str = "invoice", visible_injection: bool =
     if kind not in {"invoice", "purchase_order"}:
         raise ValueError("kind must be invoice or purchase_order")
     memory = BytesIO()
-    pdf = canvas.Canvas(memory, pagesize=A4, pageCompression=1)
+    pdf = canvas.Canvas(memory, pagesize=A4, pageCompression=1, invariant=1)
     doc_title = "Invoice" if kind == "invoice" else "Purchase Order"
     pdf.setTitle(f"Synthetic {doc_title} - {profile['invoice_no' if kind == 'invoice' else 'po_no']}")
     pdf.setAuthor("ReceivableOS synthetic showcase generator")

@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import uuid4
 
 from app.config import FIELD_CONFIDENCE
@@ -104,6 +104,7 @@ class Extraction:
     private_bank: dict[str, str]
     injection_flags: list[str]
     injection_refs: list[str]
+    model_checks: list[dict[str, str]] = field(default_factory=list)
 
 
 def reference_id(parsed: ParsedDocument, span: Span) -> str:
@@ -246,6 +247,13 @@ def extract_document(parsed: ParsedDocument, document_type: str) -> Extraction:
             injection_refs.append(reference_id(parsed, span))
     if any(INSTRUCTION.search(text) for text in parsed.metadata_text):
         injection_flags.append("METADATA_INJECTION")
+    for text in parsed.qr_payloads:
+        if INSTRUCTION.search(text):
+            injection_flags.append("QR_INJECTION")
+        if any(unicodedata.category(char) == "Cf" for char in text):
+            injection_flags.extend(["QR_INJECTION", "UNICODE_OBFUSCATION"])
+    if any(any(unicodedata.category(char) == "Cf" for char in text) for text in parsed.metadata_text):
+        injection_flags.extend(["METADATA_INJECTION", "UNICODE_OBFUSCATION"])
     rows = anchored_rows(parsed.spans, INSTRUCTION)
     locale_matches = [
         text.split(":", 1)[1].strip()

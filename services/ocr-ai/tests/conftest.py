@@ -5,7 +5,15 @@ import secrets
 import pytest
 from fastapi.testclient import TestClient
 
+from app.cache import JsonCache
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def isolated_candidate_caches(monkeypatch):
+    monkeypatch.setattr("app.qwen._cache", JsonCache())
+    monkeypatch.setattr("app.llm_client._cache", JsonCache())
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
 
 
 @pytest.fixture
