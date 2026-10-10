@@ -17,7 +17,7 @@ invoice upload → OCR + injection scan + fraud score → credit decision (appro
 → wallet proposes financing → policy guard checks mandate → on-chain draw → "buyer paid" → on-chain settlement
 ```
 
-Why it fits the competition: the 2026 Shenzhen FinTechathon International Track topic is **"Agent Wallet – AI Agent Digital Wallet"** (organised by IEEE CIS Shenzhen with WeBank). Our design notes cite the rules as weighting **task completion 40%, security/compliance 30%, innovation/interaction 30%**, and requiring **real on-chain transaction hashes** in the submission. Past FinTechathon entries (github.com/FISCO-BCOS/hackathon) deploy Solidity contracts on **FISCO BCOS** and document contract calls with console / python-sdk screenshots.
+Why it fits the competition: the 2026 Shenzhen FinTechathon International Track topic is **"Agent Wallet – AI Agent Digital Wallet"** (organised by IEEE CIS Shenzhen with WeBank). **Official deadline: 20 Oct 23:59 Beijing time (22:59 Bangkok)**; registration closes at the same moment, and submissions can be made early and updated until then. **Eligibility:** every member a full-time student at a university outside China, at least 60% non-Chinese nationals, all materials in English. The rules name no chain but require **real on-chain transaction hashes** (a mock ledger alone does not count); we use FISCO BCOS, with Base Sepolia as an optional extra after Oct 12 for the 0 to 5 on-chain bonus points. Our design notes cite the rules as weighting **task completion 40%, security/compliance 30%, innovation/interaction 30%**, and requiring **real on-chain transaction hashes** in the submission. Past FinTechathon entries (github.com/FISCO-BCOS/hackathon) deploy Solidity contracts on **FISCO BCOS** and document contract calls with console / python-sdk screenshots.
 
 Background reading (in the project folder, not the repo): `ReceivableOS-Idea+Architect.md` (design and research) and `receivableos_specialization_roadmap.md` (learning roadmap, Thai).
 
@@ -25,7 +25,7 @@ Background reading (in the project folder, not the repo): `ReceivableOS-Idea+Arc
 
 ## 2. In scope / out of scope (hackathon MVP)
 
-| In scope (must exist by Oct 12) | Out of scope (say "production roadmap" in the pitch) |
+| In scope (MVP by Oct 12 noon freeze; polished by Oct 20) | Out of scope (say "production roadmap" in the pitch) |
 |---|---|
 | Invoice OCR from PDF/image into a typed JSON invoice | Real ERP, bank, e-invoice or logistics integrations |
 | Prompt-injection detection on invoice text before any LLM reasoning | Federated learning, TEE, zkML, MPC / threshold signing |
@@ -146,6 +146,7 @@ Rule for changing an interface: open a PR titled `contract: ...` that changes on
 
 | When | Checkpoint | Who | Evidence |
 |---|---|---|---|
+| **Fri Oct 10, today** | **Registration check:** confirm every member is a full-time student outside China and the team meets the 60% non-Chinese nationals rule; start registration (closes Oct 20 22:59 Bangkok) | P | screenshot |
 | **Fri Oct 10, by 14:00** | Knowledge docs `01`–`05`, this scope, repo skeleton and per-service `CLAUDE.md` merged | P + threads | PRs merged |
 | Oct 10, 14:00 | 15-min kickoff: walk the pipeline, confirm interfaces, answer [OPEN] items | all | Decision log updated |
 | Oct 10, by 22:00 | Each service runs locally and returns **stubbed** JSON matching section 4; contracts compile | each owner | `curl` screenshot in PR |
@@ -156,9 +157,14 @@ Rule for changing an interface: open a PR titled `contract: ...` that changes on
 | Oct 11, by 23:00 | Attack cases wired: injection invoice, forged invoice, duplicate invoice, APR over mandate, payee not allowlisted | all | each blocked with a reason |
 | **Sun Oct 12, by 10:00** | Demo data set final, UI shows the full flow, eval numbers computed | P, Finance, owners | numbers in `docs/` |
 | **Oct 12, 12:00** | **Code freeze.** After this, only bug fixes P approves | all | tag `v0.1-freeze` |
-| Oct 12, 12:00–18:00 | Deck, 3-minute video, README in submission shape, tx hash list | Finance + P | `pitch/` |
+| Oct 12, 12:00–18:00 | First drafts of the six submission items (section 6.1) | owners in 6.1 | `pitch/`, `docs/` |
 | Oct 12, 18:00–21:00 | Two full rehearsals with a fresh clone | all | recording |
-| Oct 12, by 23:59 | Submit / internal deadline met | P | link |
+| Oct 12, by 23:59 | **Internal MVP done**; registration submitted if not already | P | confirmation |
+| **Oct 13–15** | Harden: real FISCO BCOS tx hashes for the full flow, attack suite green, eval numbers final; optional Base Sepolia deploy for bonus points | owners | tx list, eval table |
+| Oct 16–17 | Tech doc, security self-assessment, deck (≤ 10 min) and README final drafts; English review | owners in 6.1 | PRs |
+| **Oct 18** | **First full submission uploaded early** (can be updated until the deadline) | P | upload confirmation |
+| Oct 19 | Demo video (≤ 5 min), rehearsal of the 10-minute presentation, fixes | P + Policy AI eng + Finance | video file |
+| **Oct 20, 22:59 Bangkok** | **Official deadline** (23:59 Beijing). Final update submitted by 18:00 Bangkok to leave margin | P | final confirmation |
 
 Daily stand-up in chat at 09:00 and 21:00: what merged, what is blocked, what is next.
 
@@ -203,6 +209,19 @@ A module is done when **all** of its lines are true and shown in a merged PR.
 
 ---
 
+### 6.1 Submission package (six official items)
+
+Source and owner per item follow `docs/01-architecture.md` section 2.1; this table is the PM's checklist.
+
+| # | Item | Done when | Lead |
+|---|---|---|---|
+| 1 | Technical document: architecture, core algorithms, security design | English PDF/MD built from `docs/01`, `03`, `04`, `05` | P |
+| 2 | Presentation deck, talk of at most 10 minutes | Rehearsed under 10:00 twice | P + Policy AI eng + Finance |
+| 3 | Demo video, at most 5 minutes (optional, we do it) | Shows happy path, one blocked tx, tx hashes on screen | P + Policy AI eng |
+| 4 | Source code with README, GitHub link, deploy steps and tests | Fresh clone → deploy steps → tests pass, by someone who did not write it | P (README), every owner (tests) |
+| 5 | Security self-assessment: permission tiers and known risks | Built from `docs/06`; lists the oracle-key limit and other known limits honestly | P + Agent AI eng |
+| 6 | Real on-chain transaction hashes | ≥ 5 green + ≥ 1 blocked attempt on FISCO BCOS, each with explorer/console evidence | Agent AI eng |
+
 ## 7. PR review checklist (for P)
 
 Copy into each review. A "no" on any **bold** line blocks the merge.
@@ -224,13 +243,15 @@ Copy into each review. A "no" on any **bold** line blocks the merge.
 
 | Risk | Likelihood | Fallback |
 |---|---|---|
-| FISCO BCOS node setup eats hours | High | Mock ledger in `LEDGER_MODE=mock` (the default) from day one; one person (contracts owner) brings up a local 4-node chain with `build_chain.sh` in parallel. Real tx hashes are required for submission, so the chain must work by Oct 12 morning. |
+| FISCO BCOS node setup eats hours | High | Mock ledger in `LEDGER_MODE=mock` (the default) from day one; one person (contracts owner) brings up a local 4-node chain with `build_chain.sh` in parallel. Real tx hashes are required for submission (mock alone does not count): the chain should work by Oct 12 and must by Oct 15. |
 | LLM / vision API down or rate-limited during demo | Medium | Cache responses for the demo invoice set; pluggable client can point to a local model. |
 | OCR accuracy weak on photos | Medium | Demo on clean generated PDFs; show photo case as stretch. |
 | No real credit data | Certain | Synthetic data generator with documented assumptions plus a public credit dataset for the model; say so openly. |
 | Integration slips because three silos drift | High | Stubs matching section 4 by Oct 10 22:00; first end-to-end Oct 11 18:00; P owns the orchestrator. |
 | Scope creep (GNNs, ZK, ERC-4337) | High | Section 2 table; PR checklist line 1. |
-| Rules require something we did not plan (format, language, chain) | Medium | [OPEN] P confirms the rule PDF details (see Decision log). |
+| Team fails eligibility (student status, 60% non-Chinese nationals) | Low, fatal | P checks on Oct 10 before more build time is spent. |
+| Late upload or registration problem | Medium | Register now, upload a full version on Oct 18, final update by Oct 20 18:00 Bangkok. |
+| Materials not fully in English | Medium | English review on Oct 16–17 for every submitted file. |
 | A teammate drops out | Low | Each `services/*/CLAUDE.md` lets another engineer continue with their AI. |
 | Wallet service holds the risk-oracle key, so it could approve its own receivable | Certain in MVP | Agent eng separates the key if time allows; otherwise state it on stage as a known limit (`docs/06`). |
 | On-chain fingerprints reveal who trades with whom | Medium | `invoice_fingerprint` is a keyed hash (secret key off chain), per `docs/06`. |
@@ -259,8 +280,8 @@ Target slide: 5 green tx hashes (register, create position, lender funds vault, 
 | Date | Decision | By |
 |---|---|---|
 | 2026-10-10 | Stack: Python 3.11 + FastAPI per service, JSON over HTTP, pluggable LLM client | coordinator default |
-| 2026-10-10 | Chain: FISCO BCOS with mock ledger fallback (replaces Base Sepolia / Safe in the design notes) | [OPEN] P to confirm |
-| 2026-10-10 | Oct 12 is the team's internal MVP deadline; the public announcement lists the preliminary round closing Nov 2 | [OPEN] P to confirm |
+| 2026-10-10 | Chain: FISCO BCOS for the required real tx hashes, mock ledger only for development; Base Sepolia optional after Oct 12 for bonus points | Architect default, [OPEN] P to confirm |
+| 2026-10-10 | Official deadline 20 Oct 23:59 Beijing (22:59 Bangkok), from the rules P uploaded; Oct 12 noon stays the internal MVP freeze | rules |
 | 2026-10-10 | Lender quotes, settlement trigger and KYC mock live in the orchestrator (PM) | [OPEN] P to confirm |
 | 2026-10-10 | Agent AI eng owns the whole on-chain layer (all contracts, in `services/agent-wallet/contracts/`) | P |
 | 2026-10-10 | Integration: PM. Demo data: each engineer for their module, PM rechecks. Demo UI design: Policy AI eng. Pitch pack: PM + Policy AI eng + Finance. Controls/compliance research: PM (`docs/06`) | P |
