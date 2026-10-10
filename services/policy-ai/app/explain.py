@@ -9,9 +9,12 @@ Without an LLM (the default) the template text is returned. With one configured 
 may rephrase the same facts, and its text is used only if it passes every check:
 - 80 words or fewer;
 - every number in it is one of the facts' numbers;
-- it names the actual outcome and not the opposite one;
+- it names the actual outcome and states no other final outcome (a review may not say "approved");
 - no addresses or links.
 Anything else, or any LLM failure, returns the template text with a warning.
+
+A request that carries `decision_hash` must match it (the same keccak256 the wallet checks, app/hashing.py),
+so an edited decision can't be explained as if policy-ai had issued it; the route returns 422 otherwise.
 """
 
 from __future__ import annotations
@@ -23,6 +26,7 @@ from decimal import Decimal
 
 from pydantic import Field
 
+from app.hashing import decision_hash
 from app.rules import RuleSet, active_rules
 from shared.money import fee_rate_30d_to_apr
 from shared.schemas import Decision, PolicyDecision
@@ -44,10 +48,12 @@ _MUST = {
     Decision.review: ("review", "check"),
     Decision.reject: ("not financed", "reject", "declin"),
 }
+# words that state a different final outcome; whole words, so a review may still say "review" or "approve"
+# ("if they approve, ...") but never that the invoice *is* approved, rejected or declined
 _MUST_NOT = {
-    Decision.approve: ("reject", "declin", "not financed"),
-    Decision.review: (),
-    Decision.reject: ("approv",),
+    Decision.approve: re.compile(r"\b(?:reject\w*|declin\w*|not financed)\b", re.IGNORECASE),
+    Decision.review: re.compile(r"\b(?:approved|rejected|declined|not financed)\b", re.IGNORECASE),
+    Decision.reject: re.compile(r"\bapprov\w*", re.IGNORECASE),
 }
 SYSTEM = (
     "You explain a finished invoice-financing decision to a small-business owner in plain English. "
@@ -63,6 +69,11 @@ class ExplainRequest(PolicyDecision):
     currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
     tenor_days: int | None = Field(default=None, ge=0, le=3650)
     fee_amount: Decimal | None = Field(default=None, ge=0)
+
+
+def hash_matches(d: ExplainRequest) -> bool:
+    """True if the request carries no decision_hash, or the one it carries matches its own fields."""
+    return d.decision_hash is None or decision_hash(d.model_dump(mode="json")) == d.decision_hash
 
 
 def _percent(rate: Decimal | float, places: int = 2) -> str:
@@ -156,7 +167,7 @@ def check(text: str, f: dict) -> str | None:
     if unknown:
         return "uses numbers that are not in the decision: " + ", ".join(sorted(map(str, unknown)))
     outcome = Decision(f["outcome"])
-    if not any(w in lowered for w in _MUST[outcome]) or any(w in lowered for w in _MUST_NOT[outcome]):
+    if not any(w in lowered for w in _MUST[outcome]) or _MUST_NOT[outcome].search(text):
         return "does not state the decision's outcome"
     return None
 

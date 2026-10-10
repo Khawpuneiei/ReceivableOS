@@ -62,4 +62,6 @@ def compile_mandate(req: mandate.CompileRequest) -> dict:
 
 @app.post("/policy/explain")
 def explain_decision(req: explain.ExplainRequest) -> dict:
+    if not explain.hash_matches(req):
+        raise HTTPException(status_code=422, detail="decision_hash does not match the decision's fields")
     return explain.explain(req)
