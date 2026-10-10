@@ -68,7 +68,8 @@ class PolicyDecision(BaseModel):
     decision: Decision
     advance_rate: Decimal = Field(ge=0, le=1)
     limit: Decimal
-    fee_rate: Decimal = Field(ge=0)
+    fee_rate: Decimal = Field(ge=0)  # per 30 days
+    apr: Decimal | None = Field(default=None, ge=0)  # optional, = shared.money.fee_rate_30d_to_apr(fee_rate)
     risk_score: float = Field(ge=0, le=1)
     reasons: list[str] = []
     model_version: str

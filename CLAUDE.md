@@ -64,7 +64,7 @@ The spec is section 4 of `docs/00-scope.md`; `shared/schemas.py` is the same con
 `doc_hash` hashes the file bytes; `invoice_fingerprint` hashes the canonical content (supplier, buyer, invoice number, amount, currency, date) so a re-saved PDF is still caught as a duplicate. The registry keys on `invoice_fingerprint`.
 
 **Policy** — `POST /policy/decide` takes `{invoice: ExtractedInvoice, supplier_profile, buyer_profile}` and returns `PolicyDecision`:
-`decision (approve | review | reject), advance_rate, limit, fee_rate, risk_score, reasons, model_version, policy_version`
+`decision (approve | review | reject), advance_rate, limit, fee_rate (per 30 days), apr (optional), risk_score, reasons, model_version, policy_version`
 Hard rules before any model: `injection_flags` non-empty → `review`; `fraud_score ≥ 0.30` → `reject`; `confidence < 0.80` → `review`.
 
 **Agent wallet** — `POST /wallet/execute` (more `/wallet/*` endpoints are proposed in `docs/01-architecture.md` section 5.3) takes `{decision, payee, amount, currency, invoice_id}` and returns `WalletResult`:
