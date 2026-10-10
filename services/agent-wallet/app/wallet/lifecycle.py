@@ -56,6 +56,7 @@ class WalletService:
         demo_mode: bool = False,
         canary: str | None = None,
         classifier: Classifier | None = None,
+        classifier_blocks: bool = False,
     ) -> None:
         self.ledger = ledger
         self.store = store
@@ -65,6 +66,7 @@ class WalletService:
         self.demo_mode = demo_mode
         self.canary = canary
         self.classifier = classifier
+        self.classifier_blocks = classifier_blocks
         self.mandate: Mandate | None = None
         self.paused = False
         self.audit = AuditLog()
@@ -112,7 +114,7 @@ class WalletService:
         report = scan_payload(request.model_dump(mode="json"), self.canary, self.classifier)
         if report.canary_hit:
             return self._blocked([GuardCheck(layer="L2", code="CanaryLeak", passed=False)])
-        if report.injection_flagged:
+        if report.rule_flagged or (report.classifier_flagged and self.classifier_blocks):
             return self._blocked([GuardCheck(layer="L2", code="InjectionSuspected", passed=False)])
         return None
 
@@ -128,6 +130,7 @@ class WalletService:
             spent_last_24h=self._spent_24h(),
             canary=self.canary,
             classifier=self.classifier,
+            classifier_blocks=self.classifier_blocks,
         )
 
     def _finish(self, res: ChainResult, extra: list[GuardCheck] | None = None) -> WalletResult:

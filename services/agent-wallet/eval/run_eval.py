@@ -26,6 +26,7 @@ sys.path[:0] = [str(SERVICE), str(SERVICE.parents[1])]
 from fastapi.testclient import TestClient  # noqa: E402
 from ledger.mock import TOKEN_DECIMALS  # noqa: E402
 
+from app.guard.classifier import load_classifier  # noqa: E402
 from app.guard.injection import scan_payload  # noqa: E402
 from app.main import bootstrap_demo, build_service, create_app  # noqa: E402
 from app.models import canonical_hash  # noqa: E402
@@ -320,8 +321,12 @@ def stopped_at(result: dict) -> str:
 
 
 def scanner_flags(result: dict, canary: str) -> bool:
-    report = scan_payload(result["scan_body"], canary)
-    return report.injection_flagged or report.canary_hit
+    # Same detectors as the guard: rules, plus the classifier when INJECTION_MODEL_DIR is set.
+    model_dir = os.environ.get("INJECTION_MODEL_DIR")
+    classifier = load_classifier(model_dir) if model_dir else None
+    report = scan_payload(result["scan_body"], canary, classifier)
+    blocks = os.environ.get("INJECTION_CLASSIFIER_BLOCKS", "0").lower() in ("1", "true")
+    return (report.rule_flagged or (report.classifier_flagged and blocks)) or report.canary_hit
 
 
 def run_all(skip_offchain: bool, cases_path: Path = CASES) -> tuple[list[dict], str]:
@@ -384,6 +389,11 @@ def pct(n: int, d: int) -> str:
 
 def render(stats: dict, skip_offchain: bool) -> str:
     mode = "chain only (DEMO_MODE bypass, L5)" if skip_offchain else "guard on (L0-L4), then chain (L5)"
+    detectors = "rules-v2"
+    if os.environ.get("INJECTION_MODEL_DIR"):
+        blocks = os.environ.get("INJECTION_CLASSIFIER_BLOCKS", "0").lower() in ("1", "true")
+        detectors += " + protectai-deberta-v3-v2 classifier " + ("(blocking)" if blocks else "(audit only)")
+    mode = f"{mode}; detectors: {detectors}"
     lines = [
         "# Agent wallet red-team eval",
         "",

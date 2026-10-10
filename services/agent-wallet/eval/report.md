@@ -1,6 +1,6 @@
 # Agent wallet red-team eval
 
-Mode: guard on (L0-L4), then chain (L5). Ledger: mock. Cases run: 49, skipped (agent loop): 2.
+Mode: guard on (L0-L4), then chain (L5); detectors: rules-v2. Ledger: mock. Cases run: 49, skipped (agent loop): 2.
 
 | Metric | Result | Target |
 |---|---|---|

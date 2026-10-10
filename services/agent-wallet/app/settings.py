@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     decision_hmac_key: str | None = None
     require_signed_decision: bool = False
     agent_canary: str | None = None
+    injection_model_dir: str | None = None  # local folder with the pinned classifier; unset = rules only
+    # False (default): classifier flags are audited but do not block. Its benign false-block rate is too
+    # high to gate payments on (see eval/report_*.md). True: classifier flags block like rule hits.
+    injection_classifier_blocks: bool = False
     platform_fee_rate: Decimal = Decimal("0.003")
     demo_mode: bool = False  # enables the skip_offchain_checks bypass for on-stage reverts
 

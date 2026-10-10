@@ -4,3 +4,6 @@ pydantic>=2.6
 python-multipart>=0.0.9
 pydantic-settings>=2.2
 pycryptodome>=3.20
+onnxruntime>=1.18
+tokenizers>=0.19
+numpy>=1.26

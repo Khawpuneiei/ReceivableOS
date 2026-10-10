@@ -341,6 +341,14 @@ class ScanReport:
     def injection_flagged(self) -> bool:
         return bool(self.hits)
 
+    @property
+    def rule_flagged(self) -> bool:
+        return any(not rule.startswith("classifier:") for _, rule in self.hits)
+
+    @property
+    def classifier_flagged(self) -> bool:
+        return any(rule.startswith("classifier:") for _, rule in self.hits)
+
 
 def scan_payload(payload: Any, canary: str | None = None, classifier: Classifier | None = None) -> ScanReport:
     report = ScanReport()
@@ -349,7 +357,8 @@ def scan_payload(payload: Any, canary: str | None = None, classifier: Classifier
         report.hits += [(path, rule) for rule in scan_text(value)]
         if canary and (canary in value or canary in normalize(value)):
             report.canary_hit = True
-        if classifier is not None and classifier.score(normalize(value)) >= 0.5:
+        # Free text only: scoring hashes and ids with a language model adds time and noise.
+        if classifier is not None and " " in value and classifier.score(normalize(value)) >= 0.5:
             report.hits.append((path, f"classifier:{classifier.name}"))
     # Split attacks: the whole payload as one text, one string per line so no match crosses two fields.
     joined = "\n".join(value for _, value in strings)

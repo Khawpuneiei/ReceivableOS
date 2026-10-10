@@ -28,6 +28,7 @@ class GuardContext:
     spent_last_24h: Decimal
     canary: str | None = None
     classifier: Classifier | None = None
+    classifier_blocks: bool = False  # False: classifier flags are audited only
 
 
 def check_draw(
@@ -63,7 +64,10 @@ def check_draw(
     # L2: untrusted text. Injection rules first, then the canary.
     report = scan_payload(req.model_dump(mode="json"), ctx.canary, ctx.classifier)
     add("L2", "CanaryLeak", not report.canary_hit)  # a leaked canary is the strongest signal: report it first
-    add("L2", "InjectionSuspected", not report.injection_flagged)
+    blocking = report.rule_flagged or (report.classifier_flagged and ctx.classifier_blocks)
+    add("L2", "InjectionSuspected", not blocking)
+    if report.classifier_flagged and not ctx.classifier_blocks:
+        checks.append(GuardCheck(layer="L2", code="ClassifierFlag", passed=True))  # audited, not blocking
 
     # L3: mandate and spending. Needs a registered receivable.
     add("L3", "NotRegistered", fact is not None)

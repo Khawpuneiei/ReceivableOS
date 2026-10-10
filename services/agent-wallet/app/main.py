@@ -12,6 +12,7 @@ from pathlib import Path
 from fastapi import FastAPI, Header, HTTPException
 from ledger.mock import MockLedger
 
+from app.guard.classifier import load_classifier
 from app.models import ExecuteRequest, load_mandate, load_payees
 from app.settings import get_settings
 from app.wallet.lifecycle import WalletService
@@ -36,6 +37,7 @@ def build_service(clock: Callable[[], datetime] = _now) -> WalletService:
     settings = get_settings()
     ledger = MockLedger(clock=clock)  # CHAIN_MODE=fisco adds the FISCO adapter behind the same interface
     payees = load_payees(CONFIG / "payees.json")
+    classifier = load_classifier(settings.injection_model_dir) if settings.injection_model_dir else None
     return WalletService(
         ledger,
         Store(),
@@ -44,6 +46,8 @@ def build_service(clock: Callable[[], datetime] = _now) -> WalletService:
         clock,
         demo_mode=settings.demo_mode,
         canary=settings.agent_canary,
+        classifier=classifier,
+        classifier_blocks=settings.injection_classifier_blocks,
     )
 
 
