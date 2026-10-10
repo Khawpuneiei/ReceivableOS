@@ -62,7 +62,13 @@ def export_graph(records, current_id: str, findings: list[FraudFinding]) -> Frau
             )
     for item in findings:
         if (
-            item.code not in {"duplicate_invoice_hash", "duplicate_fingerprint", "near_duplicate"}
+            item.code
+            not in {
+                "duplicate_invoice_hash",
+                "duplicate_fingerprint",
+                "near_duplicate",
+                "bank_account_changed",
+            }
             or len(item.path) != 2
         ):
             continue
@@ -72,7 +78,13 @@ def export_graph(records, current_id: str, findings: list[FraudFinding]) -> Frau
                 GraphEdge(
                     source=item.path[0],
                     target=item.path[1],
-                    relation="SIMILAR_REFERENCE" if item.code == "near_duplicate" else "DUPLICATE_CANDIDATE",
+                    relation=(
+                        "SIMILAR_REFERENCE"
+                        if item.code == "near_duplicate"
+                        else "BANK_ACCOUNT_CHANGED_CANDIDATE"
+                        if item.code == "bank_account_changed"
+                        else "DUPLICATE_CANDIDATE"
+                    ),
                     evidence_refs=refs,
                 )
             )

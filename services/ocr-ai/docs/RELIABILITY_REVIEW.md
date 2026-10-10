@@ -1,6 +1,6 @@
-# English-primary OCR and fraud reliability review
+# Historical English-primary OCR and fraud reliability review (superseded)
 
-Historical report before spatial-rules-v2. See [current architecture validation](ARCHITECTURE_VALIDATION.md) for later role, table and graph improvements. The measurements below describe their original snapshots.
+This is a historical snapshot from before spatial-rules-v2. Its tables and conclusions describe the original run only; use the [current reliability evaluation](RELIABILITY_EVALUATION.json) and [research and next steps](RESEARCH_AND_NEXT_STEPS.md) for current Chinese coverage and recommendations. See [current architecture validation](ARCHITECTURE_VALIDATION.md) for later role, table and graph improvements.
 
 Date: 10 October 2026. Branch: `ocr/evidence-fraud-graph`. All six authorized workstreams were exercised locally; consumer adoption is still an owner decision. No commits, remote changes, shared-schema edits or other-service implementation occurred.
 
@@ -17,7 +17,7 @@ Date: 10 October 2026. Branch: `ocr/evidence-fraud-graph`. All six authorized wo
 
 ## Header and line evidence
 
-The [post-safety OCR evaluation](RELIABILITY_EVALUATION.json) measures seven header fields on all 80 documents. The [baseline](RELIABILITY_BASELINE.json) retains the earlier model experiment and pre-guard values; the [line evaluation](LINE_EVALUATION.json) measures SKU, description, quantity, unit price and total separately.
+The table below records the historical seven-field evaluation across 80 documents; that exact report snapshot was replaced by the current run and is preserved here only in this review. For current results, use [RELIABILITY_EVALUATION.json](RELIABILITY_EVALUATION.json) and [research and next steps](RESEARCH_AND_NEXT_STEPS.md). The [baseline](RELIABILITY_BASELINE.json) retains the earlier model experiment and pre-guard values; the [line evaluation](LINE_EVALUATION.json) measures SKU, description, quantity, unit price and total separately.
 
 | Language | Documents | Correct header fields | All seven annotation matches | Correct complete line tuples / expected |
 |---|---:|---:|---:|---:|
@@ -31,7 +31,7 @@ Correct nulls count as annotation matches, so an all-seven match can include an 
 
 The dedicated English recognizer reads the evaluated stacked scans well; multi-panel field grouping remains unreliable. Thai scan diagnostics show both recognition errors (`วันที่ออก` loses its tone mark) and geometry errors: label/value top coordinates can differ by exactly five pixels, failing the existing strict row threshold. The prototype uses vertical overlap and explicit anchors; it does not fuzzy-correct missing Thai marks or invent reference numbers.
 
-Chinese native labels are absent from the live label map, and observed Chinese script still requires review. Qwen's ability to read the example values does not resolve this missing deterministic layer. Traditional Chinese, native date notation, handwriting, currency symbols and arbitrary vendor documents were not validated.
+At the time of this historical snapshot, Chinese native labels were absent from the live label map. The current extractor includes Simplified Chinese labels and has since passed the generated Chinese PDF and language-profile scan checks shown in the current reliability evaluation, while retaining mandatory human review. Traditional Chinese, native date notation, handwriting, currency symbols and independently sourced vendor documents remain unvalidated.
 
 ## Model reliability and grounding
 

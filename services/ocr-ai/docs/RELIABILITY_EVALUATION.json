@@ -11,22 +11,24 @@
   "paddle_enabled": true,
   "code_hashes_at_run_start": {
     "app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "app/compare.py": "d382592ae9d7f2a7d0b76dd04785f04a42d34de8d053e40a261e9e0048b762e6",
-    "app/config.py": "04065b0e26d0cec0a535500d87e37396946263bbf71f107bd8ce47a30e9f37fc",
-    "app/extract.py": "8e83b8ce14c491f17bd89842051e87fe8a9e665a01573d7a4bce4e07c09f2b89",
-    "app/fingerprint.py": "cdfdcb10d09a43ec3e45c8eb28ca84196ce675740f93189ddc54c67f6d1e0cd0",
-    "app/fraud.py": "8c75176066977f8fe3eb7e87358f2565a63ada3ea95163e6d9bcf6b87c8d206d",
+    "app/compare.py": "6e693194fb866feef5e0395c8e657d227fb334c05a8ff99cbccbd235b8e5498e",
+    "app/config.py": "6e893da922088befe423b60b548fb8f191fef47db560f0440ddfa0ae93c58b9c",
+    "app/extract.py": "6d6054c9cff3284bb537958e5ba6d770e5393e4981e2fba64b98d94bc6e8ec64",
+    "app/fingerprint.py": "8564b4f426b2e011dc75c0cac38b8a78c10f2768df753f7776048f54561b92eb",
+    "app/fraud.py": "b0d65d97975185dd37842cee92d51918fc911fede58054c56de0b089825ee5a1",
+    "app/graph.py": "94c17cac9f6424e99bf18c8bc5c6949dd3b57ada06f6bfe013b23c962d915472",
     "app/history.py": "0fcaf6ecbddf285971d8eb256af3fd58473456b41fdc80b0e7fb3e7df23194a6",
     "app/ingest.py": "f1f3026a75f3e2ab3eab4a7d5cb1a1cfaaa41114e73f2896e7f6ce718697a5d7",
+    "app/layout.py": "dbc4be79316dc722c9efc5274703a03c36c84037b158d03337eb01ce7d274318",
     "app/main.py": "56aa3f8b7181c34642546eb7e4ae8a125517a5274b4fd9969dd000f52bdd3dea",
-    "app/models.py": "77c1c1e896569237b9e958f0036d37b659864b87791d6de637ae80bfd88d6a58",
-    "app/normalize.py": "7583dff86155e31bff8fa3f1a0218bda3a99c838817d217e1b564c20b99a55d7",
-    "app/pipeline.py": "947a87a74006159ac62cdd52a59d36bc6caf72b550e3abe4ee8d58979ee6aa6c",
+    "app/models.py": "78c58459ee7771b02cbb196375e245aaf8e0a1b566426cdd16cf8c4bc18de293",
+    "app/normalize.py": "00427894178cda4d478c9de6d261da593a78d40e5d761e888dae875e90211ec2",
+    "app/pipeline.py": "7ef0a91168e7c22fee7bd5e166b8b4f60f501b4768f20a49cca8fbabad1dca76",
     "app/qwen.py": "79123ff98372697d5cbc5fe58c56c9f98ad470efc912a89e5a4c0e58ee605967",
-    "app/validate.py": "f2ed96a4d7734a0005edb7c9d90e18e6a548dfb3a3ec319dc4c8b14dd977c77d",
-    "app/worker.py": "8bae6847283278f1bc20c3109a3e37b906cb48592033e4fe3c7f5b0134f2a56f",
-    "scripts/evaluate_reliability.py": "625c7662cebc3dcdf1b42c17cd050269ec91512fbe40cca7eac5c03221ada8b6",
-    "experiments/grounding.py": "5aa4c6d89dd50cab3d35f19cb17d75e8e2d2b3627234969961cd5f7d1726991b"
+    "app/validate.py": "21658aae403b32bb35ded07874fcb94401d659d79c8b7feb010eb870ad634f12",
+    "app/worker.py": "7167a739a5c7f57d8038d12ccde579e0feeb09fd5a238512c180478f4297a1f0",
+    "scripts/evaluate_reliability.py": "0271e2497afaa859f0dca4eae9b2866dd30a5500562c30a2f8aa27dc6b5155c8",
+    "experiments/grounding.py": "8fa13c1c1ab92a544d8d30bf47dd498474b486ebec058d7626a239178f126b60"
   },
   "prompt_sha256": "5b6c3a181eb4f08f27ed6b50c3c187515ab41dceb383797d6db6386628ef3064",
   "qwen_model": "qwen3-vl:4b-instruct",
@@ -41,20 +43,20 @@
   "summary": {
     "en/development/pdf": {
       "documents": 24,
-      "field_matches": 122,
+      "field_matches": 168,
       "fields": 168,
-      "full_matches": 16,
-      "review_documents": 16,
+      "full_matches": 24,
+      "review_documents": 12,
       "wrong_present_fields": 0,
       "injection_alerts": 6,
       "correct_line_counts": 24
     },
     "en/development/png": {
       "documents": 12,
-      "field_matches": 57,
+      "field_matches": 84,
       "fields": 84,
-      "full_matches": 4,
-      "review_documents": 9,
+      "full_matches": 12,
+      "review_documents": 3,
       "wrong_present_fields": 0,
       "injection_alerts": 0,
       "correct_line_counts": 12
@@ -64,10 +66,10 @@
       "field_matches": 56,
       "fields": 56,
       "full_matches": 8,
-      "review_documents": 8,
+      "review_documents": 4,
       "wrong_present_fields": 0,
       "injection_alerts": 2,
-      "correct_line_counts": 0
+      "correct_line_counts": 8
     },
     "en/holdout/png": {
       "documents": 4,
@@ -81,39 +83,39 @@
     },
     "zh/development/pdf": {
       "documents": 6,
-      "field_matches": 0,
+      "field_matches": 42,
       "fields": 42,
-      "full_matches": 0,
+      "full_matches": 6,
       "review_documents": 6,
       "wrong_present_fields": 0,
       "injection_alerts": 0,
-      "correct_line_counts": 0
+      "correct_line_counts": 6
     },
     "zh/development/png": {
       "documents": 6,
-      "field_matches": 0,
+      "field_matches": 42,
       "fields": 42,
-      "full_matches": 0,
+      "full_matches": 6,
       "review_documents": 6,
       "wrong_present_fields": 0,
       "injection_alerts": 0,
-      "correct_line_counts": 0
+      "correct_line_counts": 6
     },
     "zh/holdout/pdf": {
       "documents": 2,
-      "field_matches": 0,
+      "field_matches": 14,
       "fields": 14,
-      "full_matches": 0,
+      "full_matches": 2,
       "review_documents": 2,
       "wrong_present_fields": 0,
       "injection_alerts": 0,
-      "correct_line_counts": 0
+      "correct_line_counts": 2
     },
     "zh/holdout/png": {
       "documents": 2,
-      "field_matches": 0,
+      "field_matches": 14,
       "fields": 14,
-      "full_matches": 0,
+      "full_matches": 2,
       "review_documents": 2,
       "wrong_present_fields": 0,
       "injection_alerts": 0,
@@ -121,17 +123,17 @@
     },
     "th/development/pdf": {
       "documents": 6,
-      "field_matches": 30,
+      "field_matches": 42,
       "fields": 42,
-      "full_matches": 4,
-      "review_documents": 2,
+      "full_matches": 6,
+      "review_documents": 0,
       "wrong_present_fields": 0,
       "injection_alerts": 0,
       "correct_line_counts": 6
     },
     "th/development/png": {
       "documents": 6,
-      "field_matches": 20,
+      "field_matches": 34,
       "fields": 42,
       "full_matches": 0,
       "review_documents": 6,
@@ -144,10 +146,10 @@
       "field_matches": 14,
       "fields": 14,
       "full_matches": 2,
-      "review_documents": 2,
+      "review_documents": 0,
       "wrong_present_fields": 0,
       "injection_alerts": 0,
-      "correct_line_counts": 0
+      "correct_line_counts": 2
     },
     "th/holdout/png": {
       "documents": 2,
@@ -207,7 +209,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.291,
+      "elapsed_seconds": 0.468,
       "values": {
         "document_number": "INV-EN-STACKED-0",
         "amount": "79.18",
@@ -245,7 +247,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.321,
+      "elapsed_seconds": 0.455,
       "values": {
         "document_number": "PO-EN-STACKED-0",
         "amount": "79.18",
@@ -283,7 +285,7 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 6.199,
+      "elapsed_seconds": 10.689,
       "values": {
         "document_number": "INV-EN-STACKED-1",
         "amount": "79.18",
@@ -321,7 +323,7 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 5.918,
+      "elapsed_seconds": 9.269,
       "values": {
         "document_number": "PO-EN-STACKED-1",
         "amount": "79.18",
@@ -359,7 +361,7 @@
       "format": "pdf",
       "case": "injection",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.301,
+      "elapsed_seconds": 0.48,
       "values": {
         "document_number": "INV-EN-STACKED-2",
         "amount": "79.18",
@@ -401,7 +403,7 @@
       "format": "pdf",
       "case": "injection",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.277,
+      "elapsed_seconds": 0.463,
       "values": {
         "document_number": "PO-EN-STACKED-2",
         "amount": "79.18",
@@ -443,7 +445,7 @@
       "format": "png",
       "case": "missing_due",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 5.701,
+      "elapsed_seconds": 8.892,
       "values": {
         "document_number": "INV-EN-STACKED-3",
         "amount": "791",
@@ -483,7 +485,7 @@
       "format": "png",
       "case": "missing_due",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 5.68,
+      "elapsed_seconds": 8.51,
       "values": {
         "document_number": "PO-EN-STACKED-3",
         "amount": "791",
@@ -521,7 +523,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.268,
+      "elapsed_seconds": 0.467,
       "values": {
         "document_number": "INV-EN-STACKED-4",
         "amount": "79.191",
@@ -559,7 +561,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.274,
+      "elapsed_seconds": 0.482,
       "values": {
         "document_number": "PO-EN-STACKED-4",
         "amount": "79.191",
@@ -597,7 +599,7 @@
       "format": "pdf",
       "case": "ambiguous_amount",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.28,
+      "elapsed_seconds": 0.469,
       "values": {
         "document_number": "INV-EN-STACKED-5",
         "amount": null,
@@ -638,7 +640,7 @@
       "format": "pdf",
       "case": "ambiguous_amount",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.277,
+      "elapsed_seconds": 0.443,
       "values": {
         "document_number": "PO-EN-STACKED-5",
         "amount": null,
@@ -679,7 +681,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.302,
+      "elapsed_seconds": 0.443,
       "values": {
         "document_number": "INV-EN-SPLIT_VALUES-0",
         "amount": "79.18",
@@ -717,7 +719,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.293,
+      "elapsed_seconds": 0.455,
       "values": {
         "document_number": "PO-EN-SPLIT_VALUES-0",
         "amount": "79.18",
@@ -755,30 +757,27 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 7.859,
+      "elapsed_seconds": 10.945,
       "values": {
         "document_number": "INV-EN-SPLIT_VALUES-1",
         "amount": "79.18",
         "currency": "EUR",
         "issue_date": "2026-10-01",
-        "due_date": null,
+        "due_date": "2026-11-15",
         "supplier_name": "Example Packaging Ltd",
-        "buyer_name": null
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
         "document_number": true,
         "amount": true,
         "currency": true,
         "issue_date": true,
-        "due_date": false,
+        "due_date": true,
         "supplier_name": true,
-        "buyer_name": false
+        "buyer_name": true
       },
-      "full_match": false,
-      "review_reasons": [
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:buyer.name"
-      ],
+      "full_match": true,
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
       "line_count": 2,
@@ -796,30 +795,27 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 6.236,
+      "elapsed_seconds": 11.181,
       "values": {
-        "document_number": null,
+        "document_number": "PO-EN-SPLIT_VALUES-1",
         "amount": "79.18",
         "currency": "EUR",
         "issue_date": "2026-10-01",
-        "due_date": null,
+        "due_date": "2026-11-15",
         "supplier_name": "Example Packaging Ltd",
-        "buyer_name": null
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
-        "document_number": false,
+        "document_number": true,
         "amount": true,
         "currency": true,
         "issue_date": true,
-        "due_date": false,
+        "due_date": true,
         "supplier_name": true,
-        "buyer_name": false
+        "buyer_name": true
       },
-      "full_match": false,
-      "review_reasons": [
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:buyer.name"
-      ],
+      "full_match": true,
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
       "line_count": 2,
@@ -837,7 +833,7 @@
       "format": "pdf",
       "case": "injection",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.278,
+      "elapsed_seconds": 0.523,
       "values": {
         "document_number": "INV-EN-SPLIT_VALUES-2",
         "amount": "79.18",
@@ -879,7 +875,7 @@
       "format": "pdf",
       "case": "injection",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.245,
+      "elapsed_seconds": 0.454,
       "values": {
         "document_number": "PO-EN-SPLIT_VALUES-2",
         "amount": "79.18",
@@ -921,7 +917,7 @@
       "format": "png",
       "case": "missing_due",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 7.471,
+      "elapsed_seconds": 10.308,
       "values": {
         "document_number": "INV-EN-SPLIT_VALUES-3",
         "amount": "791",
@@ -929,7 +925,7 @@
         "issue_date": "2026-10-01",
         "due_date": null,
         "supplier_name": "Example Packaging Ltd",
-        "buyer_name": null
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
         "document_number": true,
@@ -938,12 +934,11 @@
         "issue_date": true,
         "due_date": true,
         "supplier_name": true,
-        "buyer_name": false
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:buyer.name"
+        "MISSING_OR_UNRESOLVED:due_date"
       ],
       "injection_flags": [],
       "expected_injection": false,
@@ -962,7 +957,7 @@
       "format": "png",
       "case": "missing_due",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 6.964,
+      "elapsed_seconds": 9.955,
       "values": {
         "document_number": "PO-EN-SPLIT_VALUES-3",
         "amount": "791",
@@ -970,7 +965,7 @@
         "issue_date": "2026-10-01",
         "due_date": null,
         "supplier_name": "Example Packaging Ltd",
-        "buyer_name": null
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
         "document_number": true,
@@ -979,12 +974,10 @@
         "issue_date": true,
         "due_date": true,
         "supplier_name": true,
-        "buyer_name": false
+        "buyer_name": true
       },
-      "full_match": false,
-      "review_reasons": [
-        "MISSING_OR_UNRESOLVED:buyer.name"
-      ],
+      "full_match": true,
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
       "line_count": 2,
@@ -1002,7 +995,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.309,
+      "elapsed_seconds": 0.455,
       "values": {
         "document_number": "INV-EN-SPLIT_VALUES-4",
         "amount": "79.191",
@@ -1040,7 +1033,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.308,
+      "elapsed_seconds": 0.445,
       "values": {
         "document_number": "PO-EN-SPLIT_VALUES-4",
         "amount": "79.191",
@@ -1078,7 +1071,7 @@
       "format": "pdf",
       "case": "ambiguous_amount",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.349,
+      "elapsed_seconds": 0.458,
       "values": {
         "document_number": "INV-EN-SPLIT_VALUES-5",
         "amount": null,
@@ -1119,7 +1112,7 @@
       "format": "pdf",
       "case": "ambiguous_amount",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.326,
+      "elapsed_seconds": 0.455,
       "values": {
         "document_number": "PO-EN-SPLIT_VALUES-5",
         "amount": null,
@@ -1160,42 +1153,27 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.366,
+      "elapsed_seconds": 0.463,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
+        "document_number": "INV-EN-TWO_PANELS-0",
+        "amount": "79.18",
+        "currency": "USD",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "Example Packaging Ltd",
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
+        "document_number": true,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
-      "review_reasons": [
-        "AMBIGUOUS:document_number",
-        "AMBIGUOUS:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "AMBIGUOUS:buyer.country",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
-      ],
+      "full_match": true,
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
       "line_count": 2,
@@ -1213,41 +1191,27 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.344,
+      "elapsed_seconds": 0.431,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
+        "document_number": "PO-EN-TWO_PANELS-0",
+        "amount": "79.18",
+        "currency": "USD",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "Example Packaging Ltd",
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
+        "document_number": true,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
-      "review_reasons": [
-        "CONFLICTING:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "AMBIGUOUS:buyer.country",
-        "CONFLICTING:document_number",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
-      ],
+      "full_match": true,
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
       "line_count": 2,
@@ -1265,42 +1229,27 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 9.143,
+      "elapsed_seconds": 10.85,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
+        "document_number": "INV-EN-TWO_PANELS-1",
+        "amount": "79.18",
+        "currency": "EUR",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "Example Packaging Ltd",
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
+        "document_number": true,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
-      "review_reasons": [
-        "AMBIGUOUS:document_number",
-        "AMBIGUOUS:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "AMBIGUOUS:buyer.country",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
-      ],
+      "full_match": true,
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
       "line_count": 2,
@@ -1318,41 +1267,27 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 12.346,
+      "elapsed_seconds": 11.124,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
+        "document_number": "PO-EN-TWO_PANELS-1",
+        "amount": "79.18",
+        "currency": "EUR",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "Example Packaging Ltd",
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
+        "document_number": true,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
-      "review_reasons": [
-        "CONFLICTING:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "AMBIGUOUS:buyer.country",
-        "CONFLICTING:document_number",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
-      ],
+      "full_match": true,
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
       "line_count": 2,
@@ -1370,42 +1305,28 @@
       "format": "pdf",
       "case": "injection",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.793,
+      "elapsed_seconds": 0.537,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
+        "document_number": "INV-EN-TWO_PANELS-2",
+        "amount": "79.18",
+        "currency": "CNY",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "Example Packaging Ltd",
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
+        "document_number": true,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "AMBIGUOUS:document_number",
-        "AMBIGUOUS:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "AMBIGUOUS:buyer.country",
-        "DOCUMENT_INJECTION_ALERT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
+        "DOCUMENT_INJECTION_ALERT"
       ],
       "injection_flags": [
         "VISIBLE_INSTRUCTION"
@@ -1426,41 +1347,28 @@
       "format": "pdf",
       "case": "injection",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.484,
+      "elapsed_seconds": 0.446,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
+        "document_number": "PO-EN-TWO_PANELS-2",
+        "amount": "79.18",
+        "currency": "CNY",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "Example Packaging Ltd",
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
+        "document_number": true,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "CONFLICTING:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "AMBIGUOUS:buyer.country",
-        "CONFLICTING:document_number",
-        "DOCUMENT_INJECTION_ALERT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
+        "DOCUMENT_INJECTION_ALERT"
       ],
       "injection_flags": [
         "VISIBLE_INSTRUCTION"
@@ -1481,37 +1389,28 @@
       "format": "png",
       "case": "missing_due",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 13.552,
+      "elapsed_seconds": 10.111,
       "values": {
         "document_number": "INV-EN-TWO_PANELS-3",
-        "amount": null,
+        "amount": "791",
         "currency": "JPY",
         "issue_date": "2026-10-01",
         "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "supplier_name": "Example Packaging Ltd",
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
         "document_number": true,
-        "amount": false,
+        "amount": true,
         "currency": true,
         "issue_date": true,
         "due_date": true,
-        "supplier_name": false,
-        "buyer_name": false
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "AMBIGUOUS:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
+        "MISSING_OR_UNRESOLVED:due_date"
       ],
       "injection_flags": [],
       "expected_injection": false,
@@ -1530,40 +1429,27 @@
       "format": "png",
       "case": "missing_due",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 15.608,
+      "elapsed_seconds": 9.854,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
+        "document_number": "PO-EN-TWO_PANELS-3",
+        "amount": "791",
+        "currency": "JPY",
         "issue_date": "2026-10-01",
         "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "supplier_name": "Example Packaging Ltd",
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
+        "document_number": true,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
         "due_date": true,
-        "supplier_name": false,
-        "buyer_name": false
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
-      "review_reasons": [
-        "CONFLICTING:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "CONFLICTING:document_number",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
-      ],
+      "full_match": true,
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
       "line_count": 2,
@@ -1581,44 +1467,27 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 1.512,
+      "elapsed_seconds": 0.457,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
+        "document_number": "INV-EN-TWO_PANELS-4",
+        "amount": "79.191",
+        "currency": "KWD",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "Example Packaging Ltd",
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
+        "document_number": true,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
-      "review_reasons": [
-        "AMBIGUOUS:document_number",
-        "AMBIGUOUS:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "AMBIGUOUS:buyer.country",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "LINE_EVIDENCE_UNRESOLVED:0",
-        "LINE_EVIDENCE_UNRESOLVED:1"
-      ],
+      "full_match": true,
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
       "line_count": 2,
@@ -1636,43 +1505,27 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 1.346,
+      "elapsed_seconds": 0.456,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
+        "document_number": "PO-EN-TWO_PANELS-4",
+        "amount": "79.191",
+        "currency": "KWD",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "Example Packaging Ltd",
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
+        "document_number": true,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
-      "review_reasons": [
-        "CONFLICTING:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "AMBIGUOUS:buyer.country",
-        "CONFLICTING:document_number",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "LINE_EVIDENCE_UNRESOLVED:0",
-        "LINE_EVIDENCE_UNRESOLVED:1"
-      ],
+      "full_match": true,
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
       "line_count": 2,
@@ -1690,40 +1543,29 @@
       "format": "pdf",
       "case": "ambiguous_amount",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.85,
+      "elapsed_seconds": 0.482,
       "values": {
-        "document_number": null,
+        "document_number": "INV-EN-TWO_PANELS-5",
         "amount": null,
-        "currency": null,
+        "currency": "GBP",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "Example Packaging Ltd",
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
-        "document_number": false,
+        "document_number": true,
         "amount": true,
-        "currency": false,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "AMBIGUOUS:document_number",
-        "AMBIGUOUS:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
+        "AMBIGUOUS:amount",
+        "MISSING_OR_UNRESOLVED:amount"
       ],
       "injection_flags": [],
       "expected_injection": false,
@@ -1742,39 +1584,29 @@
       "format": "pdf",
       "case": "ambiguous_amount",
       "engine": "pdf-text",
-      "elapsed_seconds": 1.53,
+      "elapsed_seconds": 0.434,
       "values": {
-        "document_number": null,
+        "document_number": "PO-EN-TWO_PANELS-5",
         "amount": null,
-        "currency": null,
+        "currency": "GBP",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "Example Packaging Ltd",
+        "buyer_name": "Example Retail Ltd"
       },
       "field_matches": {
-        "document_number": false,
+        "document_number": true,
         "amount": true,
-        "currency": false,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "CONFLICTING:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "CONFLICTING:document_number",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
+        "AMBIGUOUS:amount",
+        "MISSING_OR_UNRESOLVED:amount"
       ],
       "injection_flags": [],
       "expected_injection": false,
@@ -1793,7 +1625,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 1.254,
+      "elapsed_seconds": 0.484,
       "values": {
         "document_number": "INV-EN-COMMERCIAL_TABLE-0",
         "amount": "79.18",
@@ -1813,12 +1645,10 @@
         "buyer_name": true
       },
       "full_match": true,
-      "review_reasons": [
-        "NO_LINE_EVIDENCE"
-      ],
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -1833,7 +1663,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 2.21,
+      "elapsed_seconds": 0.487,
       "values": {
         "document_number": "PO-EN-COMMERCIAL_TABLE-0",
         "amount": "79.18",
@@ -1853,12 +1683,10 @@
         "buyer_name": true
       },
       "full_match": true,
-      "review_reasons": [
-        "NO_LINE_EVIDENCE"
-      ],
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -1873,7 +1701,7 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 20.088,
+      "elapsed_seconds": 8.764,
       "values": {
         "document_number": "INV-EN-COMMERCIAL_TABLE-1",
         "amount": "79.18",
@@ -1913,7 +1741,7 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 19.589,
+      "elapsed_seconds": 9.036,
       "values": {
         "document_number": "PO-EN-COMMERCIAL_TABLE-1",
         "amount": "79.18",
@@ -1953,7 +1781,7 @@
       "format": "pdf",
       "case": "injection",
       "engine": "pdf-text",
-      "elapsed_seconds": 1.313,
+      "elapsed_seconds": 0.487,
       "values": {
         "document_number": "INV-EN-COMMERCIAL_TABLE-2",
         "amount": "79.18",
@@ -1974,14 +1802,13 @@
       },
       "full_match": true,
       "review_reasons": [
-        "DOCUMENT_INJECTION_ALERT",
-        "NO_LINE_EVIDENCE"
+        "DOCUMENT_INJECTION_ALERT"
       ],
       "injection_flags": [
         "VISIBLE_INSTRUCTION"
       ],
       "expected_injection": true,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -1996,7 +1823,7 @@
       "format": "pdf",
       "case": "injection",
       "engine": "pdf-text",
-      "elapsed_seconds": 2.103,
+      "elapsed_seconds": 0.493,
       "values": {
         "document_number": "PO-EN-COMMERCIAL_TABLE-2",
         "amount": "79.18",
@@ -2017,14 +1844,13 @@
       },
       "full_match": true,
       "review_reasons": [
-        "DOCUMENT_INJECTION_ALERT",
-        "NO_LINE_EVIDENCE"
+        "DOCUMENT_INJECTION_ALERT"
       ],
       "injection_flags": [
         "VISIBLE_INSTRUCTION"
       ],
       "expected_injection": true,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2039,7 +1865,7 @@
       "format": "png",
       "case": "missing_due",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 17.011,
+      "elapsed_seconds": 8.41,
       "values": {
         "document_number": "INV-EN-COMMERCIAL_TABLE-3",
         "amount": "791",
@@ -2080,7 +1906,7 @@
       "format": "png",
       "case": "missing_due",
       "engine": "paddleocr:en_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 16.443,
+      "elapsed_seconds": 8.239,
       "values": {
         "document_number": "PO-EN-COMMERCIAL_TABLE-3",
         "amount": "791",
@@ -2120,7 +1946,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 1.031,
+      "elapsed_seconds": 0.519,
       "values": {
         "document_number": "INV-EN-COMMERCIAL_TABLE-4",
         "amount": "79.191",
@@ -2140,12 +1966,10 @@
         "buyer_name": true
       },
       "full_match": true,
-      "review_reasons": [
-        "NO_LINE_EVIDENCE"
-      ],
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2160,7 +1984,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 1.355,
+      "elapsed_seconds": 0.484,
       "values": {
         "document_number": "PO-EN-COMMERCIAL_TABLE-4",
         "amount": "79.191",
@@ -2180,12 +2004,10 @@
         "buyer_name": true
       },
       "full_match": true,
-      "review_reasons": [
-        "NO_LINE_EVIDENCE"
-      ],
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2200,7 +2022,7 @@
       "format": "pdf",
       "case": "ambiguous_amount",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.995,
+      "elapsed_seconds": 0.474,
       "values": {
         "document_number": "INV-EN-COMMERCIAL_TABLE-5",
         "amount": null,
@@ -2222,12 +2044,11 @@
       "full_match": true,
       "review_reasons": [
         "AMBIGUOUS:amount",
-        "MISSING_OR_UNRESOLVED:amount",
-        "NO_LINE_EVIDENCE"
+        "MISSING_OR_UNRESOLVED:amount"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2242,7 +2063,7 @@
       "format": "pdf",
       "case": "ambiguous_amount",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.909,
+      "elapsed_seconds": 0.482,
       "values": {
         "document_number": "PO-EN-COMMERCIAL_TABLE-5",
         "amount": null,
@@ -2264,12 +2085,11 @@
       "full_match": true,
       "review_reasons": [
         "AMBIGUOUS:amount",
-        "MISSING_OR_UNRESOLVED:amount",
-        "NO_LINE_EVIDENCE"
+        "MISSING_OR_UNRESOLVED:amount"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2284,40 +2104,32 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 1.164,
+      "elapsed_seconds": 0.478,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "INV-ZH-STACKED-0",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:issue_date",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2332,38 +2144,32 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 1.07,
+      "elapsed_seconds": 0.463,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "PO-ZH-STACKED-0",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2378,40 +2184,32 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 17.633,
+      "elapsed_seconds": 9.723,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "INV-ZH-STACKED-1",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:issue_date",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2426,38 +2224,32 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 15.25,
+      "elapsed_seconds": 9.497,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "PO-ZH-STACKED-1",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2472,40 +2264,32 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 1.748,
+      "elapsed_seconds": 0.456,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "INV-ZH-SPLIT_VALUES-0",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:issue_date",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2520,38 +2304,32 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 1.248,
+      "elapsed_seconds": 0.454,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "PO-ZH-SPLIT_VALUES-0",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2566,40 +2344,32 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 22.15,
+      "elapsed_seconds": 11.332,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "INV-ZH-SPLIT_VALUES-1",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:issue_date",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2614,38 +2384,32 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 17.043,
+      "elapsed_seconds": 11.558,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "PO-ZH-SPLIT_VALUES-1",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2660,40 +2424,32 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.654,
+      "elapsed_seconds": 0.524,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "INV-ZH-TWO_PANELS-0",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:issue_date",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2708,38 +2464,32 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.754,
+      "elapsed_seconds": 0.467,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "PO-ZH-TWO_PANELS-0",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2754,40 +2504,32 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 15.312,
+      "elapsed_seconds": 11.426,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "INV-ZH-TWO_PANELS-1",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:issue_date",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2802,38 +2544,32 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 22.247,
+      "elapsed_seconds": 11.679,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "PO-ZH-TWO_PANELS-1",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2848,40 +2584,32 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.94,
+      "elapsed_seconds": 0.558,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "INV-ZH-COMMERCIAL_TABLE-0",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:issue_date",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2896,38 +2624,32 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.992,
+      "elapsed_seconds": 0.499,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "PO-ZH-COMMERCIAL_TABLE-0",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
-        "NO_LINE_EVIDENCE"
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW"
       ],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -2942,35 +2664,28 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 21.884,
+      "elapsed_seconds": 9.641,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "INV-ZH-COMMERCIAL_TABLE-1",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:issue_date",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW",
         "NO_LINE_EVIDENCE"
       ],
       "injection_flags": [],
@@ -2990,33 +2705,28 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 15.793,
+      "elapsed_seconds": 9.383,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
-        "issue_date": null,
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "document_number": "PO-ZH-COMMERCIAL_TABLE-1",
+        "amount": "79.18",
+        "currency": "CNY",
+        "issue_date": "2026-10-01",
+        "due_date": "2026-11-15",
+        "supplier_name": "示例包装有限公司",
+        "buyer_name": "示例零售有限公司"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
-        "issue_date": false,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
+      "full_match": true,
       "review_reasons": [
-        "UNSUPPORTED_SCRIPT",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name",
+        "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW",
         "NO_LINE_EVIDENCE"
       ],
       "injection_flags": [],
@@ -3036,7 +2746,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.749,
+      "elapsed_seconds": 0.519,
       "values": {
         "document_number": "INV-TH-STACKED-0",
         "amount": "79.18",
@@ -3074,7 +2784,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.83,
+      "elapsed_seconds": 0.446,
       "values": {
         "document_number": "PO-TH-STACKED-0",
         "amount": "79.18",
@@ -3112,7 +2822,7 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:th_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 16.478,
+      "elapsed_seconds": 9.221,
       "values": {
         "document_number": null,
         "amount": "79.18",
@@ -3135,8 +2845,7 @@
       "review_reasons": [
         "LINE_LAYOUT_UNSUPPORTED",
         "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:issue_date",
-        "LINE_SUM_MISMATCH"
+        "MISSING_OR_UNRESOLVED:issue_date"
       ],
       "injection_flags": [],
       "expected_injection": false,
@@ -3410,7 +3119,7 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:th_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 18.861,
+      "elapsed_seconds": 9.114,
       "values": {
         "document_number": null,
         "amount": "79.18",
@@ -3432,8 +3141,7 @@
       "full_match": false,
       "review_reasons": [
         "LINE_LAYOUT_UNSUPPORTED",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "LINE_SUM_MISMATCH"
+        "MISSING_OR_UNRESOLVED:document_number"
       ],
       "injection_flags": [],
       "expected_injection": false,
@@ -3707,7 +3415,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.779,
+      "elapsed_seconds": 0.479,
       "values": {
         "document_number": "INV-TH-SPLIT_VALUES-0",
         "amount": "79.18",
@@ -3745,7 +3453,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.649,
+      "elapsed_seconds": 0.45,
       "values": {
         "document_number": "PO-TH-SPLIT_VALUES-0",
         "amount": "79.18",
@@ -3783,30 +3491,28 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:th_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 18.166,
+      "elapsed_seconds": 10.827,
       "values": {
         "document_number": null,
-        "amount": null,
+        "amount": "79.18",
         "currency": "THB",
-        "issue_date": null,
+        "issue_date": "2026-10-01",
         "due_date": "2026-11-15",
         "supplier_name": "บริษัท ตัวอย่างบรรจุภัณฑ์",
         "buyer_name": "บริษัท ตัวอย่างค้าปลีก"
       },
       "field_matches": {
         "document_number": false,
-        "amount": false,
+        "amount": true,
         "currency": true,
-        "issue_date": false,
+        "issue_date": true,
         "due_date": true,
         "supplier_name": true,
         "buyer_name": true
       },
       "full_match": false,
       "review_reasons": [
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:issue_date",
-        "MISSING_OR_UNRESOLVED:amount"
+        "MISSING_OR_UNRESOLVED:document_number"
       ],
       "injection_flags": [],
       "expected_injection": false,
@@ -4289,29 +3995,28 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:th_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 19.178,
+      "elapsed_seconds": 11.002,
       "values": {
         "document_number": null,
-        "amount": null,
+        "amount": "79.18",
         "currency": "THB",
-        "issue_date": null,
+        "issue_date": "2026-10-01",
         "due_date": "2026-11-15",
         "supplier_name": "บริษัท ตัวอย่างบรรจุภัณฑ์",
         "buyer_name": "บริษัท ตัวอย่างค้าปลีก"
       },
       "field_matches": {
         "document_number": false,
-        "amount": false,
+        "amount": true,
         "currency": true,
-        "issue_date": false,
+        "issue_date": true,
         "due_date": true,
         "supplier_name": true,
         "buyer_name": true
       },
       "full_match": false,
       "review_reasons": [
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:amount"
+        "MISSING_OR_UNRESOLVED:document_number"
       ],
       "injection_flags": [],
       "expected_injection": false,
@@ -4794,42 +4499,27 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.649,
+      "elapsed_seconds": 0.546,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
+        "document_number": "INV-TH-TWO_PANELS-0",
+        "amount": "79.18",
+        "currency": "THB",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "บริษัท ตัวอย่างบรรจุภัณฑ์",
+        "buyer_name": "บริษัท ตัวอย่างค้าปลีก"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
+        "document_number": true,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
-      "review_reasons": [
-        "AMBIGUOUS:document_number",
-        "AMBIGUOUS:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "AMBIGUOUS:buyer.country",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
-      ],
+      "full_match": true,
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
       "line_count": 2,
@@ -4847,41 +4537,27 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.525,
+      "elapsed_seconds": 0.449,
       "values": {
-        "document_number": null,
-        "amount": null,
-        "currency": null,
+        "document_number": "PO-TH-TWO_PANELS-0",
+        "amount": "79.18",
+        "currency": "THB",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "บริษัท ตัวอย่างบรรจุภัณฑ์",
+        "buyer_name": "บริษัท ตัวอย่างค้าปลีก"
       },
       "field_matches": {
-        "document_number": false,
-        "amount": false,
-        "currency": false,
+        "document_number": true,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
-      "full_match": false,
-      "review_reasons": [
-        "CONFLICTING:po_reference",
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:buyer.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "AMBIGUOUS:buyer.country",
-        "CONFLICTING:document_number",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
-      ],
+      "full_match": true,
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
       "line_count": 2,
@@ -4899,38 +4575,28 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:th_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 13.943,
+      "elapsed_seconds": 10.78,
       "values": {
         "document_number": null,
-        "amount": null,
-        "currency": null,
+        "amount": "79.18",
+        "currency": "THB",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "บริษัท ตัวอย่างบรรจุภัณฑ์",
+        "buyer_name": "บริษัท ตัวอย่างค้าปลีก"
       },
       "field_matches": {
         "document_number": false,
-        "amount": false,
-        "currency": false,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
       "full_match": false,
       "review_reasons": [
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "AMBIGUOUS:buyer.country",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:due_date",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
+        "MISSING_OR_UNRESOLVED:document_number"
       ],
       "injection_flags": [],
       "expected_injection": false,
@@ -5413,37 +5079,28 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:th_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 13.614,
+      "elapsed_seconds": 10.988,
       "values": {
         "document_number": null,
-        "amount": null,
-        "currency": null,
+        "amount": "79.18",
+        "currency": "THB",
         "issue_date": "2026-10-01",
-        "due_date": null,
-        "supplier_name": null,
-        "buyer_name": null
+        "due_date": "2026-11-15",
+        "supplier_name": "บริษัท ตัวอย่างบรรจุภัณฑ์",
+        "buyer_name": "บริษัท ตัวอย่างค้าปลีก"
       },
       "field_matches": {
         "document_number": false,
-        "amount": false,
-        "currency": false,
+        "amount": true,
+        "currency": true,
         "issue_date": true,
-        "due_date": false,
-        "supplier_name": false,
-        "buyer_name": false
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
       },
       "full_match": false,
       "review_reasons": [
-        "AMBIGUOUS:supplier.name",
-        "AMBIGUOUS:buyer.name",
-        "AMBIGUOUS:supplier.legal_identifier",
-        "AMBIGUOUS:supplier.country",
-        "AMBIGUOUS:buyer.country",
-        "MISSING_OR_UNRESOLVED:document_number",
-        "MISSING_OR_UNRESOLVED:currency",
-        "MISSING_OR_UNRESOLVED:amount",
-        "MISSING_OR_UNRESOLVED:supplier.name",
-        "MISSING_OR_UNRESOLVED:buyer.name"
+        "MISSING_OR_UNRESOLVED:document_number"
       ],
       "injection_flags": [],
       "expected_injection": false,
@@ -5926,7 +5583,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.648,
+      "elapsed_seconds": 0.552,
       "values": {
         "document_number": "INV-TH-COMMERCIAL_TABLE-0",
         "amount": "79.18",
@@ -5946,12 +5603,10 @@
         "buyer_name": true
       },
       "full_match": true,
-      "review_reasons": [
-        "NO_LINE_EVIDENCE"
-      ],
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -5966,7 +5621,7 @@
       "format": "pdf",
       "case": "clean",
       "engine": "pdf-text",
-      "elapsed_seconds": 0.658,
+      "elapsed_seconds": 0.495,
       "values": {
         "document_number": "PO-TH-COMMERCIAL_TABLE-0",
         "amount": "79.18",
@@ -5986,12 +5641,10 @@
         "buyer_name": true
       },
       "full_match": true,
-      "review_reasons": [
-        "NO_LINE_EVIDENCE"
-      ],
+      "review_reasons": [],
       "injection_flags": [],
       "expected_injection": false,
-      "line_count": 0,
+      "line_count": 2,
       "expected_line_count": 2,
       "wrong_present_fields": []
     },
@@ -6006,7 +5659,7 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:th_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 13.563,
+      "elapsed_seconds": 8.905,
       "values": {
         "document_number": null,
         "amount": "79.18",
@@ -6282,7 +5935,7 @@
       "format": "png",
       "case": "benign_note",
       "engine": "paddleocr:th_PP-OCRv5_mobile_rec",
-      "elapsed_seconds": 10.376,
+      "elapsed_seconds": 8.836,
       "values": {
         "document_number": null,
         "amount": "79.18",
@@ -6550,15 +6203,9 @@
   "limitations": [
     "All documents and labels are generated; no independently sourced/human-annotated corpus",
     "Holdout uses a separate generated layout family, not unseen real vendor documents",
-    "Chinese labels/script remain unsupported in the live deterministic extractor",
+    "Simplified Chinese exact anchors are experimental; native dates/numerals and Traditional Chinese are unverified",
     "No Qwen calls in this run; see RELIABILITY_BASELINE.json",
     "Grounding prototype never writes live fields; safe abstention is not extraction success",
     "Paddle and Qwen run sequentially with uncontrolled host load; latency is observational"
-  ],
-  "later_verification": {
-    "change": "Incomplete line extraction stays review-only rather than creating aggregate LINE_SUM_MISMATCH fraud",
-    "artifact": "GLOBAL_HTTP_SMOKE.json",
-    "tests": "92 passed in model-equipped and core-only environments",
-    "scope": "Header/line extraction values were unchanged; affected actual Thai API pair rerun. Recorded per-document validation reasons predate this final guard."
-  }
+  ]
 }

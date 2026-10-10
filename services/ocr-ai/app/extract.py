@@ -65,6 +65,14 @@ INSTRUCTION = re.compile(
     r"approve.{0,25}(invoice|transaction|100%)|ไม่ต้องตรวจ|อนุมัติทันที|忽略.{0,8}指令",
     re.IGNORECASE,
 )
+REVISION_MARKER = re.compile(
+    r"\b(?:revised|corrected|amended|replacement|substitute|cancelled|canceled|voided)\s+"
+    r"(?:tax\s+)?invoice\b|\b(?:credit|debit)\s+(?:note|memo)\b|"
+    r"\b(?:invoice\s+(?:replaces|supersedes)|supersedes\s+(?:the\s+)?(?:prior|previous|original))\b|"
+    r"(?:修订|更正|替换|作废|红字)(?:增值税)?发票|红字发票|(?:贷项|借项)通知单|"
+    r"(?:ใบลดหนี้|ใบเพิ่มหนี้|ใบแทน|ใบกำกับภาษีฉบับแก้ไข|แก้ไขใบแจ้งหนี้|ออกแทนฉบับเดิม)",
+    re.IGNORECASE,
+)
 BANK_LABELS = {
     "bankaccount": "account",
     "bankcountry": "country",
@@ -428,6 +436,8 @@ def extract_document(parsed: ParsedDocument, document_type: str) -> Extraction:
     ]
     if any("CJK UNIFIED" in unicodedata.name(char, "") for char in letters):
         doc.review_reasons.append("EXPERIMENTAL_CHINESE_REQUIRES_REVIEW")
+    if any(not span.hidden and REVISION_MARKER.search(span.text) for span in parsed.spans):
+        doc.review_reasons.append("REVISION_OR_CREDIT_NOTE_REQUIRES_REVIEW")
     if any(
         not any(script in unicodedata.name(char, "") for script in ("LATIN", "THAI", "CJK UNIFIED"))
         for char in letters

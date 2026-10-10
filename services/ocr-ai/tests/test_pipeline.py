@@ -6,11 +6,14 @@ from pathlib import Path
 import pytest
 from datagen.generate import document_lines, render_pdf
 
+from app.extract import extract_document
 from app.history import ObservationStore
+from app.ingest import run_worker
 from app.qwen import VisionCandidates
 from shared.schemas import ExtractedInvoice
 
 DATA = Path(__file__).resolve().parents[3] / "data" / "invoices"
+RELIABILITY_DATA = DATA / "reliability"
 
 
 def upload(client, content, headers=None):
@@ -53,6 +56,125 @@ def test_actual_pdf_extract_and_shared_compatibility(client, language):
     assert changed["invoice_no"] == "NEW-91" and changed["amount"] == "800000.00"
     assert changed["doc_hash"] != value["doc_hash"]
     assert "math_inconsistent" in changed["fraud_flags"]
+
+
+def test_chinese_invoice_extraction_is_grounded_and_review_only(client):
+    response = upload(client, (RELIABILITY_DATA / "invoice-zh-stacked-0.pdf").read_bytes())
+    assert response.status_code == 200, response.text
+    value = response.json()
+    assert value["invoice_no"] == "INV-ZH-STACKED-0"
+    assert value["amount"] == "79.18" and value["currency"] == "CNY"
+    assert value["issue_date"] == "2026-10-01" and value["due_date"] == "2026-11-15"
+    assert value["supplier"]["name"] == "示例包装有限公司"
+    assert value["buyer"]["name"] == "示例零售有限公司"
+    assert len(value["document_evidence"]["lines"]) == 2
+    assert value["review_required"]
+    assert "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW" in value["validation_flags"]
+    assert all(
+        field["status"] == "present" and field["evidence_refs"]
+        for field in (
+            value["document_evidence"]["document_number"],
+            value["document_evidence"]["amount"],
+            value["document_evidence"]["currency"],
+            value["document_evidence"]["supplier"]["name"],
+            value["document_evidence"]["buyer"]["name"],
+        )
+    )
+
+
+def test_chinese_invoice_po_pair_keeps_unitless_line_checks_unknown(client):
+    response = client.post(
+        "/ocr/verify",
+        files={
+            "invoice_file": (
+                "invoice.pdf",
+                (RELIABILITY_DATA / "invoice-zh-stacked-0.pdf").read_bytes(),
+                "application/pdf",
+            ),
+            "po_file": (
+                "po.pdf",
+                (RELIABILITY_DATA / "purchase_order-zh-stacked-0.pdf").read_bytes(),
+                "application/pdf",
+            ),
+        },
+    )
+    assert response.status_code == 200, response.text
+    value = response.json()
+    assert value["status"] == "review"
+    assert "EXPERIMENTAL_CHINESE_REQUIRES_REVIEW" in value["review_reasons"]
+    assert value["invoice"]["amount"]["value"] == value["purchase_order"]["amount"]["value"]
+    checks = {check["field"]: check for check in value["checks"]}
+    assert checks["line_items.PACK-A.unit"]["status"] == "unknown"
+    assert checks["line_items.PACK-A.quantity"]["status"] == "unknown"
+    assert checks["line_items.PACK-A.unit_price"]["status"] == "unknown"
+
+
+@pytest.mark.parametrize(
+    "marker",
+    ["REVISED INVOICE — supersedes the prior invoice", "CREDIT NOTE"],
+)
+def test_revision_label_requires_human_review(client, marker):
+    lines = document_lines(invoice_no="REV-2026-0001")
+    lines.append(marker)
+    response = upload(client, render_pdf(lines))
+    assert response.status_code == 200, response.text
+    value = response.json()
+    assert "REVISION_OR_CREDIT_NOTE_REQUIRES_REVIEW" in value["validation_flags"]
+    assert value["review_required"]
+
+
+def test_chinese_red_letter_invoice_marker_requires_review():
+    parsed = run_worker("parse", (RELIABILITY_DATA / "invoice-zh-stacked-0.pdf").read_bytes())
+    marker = parsed.spans[0].model_copy(
+        update={"text": "红字发票", "ordinal": len(parsed.spans) + 1}
+    )
+    parsed = parsed.model_copy(update={"spans": [*parsed.spans, marker]})
+    extraction = extract_document(parsed, "invoice")
+    assert "REVISION_OR_CREDIT_NOTE_REQUIRES_REVIEW" in extraction.document.review_reasons
+
+
+def test_same_reference_amount_revision_is_a_near_duplicate_review(client):
+    original = document_lines(invoice_no="REV-2026-0002")
+    revised = [
+        line.replace("14.00 | 700000.00", "14.20 | 710000.00")
+        .replace("Subtotal: 700000.00", "Subtotal: 710000.00")
+        .replace("Tax: 49000.00", "Tax: 49700.00")
+        .replace("Total: 749000.00", "Total: 759700.00")
+        for line in original
+    ]
+    first = upload(client, render_pdf(original)).json()
+    second = upload(client, render_pdf(revised)).json()
+    assert second["amount"] == "759700.00"
+    assert first["doc_hash"] != second["doc_hash"]
+    assert "near_duplicate" in second["fraud_flags"]
+    assert second["review_required"]
+    assert "math_inconsistent" not in second["fraud_flags"]
+
+
+def test_same_supplier_bank_token_change_requires_review_without_leaking_account(client):
+    first_lines = document_lines(invoice_no="BANK-CHANGE-2026-01")
+    second_lines = [
+        line.replace("100-200-3001", "900-800-7002")
+        for line in document_lines(invoice_no="BANK-CHANGE-2026-02")
+    ]
+    first = upload(client, render_pdf(first_lines)).json()
+    second_response = upload(client, render_pdf(second_lines))
+    assert second_response.status_code == 200, second_response.text
+    second = second_response.json()
+    assert first["fraud_flags"] == []
+    assert "bank_account_changed" in second["fraud_flags"]
+    assert second["review_required"]
+    assert "100-200-3001" not in second_response.text
+    assert "900-800-7002" not in second_response.text
+    finding = next(item for item in second["fraud_details"] if item["code"] == "bank_account_changed")
+    assert len(finding["path"]) == 2 and len(finding["evidence_refs"]) >= 2
+    assert finding["rule_version"] == "graph-rules-v2"
+    assert second["fraud_graph"]["schema_version"] == "ocr-graph-v2"
+    assert second["handoff"]["graph_rule_version"] == "graph-rules-v2"
+    assert any(
+        edge["relation"] == "BANK_ACCOUNT_CHANGED_CANDIDATE"
+        for edge in second["fraud_graph"]["edges"]
+    )
 
 
 @pytest.mark.parametrize("language", ["en", "th"])

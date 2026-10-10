@@ -29,6 +29,27 @@ def graph_findings(records: list[tuple[str, InvoiceObservation]], current_id: st
     by_id = dict(records)
     current = by_id[current_id]
     signals = []
+    if current.supplier_token and current.bank_token:
+        prior_supplier_accounts = [
+            (oid, record)
+            for oid, record in records
+            if oid != current_id
+            and record.supplier_token == current.supplier_token
+            and record.bank_token
+        ]
+        if prior_supplier_accounts:
+            previous_id, previous = prior_supplier_accounts[-1]
+            if current.bank_token != previous.bank_token:
+                signals.append(
+                    finding(
+                        "bank_account_changed",
+                        "The same scoped supplier entity is associated with a different bank token "
+                        "than its most recent prior observation; verify the payee change independently",
+                        [*current.evidence_refs, *previous.evidence_refs],
+                        entities=[current.supplier_token],
+                        path=[current_id, previous_id],
+                    )
+                )
     if current.bank_token and current.supplier_token:
         peers = [
             (oid, record)

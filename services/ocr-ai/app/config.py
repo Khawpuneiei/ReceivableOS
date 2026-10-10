@@ -33,6 +33,7 @@ FRAUD_WEIGHTS = {
     "po_party_mismatch": 0.50,
     "po_currency_mismatch": 0.50,
     "shared_bank_token": 0.15,
+    "bank_account_changed": 0.25,
     "suspicious_cluster": 0.15,
 }
 

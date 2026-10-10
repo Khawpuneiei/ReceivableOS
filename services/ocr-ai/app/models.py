@@ -152,7 +152,7 @@ class FraudFinding(LocalModel):
     evidence: list[EvidenceReference] = Field(default_factory=list, max_length=128)
     entity_refs: list[str] = Field(default_factory=list)
     path: list[str] = Field(default_factory=list)
-    rule_version: str = "graph-rules-v1"
+    rule_version: str = "graph-rules-v2"
 
 
 class GraphNode(LocalModel):
@@ -164,12 +164,19 @@ class GraphNode(LocalModel):
 class GraphEdge(LocalModel):
     source: str
     target: str
-    relation: Literal["ISSUED_BY", "BILLED_TO", "PAYABLE_TO", "DUPLICATE_CANDIDATE", "SIMILAR_REFERENCE"]
+    relation: Literal[
+        "ISSUED_BY",
+        "BILLED_TO",
+        "PAYABLE_TO",
+        "DUPLICATE_CANDIDATE",
+        "SIMILAR_REFERENCE",
+        "BANK_ACCOUNT_CHANGED_CANDIDATE",
+    ]
     evidence_refs: list[EvidenceId] = Field(default_factory=list, max_length=128)
 
 
 class FraudGraph(LocalModel):
-    schema_version: Literal["ocr-graph-v1"] = "ocr-graph-v1"
+    schema_version: Literal["ocr-graph-v2"] = "ocr-graph-v2"
     scope: Literal["current_observation_and_findings"] = "current_observation_and_findings"
     nodes: list[GraphNode] = Field(default_factory=list, max_length=2000)
     edges: list[GraphEdge] = Field(default_factory=list, max_length=2500)
@@ -196,7 +203,7 @@ class ConsumerHandoff(LocalModel):
     observation_id: str
     document_hashes: list[Digest] = Field(min_length=1, max_length=2)
     extraction_version: Literal["spatial-rules-v2"] = "spatial-rules-v2"
-    graph_rule_version: Literal["graph-rules-v1"] = "graph-rules-v1"
+    graph_rule_version: Literal["graph-rules-v2"] = "graph-rules-v2"
     comparison_version: Literal["invoice-po-rules-v3"] = "invoice-po-rules-v3"
     review_required: bool
     review_reasons: list[str] = Field(default_factory=list, max_length=100)
