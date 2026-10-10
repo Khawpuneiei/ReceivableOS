@@ -2,7 +2,7 @@
 
 This service reads uploaded documents. It has no financing, wallet, delivery, acceptance, or authenticity authority. The implementation replaces the original fixed-response stub on `ocr/evidence-fraud-graph`. The shared schema and other services remain unchanged.
 
-Current architecture uses source geometry for separate panels and explicit line tables, plus experimental Simplified Chinese anchors. Responses add a finding-scoped typed `fraud_graph` and unsigned `handoff` for future wallet/security review. See [architecture](docs/ARCHITECTURE.md), [handoff packet](docs/HANDOFF.md) and [current validation](docs/ARCHITECTURE_VALIDATION.md). Older reports are historical evidence.
+Current architecture uses source geometry for separate panels and explicit line tables, plus experimental Simplified Chinese anchors. Responses add a finding-scoped typed `fraud_graph` and unsigned `handoff` for future wallet/security review. See [architecture](docs/ARCHITECTURE.md), [handoff packet](docs/HANDOFF.md) and [current financial retest](docs/FINTECH_RETEST.md). Older reports are historical evidence.
 
 ## Run from the repository root
 
@@ -46,7 +46,7 @@ curl -sS -F invoice_file=@data/invoices/demo/01_happy.pdf -F po_file=@data/invoi
 - `POST /ocr/verify`: separate `invoice_file` and `po_file`; typed partial extraction with nullable field values; checks are `match`, `mismatch`, or `unknown`, with rule codes and independently scoped evidence. The pair status is `matched`, `review`, or `mismatch`. An unreadable upload returns an error. No fabricated PO lookup replaces the uploaded PO.
 - Optional `Idempotency-Key` (1–200 characters) binds one history observation to exact request bytes and route. Same-key retries retain the observation and prior duplicate/graph context; different bytes return 409. OCR executes again and document IDs are fresh; this is observation idempotency, not a cached identical HTTP response.
 
-The proposed consumer-facing contract is in [CONTRACT_PROPOSAL.md](docs/CONTRACT_PROPOSAL.md). It is local and unintegrated. Match does not establish delivery, capacity, authenticity, legal validity, or prior financing. Partial invoicing stays unknown without a trusted allocation ledger. Different currencies are never converted or compared as monetary matches.
+The proposed consumer-facing contract is in [CONTRACT_PROPOSAL.md](docs/CONTRACT_PROPOSAL.md). It is local and unintegrated. Match does not establish delivery, capacity, authenticity, legal validity, or prior financing. Partial invoicing stays unknown without a trusted allocation ledger; it does not suppress resolved over-order quantities or above-order payables. Printed amounts and unit prices use exact Decimal equality on declared currency/tax bases. Every mismatch requires handoff review and caps compatible-invoice confidence below 0.80. See [the financial decision](docs/adr/0005-exact-financial-comparison-and-review.md).
 
 ## Extraction and privacy
 

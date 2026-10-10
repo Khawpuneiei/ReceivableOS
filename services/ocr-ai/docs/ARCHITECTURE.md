@@ -30,7 +30,7 @@ flowchart TD
 | `layout.py` | Assign explicit labels to same-page, same-source adjacent values using vertical overlap; preserve separate panels and exact source spans; recognize an explicit five-column table schema |
 | `extract.py`, `normalize.py` | Exact English/Thai and experimental Simplified Chinese role aliases; typed nullable fields; explicit locale/ISO currency/date normalization; redact observed bank accounts from every public field |
 | `qwen.py` | One local, schema-constrained candidate reader with no tools, credentials or authoritative field writes; disagreement/unavailable/alert outcomes cause review |
-| `validate.py`, `compare.py` | Deterministic arithmetic, jurisdiction-scoped identifiers and independently uploaded PO comparisons; incomplete rows/pages prevent false aggregate math allegations; unknown allocations remain unknown |
+| `validate.py`, `compare.py` | Bounded exact Decimal arithmetic, jurisdiction-scoped identifiers and exact printed PO comparisons; incomplete rows/pages prevent false aggregate math allegations; partial allocation cannot hide resolved over-order terms; rounding/zero face value requires review |
 | `fingerprint.py`, `history.py` | Preserve registry v1, use exact/scoped local semantic v2 and institution-scoped bank v2; atomic idempotency and duplicate detection, 500-observation cap, private SQLite metadata |
 | `graph.py`, `fraud.py` | One typed graph implementation used by rules and finding-scoped export; no names-only merges or links through shared buyers; unique-code noisy-OR remains an uncalibrated signal aggregation |
 | `pipeline.py`, `main.py` | Compose evidence, comparison and observation stages; bounded admission and safe errors; produce backward-compatible extraction or explicit partial pair output and additive handoff metadata |
@@ -55,4 +55,4 @@ The handoff binds an observation ID to the one or two uploaded document hashes, 
 
 Wallet/security owners must define service authentication, freshness/replay handling, response/request binding, evidence retention and key rotation. Policy must enforce review/injection/risk rules; registry and wallet must independently enforce duplicate financing, PO allocations, verified payees and mandates. These remain owner decisions, not implemented guarantees here. No other-service imports or shared schema edits were needed.
 
-See [architecture validation](ARCHITECTURE_VALIDATION.md) for current measured results and limits. Earlier reliability artifacts remain historical evidence rather than being rewritten with new scores.
+See [the financial retest](FINTECH_RETEST.md) for current measured results and limits, and [the financial decision](adr/0005-exact-financial-comparison-and-review.md) for comparison-v2 and consumer review invariants. [Architecture validation](ARCHITECTURE_VALIDATION.md) and earlier artifacts retain their original measurements.

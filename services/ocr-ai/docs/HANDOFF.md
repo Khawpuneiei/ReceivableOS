@@ -2,6 +2,8 @@
 
 Status: ready for owner review; no owner agreement or downstream adoption claimed.
 
+The [financial retest](FINTECH_RETEST.md) adds `comparison_version: invoice-po-rules-v2`: exact printed financial comparisons and mandatory review for every mismatch, including line-only discrepancies. Unmatched shared projections carry confidence below 0.80. Pair response validation binds both ordered document hashes and the observation ID and rejects inconsistent review state; it does not authenticate transport or verify signatures. Partial invoicing preserves resolved over-order discrepancies. Zero face value and small internal rounding differences require review without an automatic fraud accusation.
+
 | Consumer input | Required interpretation |
 |---|---|
 | `/ocr/extract` shared fields | Existing request/response shape preserved. Incomplete required evidence returns 422. Respect injection flags, fraud score and confidence; never infer acceptance from HTTP success |

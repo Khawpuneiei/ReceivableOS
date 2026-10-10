@@ -2,6 +2,8 @@
 
 Status: implemented locally for review, not adopted by shared schemas or another service. The user accepted the Q2 partial-result plan. Existing `/ocr/extract` keeps multipart `file` and a response compatible with `shared.schemas.ExtractedInvoice`; unresolved required fields return 422. Optional OCR-owned extensions carry evidence and review details.
 
+The current optional handoff declares `comparison_version: invoice-po-rules-v2`. Exact printed monetary/price comparisons require resolved matching currency and tax bases. Partial allocation uncertainty does not erase resolved over-order quantities or above-order payables. Any mismatch requires review and compatible confidence below 0.80. Both hashes, observation ID, pair status and handoff review must agree; these are internal consistency checks, not service authentication. See [financial semantics](adr/0005-exact-financial-comparison-and-review.md).
+
 `POST /ocr/verify` accepts required multipart `invoice_file` and `po_file`, each independently validated and parsed. The local `ocr-local-v1` result contains:
 
 | Field | Meaning |

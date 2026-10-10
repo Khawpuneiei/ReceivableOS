@@ -1,6 +1,8 @@
 # OCR AI implementation and measured results
 
-Status: OCR-owned architecture upgrade ready for review on `ocr/evidence-fraud-graph`; the user authorized updating this branch. Shared schemas and other-service implementations remain unchanged. See [current architecture validation](../services/ocr-ai/docs/ARCHITECTURE_VALIDATION.md); earlier sections retain historical measurements. All documents are synthetic, not production or real-world performance.
+Status: OCR-owned architecture and financial comparison fixes ready for review on `ocr/evidence-fraud-graph`; the user authorized updating this branch. Shared schemas and other-service implementations remain unchanged. See [current financial retest](../services/ocr-ai/docs/FINTECH_RETEST.md); earlier sections retain historical measurements. All documents are synthetic, not production or real-world performance.
+
+The financial retest passes 131 service tests. Comparison-v2 preserves exact printed discrepancies and over-order terms during partial invoicing; every mismatch requires handoff review and compatible confidence below 0.80. Numeric bounds prevent oversized-amount errors, local identity ignores ambient Decimal precision, and zero/rounding cases require review without an automatic fraud accusation. English/Chinese/Thai corpus measurements and mock transport remain compatible; Qwen's benign false alerts and owner integration gaps remain explicit in the report.
 
 ## Implemented behavior
 

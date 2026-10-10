@@ -15,3 +15,5 @@ The six user-authorized workstreams were exercised on 10 October 2026. Five inve
 | Independent validation | [Select permitted independent English-first evaluation documents](tickets/independent-source-selection.md) | research | Allowed sources and an independent annotation/holdout route |
 
 The user subsequently authorized [Upgrade spatial extraction and versioned fraud handoff](tickets/architecture-upgrade.md), now implemented and measured. It supersedes the English/Chinese spike proposals for bounded anchors and explicit tables; general vendor layouts, native Chinese forms and independent validation remain open scope. Qwen's prompt stays unchanged and candidate authority stays unchanged. Deployment targets and consumer adoption remain owner decisions.
+
+[Retest financial comparisons and enforce consumer review invariants](tickets/fintech-retest.md) is resolved with 131 passing service tests and [fresh evidence](../FINTECH_RETEST.md). It preserves source discrepancies and consumer review while leaving financial authority and the two external frontier decisions unchanged.

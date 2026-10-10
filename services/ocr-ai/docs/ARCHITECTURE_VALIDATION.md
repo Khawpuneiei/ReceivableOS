@@ -1,5 +1,7 @@
 # Architecture upgrade validation
 
+Historical architecture increment. The subsequent [financial retest](FINTECH_RETEST.md) records the current source and regression results; the measurements below remain unchanged.
+
 10 October 2026. All document examples and annotations are synthetic. See [architecture](ARCHITECTURE.md) and [consumer handoff](HANDOFF.md). Earlier reports retain their original measurements.
 
 ## Header and line evidence
