@@ -24,6 +24,31 @@ pytest services/policy-ai
 ruff check services/policy-ai
 ```
 
+## Train
+
+Training is offline and optional; serving reads the committed files in `model/` and needs only `requirements.txt`.
+
+```bash
+python3 -m pip install -r services/policy-ai/requirements-train.txt
+cd services/policy-ai
+PYTHONPATH=.:../.. python -m training.synth     # 200,000 synthetic invoices -> data/training/ (git-ignored), ~4 s
+PYTHONPATH=.:../.. python -m training.train     # LR scorecard + calibrated LightGBM -> model/, ~25 s
+```
+
+The data is **synthetic**, drawn from a known latent model (see [`training/README.md`](training/README.md)), so
+these metrics show a correct, calibrated pipeline, not real-world accuracy. Test split = cohorts 21-24, the drifted
+ones (33,335 rows, base rate 4.6%):
+
+| Model | AUC | PR-AUC | Brier | ECE | KS | Served |
+|---|---|---|---|---|---|---|
+| LR scorecard `credit-lr-2026-10-10.2` | 0.8909 | 0.4083 | 0.03379 | 0.0018 | 0.627 | **yes** (lower test Brier) |
+| LightGBM + isotonic `credit-lgbm-2026-10-10.2` | 0.8873 | 0.3927 | 0.03432 | 0.0047 | 0.611 | no |
+
+Targets: AUC ≥ 0.75, ECE ≤ 0.03 (both met by both models). Demo PDs with the served model: scenario 1 0.0027,
+scenario 3 0.00463, scenario 8 0.00337, all inside Finance's pricing windows; across 12 refits with different seeds
+they stay inside (ranges in `training/README.md`). Re-running `training.train` on the same CSV gives byte-identical
+files.
+
 ## Implementation progress
 
 Built feature by feature.
