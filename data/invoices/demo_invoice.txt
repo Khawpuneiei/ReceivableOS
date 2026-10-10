@@ -1,6 +1,6 @@
-INVOICE INV-0001
-Supplier: Demo Supplier Co., Ltd.
-Buyer: Demo Buyer Plc.
-Issue date: 2026-10-10    Due date: 2026-12-09
-1 x Industrial components    10,000.00 USD
-Total: 10,000.00 USD
+TAX INVOICE SFP-2026-0101
+Supplier: Siam Fresh Pack Co., Ltd.
+Buyer: Mekong Basket Retail Co., Ltd.
+Issue date: 2026-10-10    Due date: 2026-11-24 (45 days)
+Packaged fresh produce, October delivery    749,000.00 THB
+Total: 749,000.00 THB
