@@ -46,6 +46,8 @@ def test_review_sentence_2m_per_day_sets_the_daily_cap():
         ("2 million baht daily", "daily_cap", "2000000.00"),
         ("2mn/day", "daily_cap", "2000000.00"),
         ("daily limit 1.5m", "daily_cap", "1500000.00"),
+        ("daily 1.5m", "daily_cap", "1500000.00"),
+        ("daily THB 2,000,000", "daily_cap", "2000000.00"),
         ("per day no more than 2500k", "daily_cap", "2500000.00"),
         ("2000000 บาท ต่อวัน", "daily_cap", "2000000.00"),
         ("วันละ 2,000,000 บาท", "daily_cap", "2000000.00"),
@@ -84,6 +86,25 @@ def test_any_other_unread_number_is_refused_rather_than_ignored():
     assert ("text", "UNRECOGNISED_NUMBER") in _codes("Invoices due within 60 days, advance 70%")
     # an amount next to "invoice" that isn't a recognised cap phrase is refused, not guessed
     assert ("max_amount_per_tx", "UNPARSED_CAP") in _codes("Finance my THB 749,000 invoice")
+
+
+def test_a_percentage_after_daily_is_never_read_as_an_amount():
+    assert _mandate("advance daily 70%")["max_ltv"] == "0.70"
+    assert ("text", "UNRECOGNISED_NUMBER") in _codes("daily limit 70%")
+
+
+@pytest.mark.parametrize(
+    ("text", "days"),
+    [("valid 7 days", 7), ("valid for 7 days", 7), ("good for 14 days", 14), ("expires in 7 days", 7)],
+)
+def test_stated_validity_in_days_sets_expires_at(text, days):
+    envelope = compile_mandate(text, now=NOW)
+    assert datetime.fromisoformat(envelope["mandate"]["expires_at"]) == NOW + timedelta(days=days)
+    assert "expires_at" in envelope["fields_from_text"]
+
+
+def test_validity_beyond_the_platform_maximum_is_refused():
+    assert ("expires_at", "EXPIRY_INVALID") in _codes("valid 400 days")
 
 
 # --- 2. floors are never caps ---
@@ -136,7 +157,14 @@ def test_maximum_wording_is_a_cap(text, field, value):
 def test_never_looser_than_the_sentence_property():
     """Random caps in random phrasings: the compiled cap equals the stated one, or the sentence is a 422."""
     rng = random.Random(11)
-    daily = ["{a}m per day", "up to THB {a}m a day", "daily cap {a}m", "{a} million baht daily", "{a}m/day"]
+    daily = [
+        "{a}m per day",
+        "up to THB {a}m a day",
+        "daily cap {a}m",
+        "{a} million baht daily",
+        "{a}m/day",
+        "daily {a}m",
+    ]
     per_tx = ["{b}k per invoice", "max {b}k per transaction", "per transaction up to {b}k"]
     floors = ["at least {a}m per day", "minimum {b}k per invoice", "no less than {p}% advance"]
     compiled = 0

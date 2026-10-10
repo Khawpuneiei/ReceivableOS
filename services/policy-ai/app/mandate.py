@@ -102,7 +102,11 @@ _MONEY_PATTERNS: dict[str, list[re.Pattern[str]]] = {
         re.compile(_AMOUNT + r"\s*" + _PER_DAY),
         re.compile(r"วันละ\s*" + _AMOUNT),
         re.compile(_AMOUNT + r"\s*(?:in total\s*)?daily\b"),
-        re.compile(r"\bdaily\s+(?:cap|limit|maximum|max|total|budget)\s*(?:of|at|is|:)?\s*" + _AMOUNT),
+        re.compile(
+            r"\bdaily\s+(?:(?:cap|limit|maximum|max|total|budget)\s*(?:of|at|is|:)?\s*)?"
+            + _AMOUNT
+            + r"(?![\d.,]*\s*%)"  # "daily 1.5m" is a cap; "advance daily 70%" is a rate, not THB 70
+        ),
         re.compile(r"\b(?:per|a|each|every)\s+day\b" + _CLAUSE_GAP + _AMOUNT),
     ],
 }
@@ -143,7 +147,7 @@ _CURRENCY = re.compile(r"\b(thb|usd|baht|dollars?)\b|(฿|\$|บาท)")
 _PAYEE = re.compile(r"\b0x\w+")
 _PAYEE_SHAPE = re.compile(r"^0x[0-9a-f]{1,40}$|^0xsupplier$")
 _UNTIL = re.compile(r"\b(?:until|till|through|expires?(?: on)?|valid to)\s+(\d{4}-\d{2}-\d{2})\b")
-_FOR_DAYS = re.compile(r"\bfor\s+(\d{1,4})\s+days?\b")
+_FOR_DAYS = re.compile(r"\b(?:for|valid|good|expires?\s+in)\s+(?:for\s+)?(\d{1,4})\s+days?\b")
 
 
 class CompileRequest(BaseModel):
