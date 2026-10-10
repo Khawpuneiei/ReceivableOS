@@ -169,9 +169,10 @@ services/agent-wallet/
 └── tests/
 ```
 
-Use `shared/money.py` (PR #2: `fee_rate_30d_to_apr`, `apr_to_fee_rate_30d`) and `shared/llm_client.py` once they
-land. The token-unit helpers (`to_units` / `from_units`, 2 decimals) aren't in `shared/money.py` yet: write them in
-`app/money.py` (or propose them for `shared/`).
+Import money helpers from `shared/money.py`: `fee_rate_30d_to_apr`, `apr_to_fee_rate_30d`, and `to_units` /
+`from_units` (2 decimals for tTHB; reject extra precision and negatives). Don't write your own copy. Use
+`shared/llm_client.py` when it lands. **The wallet models and `to_units`/`from_units` reach `main` only when P merges
+PR #9**; until then, base your branch on PR #9's branch or wait for the merge.
 
 ---
 
@@ -389,7 +390,7 @@ class LedgerAdapter(Protocol):
 
 ## 6. API
 
-Request/response models come from `shared/schemas.py` (PR #2): `WalletRequest` (execute), `WalletRegisterRequest`,
+Request/response models come from `shared/schemas.py` (PR #9; on `main` once P merges it): `WalletRequest` (execute), `WalletRegisterRequest`,
 `WalletApproveRequest`, `WalletSettleRequest`, `MandateActivateRequest`, `WalletConfirmRequest`, `WalletResult`,
 `TxStatus`, `GuardCheck`. Import them; don't redeclare. Only wallet-internal types (Mandate, intents, GuardResult)
 live in `app/models.py`.
@@ -461,7 +462,7 @@ Response (tx result, all write endpoints):
 }
 ```
 
-`status ∈ executed | blocked | pending_approval | failed` (`shared.schemas.TxStatus` in PR #2). `block_reason` = the first blocking
+`status ∈ executed | blocked | pending_approval | failed` (`shared.schemas.TxStatus`). `block_reason` = the first blocking
 code; `checks` (optional extra) lists all. Guard blocks and reverts are HTTP 200 with `status: blocked`; 403 for bad
 owner tokens; 422 for malformed bodies.
 
@@ -632,7 +633,7 @@ for the timeline; WeBASE block-browser link in `explorer_url` if WeBASE runs; la
 
 ### 8.3 Env (root `.env.example` is PM-owned: propose one-line additions in your PR)
 
-Existing (PR #2): `WALLET_URL`, `SETTLEMENT_TOKEN=tTHB`, `CHAIN_MODE=mock|fisco`, `CHAIN_RPC_URL`, `CHAIN_GROUP_ID`,
+Existing (`main` + PR #9): `WALLET_URL`, `SETTLEMENT_TOKEN=tTHB`, `CHAIN_MODE=mock|fisco`, `CHAIN_RPC_URL`, `CHAIN_GROUP_ID`,
 `CHAIN_ACCOUNT_KEY_PATH` (agent key), `CHAIN_DEPLOYMENTS_FILE` (contract addresses), `WALLET_CURRENCY=THB`,
 `WALLET_AMOUNT_DECIMALS=2`, `WALLET_MAX_TX_AMOUNT`, `WALLET_HUMAN_REVIEW_ABOVE`, `WALLET_PAYEE_ALLOWLIST`,
 `FINGERPRINT_HMAC_KEY` (same value as ocr-ai), `LLM_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`.
@@ -640,8 +641,7 @@ To add: `CHAIN_OWNER_KEY_PATH`, `CHAIN_APPROVER_KEY_PATH`, `CHAIN_RISK_ORACLE_KE
 `WALLET_OWNER_TOKEN`, `WALLET_APPROVER_TOKEN`, `DEMO_MODE=0`, `DECISION_HMAC_KEY`, `REQUIRE_SIGNED_DECISION=false`,
 `AGENT_CANARY`, `PLATFORM_FEE_RATE=0.003`.
 Demo values agreed with the Policy and Controls threads: `WALLET_MAX_TX_AMOUNT=1500000.00`, `WALLET_DAILY_CAP=3000000.00`,
-`WALLET_HUMAN_REVIEW_ABOVE=837500.00` (inclusive). PR #2 currently has 3,000,000 / 1,000,000; the coordinator is
-aligning it. Env values are platform ceilings and defaults; the active mandate can only tighten them. **All wallet
+`WALLET_HUMAN_REVIEW_ABOVE=837500.00` (inclusive), as set in PR #9's `.env.example`. Env values are platform ceilings and defaults; the active mandate can only tighten them. **All wallet
 money config is THB with 2 decimals.**
 
 ---
@@ -744,10 +744,10 @@ GuardCheck); never redeclare them. In app/models.py define only internal types: 
 aliases max_advance_rate, max_pd, human_review_above_thb, allowed_settlement_asset, duplicate_invoice_policy;
 Decimal money; mandate_hash = keccak256 of canonical JSON), GuardResult, and intents (RegisterIntent,
 ApproveIntent, DrawIntent, SettleIntent).
-If shared/money.py exists use it; otherwise create app/money.py with to_units/from_units (token decimals, reject
-excess precision), apr_from_fee_rate (fee_rate*365/30) and apr_to_bps rounding up. Add app/settings.py
+Use shared/money.py (to_units, from_units, fee_rate_30d_to_apr; needs PR #9 merged) and add only an apr_to_bps
+helper that rounds up. Add app/settings.py
 (pydantic-settings, env in 8.3) and config/mandate.demo.json + config/payees.json with the Siam Fresh Pack values.
-Tests: money edge cases, alias parsing, hash stability, all example JSONs parse. Run pytest and ruff.
+Tests: apr_to_bps rounding, alias parsing, hash stability, all example JSONs parse. Run pytest and ruff.
 ```
 
 **P2: token and registry contracts**
@@ -802,7 +802,7 @@ mock and fisco (skip fisco when the node is down).
 Implement app/guard/pipeline.py, provenance.py, mandate.py, approval.py per CLAUDE.md 5.4 and 6.4: run all checks,
 collect every failure, block if any blocking check fails, escalate NeedsHumanApproval to pending_approval.
 decision_hash = keccak256 of canonical JSON of the decision without decision_hash; for execute it must also equal
-the hash approved on-chain. APR from the request's apr, else from fee_rate. APR from the request's apr, else decision.apr, else shared/money.py. Payee must resolve via payees.json,
+the hash approved on-chain. APR from the request's apr, else decision.apr, else shared/money.py. Payee must resolve via payees.json,
 be allowlisted and equal the receivable's bound seller. HMAC only when REQUIRE_SIGNED_DECISION=true.
 DEMO_MODE=1 + skip_offchain_checks bypasses L0-L4 (audit it). Then app/audit/log.py per 5.8 with verify() and the
 audit endpoints, and scripts/anchor_audit.py. One pytest per code using Siam Fresh Pack numbers (19.5% APR,
