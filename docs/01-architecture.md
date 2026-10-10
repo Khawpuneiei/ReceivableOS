@@ -273,8 +273,8 @@ Response `200`:
 ```
 This matches the OCR thread's contract (`services/ocr-ai/CLAUDE.md`): the service returns the shared `ExtractedInvoice` plus optional extras that Policy ignores. Two keys matter to the rest of the system:
 
-- **`invoice_fingerprint`** (`0x` + 64 hex, bytes32): sha256 of supplier tax id, buyer tax id, normalised invoice no., amount, currency and issue date. **This is the on-chain duplicate key.** It survives re-saving and re-scanning, and holds no readable PII.
-- **`doc_hash`** (`sha256:` + hex of the file bytes): stored on-chain as evidence of the exact file that was underwritten, not used for duplicate blocking (a re-saved PDF changes it).
+- **`invoice_fingerprint`** (`0x` + 64 hex, bytes32, required): HMAC-SHA256, keyed with `FINGERPRINT_HMAC_KEY`, of the canonical content (supplier tax id, buyer tax id, normalised invoice no., amount, currency, issue date). **This is the on-chain duplicate key.** It survives re-saving and re-scanning. The key matters: those fields are guessable, so a plain hash on a public ledger could be brute-forced back to the tax ids; every service that computes fingerprints must share the same key.
+- **`doc_hash`** (`sha256:` + hex of the file bytes): evidence of the exact file that was underwritten, stored at registration; optional on the later wallet calls and never used for duplicate blocking (a re-saved PDF changes it).
 
 Flags stay plain code strings in the contract (`injection_flags`, `fraud_flags`); the matching `injection_details` / `fraud_details` lists carry severity, location and evidence for the UI and audit log. (An earlier draft of this doc proposed making the flags themselves objects; this keeps the contract stable instead.) Fraud codes include `DUPLICATE_HASH` (same file), `DUPLICATE_INVOICE` (same fingerprint), `NEAR_DUPLICATE`, `INJECTION_ATTEMPT` and the rest of the OCR thread's list.
 
@@ -481,7 +481,7 @@ machine in Part 3.4, lenders.yaml and the offer-selection rule, calling the othe
 ```
 Build services/ocr-ai: FastAPI on :8001 implementing POST /ocr/extract exactly as in docs/01-architecture.md 5.1.
 Step 1: stub returning shared/fixtures. Step 2: pdfplumber text extraction + LLM structured extraction via shared/llm_client.py
-with a JSON schema; compute doc_hash as "sha256:" + hex sha256 of the raw file bytes and invoice_fingerprint as in services/ocr-ai/CLAUDE.md §8.4. Step 3: injection detector that scans every
+with a JSON schema; compute doc_hash as "sha256:" + hex sha256 of the raw file bytes and invoice_fingerprint as "0x" + HMAC-SHA256(FINGERPRINT_HMAC_KEY, canonical content) per services/ocr-ai/CLAUDE.md §8.4. Step 3: injection detector that scans every
 extracted string for instruction-like content and returns injection_flags without letting that text reach any prompt
 as instructions. Step 4: fraud flags (duplicate hash store, total mismatch, date checks, shared bank account) and a
 fraud_score in [0,1]. Write pytest cases for the clean, injection and duplicate fixtures.
