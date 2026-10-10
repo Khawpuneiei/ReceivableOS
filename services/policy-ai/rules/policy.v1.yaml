@@ -1,0 +1,93 @@
+# Credit policy rule set (services/policy-ai/CLAUDE.md section 6.2). Loaded and validated at startup by app/rules.py.
+# Every threshold lives here, never in Python. Changing a number = editing this file + bumping `version`.
+# FINANCE-TBD = Finance confirms the number. Rule ids are matched to Python predicates by name; no expression here
+# is ever evaluated.
+version: credit-policy-v0.1
+currency_allowlist: [THB, USD]
+lgd: 0.45                              # FINANCE-TBD
+decision_ttl_hours: 24
+defaults:
+  pool_capacity: {THB: "100000000.00", USD: "3000000.00"}
+  max_pd: 0.05                         # used when no mandate is passed
+  human_review_above: {THB: "837500.00", USD: "25000.00"}   # mandate value wins when passed
+
+hard_rules:                            # team-wide (docs/00-scope.md §4.2); change only with P
+  - {id: HARD.FRAUD_SCORE,    outcome: reject, param: {min_fraud_score: 0.30}, message: "OCR fraud score at or above the reject cutoff"}
+  - {id: HARD.INJECTION,      outcome: review, message: "Prompt-injection content found in the document"}
+  - {id: HARD.LOW_CONFIDENCE, outcome: review, param: {min_confidence: 0.80}, message: "OCR confidence below the minimum"}
+  - {id: HARD.KYC_UNKNOWN,    outcome: review, message: "Seller KYC status unknown"}
+
+knockouts:                             # outcome: reject
+  # Flag lists hold both OCR's codes (services/ocr-ai/CLAUDE.md §8.2) and the brief's uppercase names.
+  - {id: KO.DUPLICATE,        param: {flags: [duplicate_invoice_hash, duplicate_fingerprint, DUPLICATE_HASH, DUPLICATE_INVOICE]}, message: "Invoice already registered or financed"}
+  - {id: KO.PO_MISMATCH,      param: {flags: [po_amount_mismatch, PO_MISMATCH]}, message: "Invoice inconsistent with its PO"}  # OCR raises the flag
+  - {id: KO.KYC_INVALID,      message: "Seller KYC invalid or expired"}
+  - {id: KO.OVERDUE,          message: "Invoice already past due"}
+  - {id: KO.TENOR_TOO_SHORT,  param: {min_tenor_days: 7},   message: "Less than 7 days to due date"}
+  - {id: KO.TENOR_TOO_LONG,   param: {max_tenor_days: 120}, message: "Tenor beyond 120 days"}
+  - {id: KO.TOO_OLD,          param: {max_age_days: 90},    message: "Invoice older than 90 days"}   # FINANCE-TBD
+  - {id: KO.BUYER_TIER,       param: {ineligible: [D]},     message: "Buyer credit tier not eligible"}
+  - {id: KO.CURRENCY,         message: "Currency not supported"}
+  - {id: KO.DATES_INVALID,    message: "Due date before issue date"}
+  - {id: KO.NO_HEADROOM,      message: "No remaining facility for buyer or seller"}
+  # Checked against the unclamped annual risk price: the clamped fee (max 0.0123 per 30 days) is always under 15% APR.
+  - {id: KO.PRICING,          param: {max_apr: 0.15}, message: "Risk price above 15% APR legal ceiling"}
+
+pd_gates:
+  - {id: KO.PD_TOO_HIGH,      param: {reject_above: 0.15}, message: "Predicted default above the platform maximum"}   # FINANCE-TBD
+  - {id: REVIEW.PD_ABOVE_CAP, param: {review_above: 0.05}, message: "Predicted default above the review cap"}   # mandate max_predicted_default wins if lower
+
+review_triggers:                       # outcome: review
+  - {id: REVIEW.UNCONFIRMED_BUYER,    message: "Buyer has not confirmed the invoice"}
+  - {id: REVIEW.FRAUD_FLAGS,          message: "OCR raised fraud flags"}   # any flag not handled by a KO
+  - {id: REVIEW.LINE_ITEMS_MISMATCH,  param: {tolerance: 0.01, vat_rates: [0.0, 0.07]}, message: "Line items (± VAT) don't sum to the total"}
+  - {id: REVIEW.NEW_SUPPLIER,         param: {min_financed: 3}, message: "Fewer than 3 invoices financed before"}
+  # amount >= human_review_above. Off by default: the wallet already sends large draws to human approval
+  # (pending_approval), and a policy review here would block that demo path. P decides; flip `enabled` to switch.
+  - {id: REVIEW.LARGE_TICKET,         param: {enabled: false, basis: amount}, message: "At or above the human-review amount"}
+  - {id: REVIEW.CONCENTRATION,        param: {max_buyer_share: 0.30, max_supplier_share: 0.30}, message: "Exposure to one buyer or seller above the pool share cap"}
+  - {id: REVIEW.THIN_PROFILE,         message: "Buyer has no tier or rating"}
+  - {id: REVIEW.MANDATE_APR,          message: "Risk price above the seller's APR mandate"}
+
+terms:
+  base_advance_by_tier: {A: 0.80, B: 0.75, C: 0.65}   # FINANCE-TBD (primer: 80–90% strong confirmed, 60–75% weaker)
+  haircuts:
+    - {id: TERMS.HAIRCUT_UNCONFIRMED,                            minus: 0.20, message: "Buyer has not confirmed the invoice"}
+    - {id: TERMS.HAIRCUT_TENOR,    param: {tenor_above: 90},     minus: 0.05, message: "Tenor above the haircut threshold"}
+    - {id: TERMS.HAIRCUT_AGE,      param: {age_above: 60},       minus: 0.05, message: "Invoice age above the haircut threshold"}
+    - {id: TERMS.HAIRCUT_DILUTION, param: {dilution_above: 0.05}, minus: 0.05, message: "Seller dilution above the haircut threshold"}
+    - {id: TERMS.HAIRCUT_PD,       param: {pd_above: 0.03},      minus: 0.05, message: "Predicted default above the haircut threshold"}
+  floor_advance: 0.50
+  max_single_invoice_limit: {THB: "3000000.00", USD: "90000.00"}
+  caps:                                # reason ids for every step that lowers the advance or the limit
+    - {id: TERMS.FLOOR,              message: "Advance raised to the platform floor"}
+    - {id: TERMS.MANDATE_CAP,        message: "Advance capped by the mandate"}
+    - {id: TERMS.CAP_BUYER_LIMIT,    message: "Limit capped by the buyer's remaining limit"}
+    - {id: TERMS.CAP_FACILITY,       message: "Limit capped by the seller's remaining facility"}
+    - {id: TERMS.CAP_SINGLE_INVOICE, message: "Limit capped by the single-invoice maximum"}
+    - {id: TERMS.CAP_MANDATE_TX,     message: "Limit capped by the mandate's per-transaction maximum"}
+
+pricing:
+  id: PRICING.RISK_FEE
+  message: "Risk-based fee per 30 days"
+  cost_of_funds: 0.04                  # annual, FINANCE-TBD (primer §10 uses 4%)
+  margin: 0.06                         # annual lender margin, FINANCE-TBD
+  unconfirmed_premium: 0.03            # annual, added when the buyer hasn't confirmed
+  min_pricing_tenor_days: 60           # short invoices priced as 60 days for the EL premium
+  fee_step: 0.0005                     # quotes move in 0.05% steps; round UP
+  min_fee_rate: 0.005                  # per 30 days
+  max_fee_rate: 0.0123                 # per 30 days (= 15% APR)
+
+mandate_limits:                        # platform maxima for the mandate compiler (§7)
+  max_ltv: 0.90
+  max_apr: 0.15
+  max_predicted_default: 0.20
+  # Money ceilings: a mandate may only tighten these. USD values are FINANCE-TBD at 33.5 THB/USD.
+  max_amount_per_tx: {THB: "1500000.00", USD: "45000.00"}
+  daily_cap: {THB: "3000000.00", USD: "90000.00"}
+  human_review_above: {THB: "837500.00", USD: "25000.00"}
+  defaults: {max_ltv: 0.70, max_apr: 0.12, max_predicted_default: 0.05,
+             max_amount_per_tx: {THB: "1500000.00", USD: "45000.00"}, daily_cap: {THB: "3000000.00", USD: "90000.00"}}   # FINANCE-TBD
+  default_validity_days: 30
+  max_validity_days: 365
+  registered_payees: ["0xSUPPLIER"]
