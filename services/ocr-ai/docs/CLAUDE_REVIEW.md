@@ -63,3 +63,9 @@ These owner assignments are recommendations from the reviewed rules and observed
 ## Checklist-driven additions
 
 The guide now documents the user-authorized hosted candidate adapter, token-protected RAM result retrieval, observation-free cache prewarm and English supporting templates. Offline operation needs no cloud account. The shared schema and owner services stay unchanged; two actual Policy violations remain visible. Evidence: [checklist](CHECKLIST_AND_DEMO.md), [fresh release check](RELEASE_CHECK.json), [case loop](CASE_LOOP_RESULTS.json), [model check](CHECKLIST_MODEL_CHECK.json). General document authenticity and live hosted accuracy remain unverified.
+
+## Owner handoff and independent-source follow-up (11 October 2026)
+
+The OCR-owned follow-up is recorded in [POLICY_INTEGRATION_HANDOFF.md](POLICY_INTEGRATION_HANDOFF.md): it fixes the exact Policy guard test matrix, identifies the `duplicate_invoice_hash`/`duplicate_fingerprint`/`po_amount_mismatch` versus uppercase consumer-code mapping decision, and proposes an additive versioned bundle for Invoice/PO/case evidence. It intentionally does not edit `services/policy-ai/`, `services/orchestrator/`, `shared/schemas.py`, or send a teammate message. PM contract review, Policy guards and orchestrator evidence routing remain their owners' tasks.
+
+[DATASET_ACCESS_AND_HOLDOUT.md](DATASET_ACCESS_AND_HOLDOUT.md) records the source review and frozen evaluation protocol. DocILE is a relevant English business-document candidate but requires a dataset token; XFUND is a Chinese form benchmark under CC BY-NC-SA 4.0 rather than an invoice set; SROIE is scanned receipts and its linked data rights need separate confirmation. No external corpus was downloaded or treated as a fraud-label set. The bank token remains a privacy-scoped correlation signal; ownership verification requires an authorized external provider and consent.
