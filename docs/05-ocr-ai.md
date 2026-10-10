@@ -20,7 +20,7 @@
 | Validation | Arithmetic (lines, subtotal + VAT = total), dates, Thai tax-id checksum, ISO currency, "value actually appears in the document" | Deterministic checks are cheap and catch both errors and sloppy forgeries. |
 | Injection defence | 5 layers: (1) architecture: extractor LLM has no tools, outputs a schema, downstream is deterministic; (2) data delimiters + fixed system prompt + a "quarantine" field where the model copies any instructions it sees; (3) deterministic detector for hidden/white/tiny/off-page text, QR payloads, metadata, Unicode tricks, instruction phrases; (4) re-scan of extracted fields; (5) optional classifier | Layer 1 is what makes it safe; layers 2–4 make it visible. |
 | Fraud | 18 named rules with weights, combined as a noisy-OR into `fraud_score`, plus a small IsolationForest anomaly flag; graph checks for shared bank account/director/address and invoice cycles | Every point of the score traces to a named reason. |
-| Duplicate key | `invoice_fingerprint` = sha256 of supplier tax id, buyer tax id, normalised invoice no., amount, currency, issue date, as `0x…` (bytes32) | Survives re-scanning and re-saving, unlike the file hash; no PII in clear, so it can go on chain. |
+| Duplicate key | `invoice_fingerprint` = HMAC-SHA256, keyed with a platform secret (`FINGERPRINT_HMAC_KEY`), over supplier tax id, buyer tax id, normalised invoice no., amount, currency, issue date, as `0x…` (bytes32) | Survives re-scanning and re-saving, unlike the file hash. Keyed so nobody can brute-force guessable fields on chain to learn who trades with whom. |
 
 ## 3. Interfaces
 
@@ -30,8 +30,8 @@
 * **Policy profiles:** the synthetic master data in `data/invoices/master/` includes the `supplier_profile` / `buyer_profile` keys from `integration/samples/profiles.json`.
 * **Agent wallet:** the injected invoices in `data/invoices/` double as the "instruction in invoice text" and "payee swap" cases for its adversarial suite.
 
-### Decisions P needs to make
-1. **Registry key: `invoice_fingerprint`, not `doc_hash`.** `docs/01-architecture.md` has the registry store `doc_hash` (sha256 of the file bytes). Re-saving or re-scanning a PDF changes that hash, so the same invoice financed twice slips through. `invoice_fingerprint` hashes the invoice content (supplier, buyer, number, amount, currency, date) and is also 32 bytes, so the contract change is one field name. `docs/00-scope.md` §4.1 already points here for it. **Recommendation:** registry keys on `invoice_fingerprint`; keep `doc_hash` for the audit trail.
+### Cross-team decisions (record)
+1. **Registry key.** Resolved: `invoice_fingerprint` is in `shared/schemas.py` and the registry keys on it, because a file hash (`doc_hash`) changes when a PDF is re-saved. It is keyed (HMAC) per the Controls and Compliance thread. `doc_hash` stays for the audit trail.
 2. **Demo tax ids.** The Finance primer's `0105559000001` and `0107559000002` fail the Thai tax-id checksum the validator checks. Resolved: Finance adopted `0105559000000` (Siam Fresh Pack) and `0107559000001` (Mekong Basket).
 
 ## 4. Demo invoices (shared scenario from `docs/02-finance-domain.md` §10)

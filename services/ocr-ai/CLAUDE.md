@@ -146,7 +146,7 @@ class ExtractedInvoice(BaseModel):
     fraud_score: float                 # 0–1
     fraud_flags: list[str] = []        # codes, see vocabulary below
     doc_hash: str                      # "sha256:<64 hex of the raw file bytes>"
-    invoice_fingerprint: str           # "0x<64 hex>", content hash; the registry keys on it (§8.4)
+    invoice_fingerprint: str           # "0x<64 hex>", HMAC-SHA256 of canonical content; the registry keys on it (§8.4)
 ```
 
 If `shared/schemas.py` on `main` differs from this when you start, **follow the file** and adjust `app/models.py`; don't edit `shared/`.
@@ -189,7 +189,7 @@ class OcrExtractResponse(ExtractedInvoice):
 
 `injection_flags` = de-duplicated list of `InjectionFinding.type`; `fraud_flags` = list of `FraudFinding.code`. Policy reads the simple lists; the UI and audit log read the details. (`docs/01-architecture.md` §5.1 proposes making the flags objects in the contract itself; if P adopts that, the details become the flags and nothing else changes.)
 
-**`doc_hash` vs `invoice_fingerprint`:** `doc_hash` identifies the exact file; re-saving or re-scanning the PDF changes it, so a fraudster defeats a file-hash duplicate check in seconds. `invoice_fingerprint` hashes the invoice's *content* and survives that (§8.4). Recommend the on-chain `ReceivableRegistry` keys on `invoice_fingerprint`; `docs/00-scope.md` §4.1 already says the registry uses a canonical fingerprint defined here.
+**`doc_hash` vs `invoice_fingerprint`:** `doc_hash` identifies the exact file; re-saving or re-scanning the PDF changes it, so a fraudster defeats a file-hash duplicate check in seconds. `invoice_fingerprint` is a keyed hash (HMAC-SHA256) of the invoice's *content* and survives that (§8.4). Recommend the on-chain `ReceivableRegistry` keys on `invoice_fingerprint`; `docs/00-scope.md` §4.1 already says the registry uses a canonical fingerprint defined here.
 
 Example response body (`fixtures/injected.json`), using the shared demo scenario from `docs/02-finance-domain.md` §10 (variant V4, hidden injection):
 
@@ -456,13 +456,15 @@ networkx `MultiDiGraph`, built from master data + history at startup, updated pe
 
 ### 8.4 `doc_hash` and `invoice_fingerprint` (`app/fingerprint.py`)
 * `doc_hash = "sha256:" + sha256(raw file bytes).hexdigest()` — identifies the exact file (audit trail; catches exact resubmission). Changes if the file is re-saved, so it is **not** the duplicate key.
-* `invoice_fingerprint = "0x" + sha256(canonical.encode("utf-8")).hexdigest()` with
+* `invoice_fingerprint = "0x" + hmac.new(key, canonical.encode("utf-8"), hashlib.sha256).hexdigest()` — a **keyed** hash (HMAC-SHA256), with `key = os.environ["FINGERPRINT_HMAC_KEY"].encode()`, and
   `canonical = "v1|" + supplier_key + "|" + buyer_key + "|" + norm(invoice_no) + "|" + f"{amount:.2f}" + "|" + currency + "|" + issue_date.isoformat()`
   * `supplier_key` / `buyer_key` = tax id digits if present, else the name upper-cased with punctuation and `CO LTD|COMPANY LIMITED|PLC|PCL|LTD|INC` removed.
   * `norm(invoice_no)` = NFKC, upper-case, remove spaces, `-`, `/`, `_`, `.`, strip leading zeros of each numeric run.
-  * 32 bytes, so it maps straight to a Solidity `bytes32` in `ReceivableRegistry`. Contains no PII in clear text, so it can go on chain.
+  * Why keyed: tax ids, invoice numbers and amounts are guessable, so a plain sha256 on chain could be brute-forced to reveal who trades with whom. With an HMAC only holders of the platform secret can compute or test a fingerprint (agreed with the Controls and Compliance thread).
+  * The key is a platform secret: read it from `.env` only, never log it, never put it in fixtures. In dev, if `FINGERPRINT_HMAC_KEY` is unset, use a fixed dev key and log a warning once; every service that computes fingerprints must use the same key, or duplicates won't match.
+  * 32 bytes, so it maps straight to a Solidity `bytes32` in `ReceivableRegistry`, which keys on it.
   * It survives re-scanning, re-rendering and cosmetic edits; changing amount, date, parties or number makes a different fingerprint, which the other rules (`near_duplicate`, `text_image_mismatch`) cover.
-* Unit-test that the same invoice rendered by two different templates gives the same fingerprint.
+* Unit-test that the same invoice rendered by two different templates gives the same fingerprint, and that a different key gives a different one.
 
 ### 8.5 Score (`app/fraud/score.py`)
 * `fraud_score = round(1 − Π(1 − weight_i), 3)` over triggered flags (noisy-OR: one strong signal is enough, weak ones add up, always in [0, 1]).
@@ -563,7 +565,7 @@ Implement services/ocr-ai/datagen/generate.py per services/ocr-ai/CLAUDE.md §9 
 
 **Prompt 2 — ingest, rules extractor, validation, fingerprint**
 ```text
-Implement services/ocr-ai/app/ingest.py, extract/rules_extract.py, validate.py and fingerprint.py per services/ocr-ai/CLAUDE.md §6.2, §6.4 and §8.4. ingest returns a dataclass with doc_hash, page PNGs (170 dpi, max 3), text spans with bbox/size/color/font, plain text, QR payloads via cv2.QRCodeDetector, PDF metadata, annotation text and incremental-save count. rules_extract reads the §4 fields from the text layer of our 3 templates using label anchors and regex. validate implements every check in the §6.4 table, grounding and the field-confidence formula, using Decimal for money. Wire them into POST /ocr/extract (extractor="rules", injection and fraud empty for now), persisting results so GET /ocr/invoices/{id} works. Write services/ocr-ai/scripts/eval.py reporting per-field and invoice-level accuracy on the clean set from data/invoices/labels.jsonl. Iterate until ≥ 90% (aim for 98%). Unit-test the Thai tax id checksum, each validator, and that two templates of the same invoice give the same fingerprint.
+Implement services/ocr-ai/app/ingest.py, extract/rules_extract.py, validate.py and fingerprint.py per services/ocr-ai/CLAUDE.md §6.2, §6.4 and §8.4. ingest returns a dataclass with doc_hash, page PNGs (170 dpi, max 3), text spans with bbox/size/color/font, plain text, QR payloads via cv2.QRCodeDetector, PDF metadata, annotation text and incremental-save count. rules_extract reads the §4 fields from the text layer of our 3 templates using label anchors and regex. validate implements every check in the §6.4 table, grounding and the field-confidence formula, using Decimal for money. Wire them into POST /ocr/extract (extractor="rules", injection and fraud empty for now), persisting results so GET /ocr/invoices/{id} works. Write services/ocr-ai/scripts/eval.py reporting per-field and invoice-level accuracy on the clean set from data/invoices/labels.jsonl. Iterate until ≥ 90% (aim for 98%). Unit-test the Thai tax id checksum, each validator, and that two templates of the same invoice give the same HMAC fingerprint (key from FINGERPRINT_HMAC_KEY, dev fallback with a warning).
 ```
 
 **Prompt 3 — guarded LLM extraction**
