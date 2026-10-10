@@ -4,6 +4,8 @@ This service reads uploaded documents. It has no financing, wallet, delivery, ac
 
 Current architecture uses source geometry for separate panels and explicit line tables, plus experimental Simplified Chinese anchors. Responses add a finding-scoped typed `fraud_graph` and unsigned `handoff` for future wallet/security review. See [architecture](docs/ARCHITECTURE.md), [handoff packet](docs/HANDOFF.md) and [historical financial retest (comparison-v2)](docs/FINTECH_RETEST.md). Older reports are historical evidence.
 
+For polished English business-document examples beyond the OCR stress corpus, see the [synthetic invoice showcase](../../data/invoices/showcase/README.md). It contains two fictional invoice designs, raster previews, and extraction plus invoice-to-PO checks.
+
 ## Run from the repository root
 
 Use Python 3.11 or newer. The tested environment is Apple M5, macOS arm64, Python 3.11.17. Core PDF extraction needs no model or cloud credentials.

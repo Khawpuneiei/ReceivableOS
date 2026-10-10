@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from datagen.generate import document_lines, render_pdf
+from datagen.showcase_invoices import SHOWCASE_PROFILES, build_pdf
 
 from app.extract import extract_document
 from app.history import ObservationStore
@@ -20,6 +21,49 @@ def upload(client, content, headers=None):
     return client.post(
         "/ocr/extract", files={"file": ("../../untrusted.pdf", content, "application/pdf")}, headers=headers
     )
+
+
+@pytest.mark.parametrize(
+    ("filename", "profile_index"),
+    [("northstar_invoice.pdf", 0), ("bluepeak_invoice.pdf", 1)],
+)
+def test_showcase_invoice_layouts_extract_all_fields_and_lines(client, filename, profile_index):
+    showcase = DATA / "showcase"
+    content = (showcase / filename).read_bytes()
+    profile = SHOWCASE_PROFILES[profile_index]
+    response = upload(client, content)
+    assert response.status_code == 200, response.text
+    value = response.json()
+
+    assert value["invoice_no"] == profile["invoice_no"]
+    assert value["amount"] == profile["total"]
+    assert value["currency"] == "USD"
+    assert value["supplier"]["name"] == profile["supplier"]
+    assert value["buyer"]["name"] == profile["buyer"]
+    assert len(value["line_items"]) == 2
+    assert value["validation_flags"] == ["LEGACY_FINGERPRINT_SCOPE_REQUIRES_REVIEW"]
+    assert value["fraud_flags"] == []
+    assert value["review_required"] is True
+
+
+@pytest.mark.parametrize("profile", SHOWCASE_PROFILES, ids=("northstar", "bluepeak"))
+def test_showcase_invoice_and_po_fields_match_under_global_review_guard(client, profile):
+    invoice = (DATA / "showcase" / f"{profile['style']}_invoice.pdf").read_bytes()
+    purchase_order = build_pdf(profile, kind="purchase_order")
+    response = client.post(
+        "/ocr/verify",
+        files={
+            "invoice_file": ("invoice.pdf", invoice, "application/pdf"),
+            "po_file": ("purchase-order.pdf", purchase_order, "application/pdf"),
+        },
+    )
+    assert response.status_code == 200, response.text
+    value = response.json()
+    assert value["status"] == "review"
+    assert value["review_reasons"] == ["LEGACY_FINGERPRINT_SCOPE_REQUIRES_REVIEW"]
+    assert value["invoice"]["document_number"]["value"] == profile["invoice_no"]
+    assert value["invoice"]["amount"]["value"] == profile["total"]
+    assert all(check["status"] == "match" for check in value["checks"])
 
 
 def pair(client, name, language="en"):
@@ -125,9 +169,7 @@ def test_revision_label_requires_human_review(client, marker):
 
 def test_chinese_red_letter_invoice_marker_requires_review():
     parsed = run_worker("parse", (RELIABILITY_DATA / "invoice-zh-stacked-0.pdf").read_bytes())
-    marker = parsed.spans[0].model_copy(
-        update={"text": "红字发票", "ordinal": len(parsed.spans) + 1}
-    )
+    marker = parsed.spans[0].model_copy(update={"text": "红字发票", "ordinal": len(parsed.spans) + 1})
     parsed = parsed.model_copy(update={"spans": [*parsed.spans, marker]})
     extraction = extract_document(parsed, "invoice")
     assert "REVISION_OR_CREDIT_NOTE_REQUIRES_REVIEW" in extraction.document.review_reasons
@@ -172,8 +214,7 @@ def test_same_supplier_bank_token_change_requires_review_without_leaking_account
     assert second["fraud_graph"]["schema_version"] == "ocr-graph-v2"
     assert second["handoff"]["graph_rule_version"] == "graph-rules-v2"
     assert any(
-        edge["relation"] == "BANK_ACCOUNT_CHANGED_CANDIDATE"
-        for edge in second["fraud_graph"]["edges"]
+        edge["relation"] == "BANK_ACCOUNT_CHANGED_CANDIDATE" for edge in second["fraud_graph"]["edges"]
     )
 
 
