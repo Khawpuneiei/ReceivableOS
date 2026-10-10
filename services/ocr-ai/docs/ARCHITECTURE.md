@@ -9,7 +9,11 @@ flowchart TD
     Parser --> Paddle[Staged local PaddleOCR for unreadable pages]
     Parser --> Layout[Spatial roles and explicit table schema]
     Paddle --> Layout
-    Parser --> Qwen[Local Qwen: typed candidates and alerts]
+    Parser --> Qwen[Local Qwen or optional hosted Anthropic: typed candidates]
+    Parser --> QR[Private QR and metadata defence]
+    QR --> Audit
+    Qwen --> Cache[Bounded process-local candidate cache]
+    Cache --> Audit
     Qwen --> Audit[Disagreement and injection review]
     Layout --> Evidence[Partial typed fields with source locations]
     Audit --> Evidence
@@ -58,3 +62,9 @@ The handoff binds an observation ID to the one or two uploaded document hashes, 
 Wallet/security owners must define service authentication, freshness/replay handling, response/request binding, evidence retention and key rotation. Policy must enforce review/injection/risk rules; registry and wallet must independently enforce duplicate financing, PO allocations, verified payees and mandates. These remain owner decisions, not implemented guarantees here. No other-service imports or shared schema edits were needed.
 
 See [the financial retest](FINTECH_RETEST.md) for the historical v2 test results and [line-unit decision](adr/0006-explicit-line-unit-comparison.md) for current v3 unit semantics. [Architecture validation](ARCHITECTURE_VALIDATION.md) and earlier artifacts retain their original measurements.
+
+## Checklist extension and supporting evidence
+
+`app/llm_client.py` adds the user-authorized keyed hosted candidate reader behind the same grounded-authority boundary. `app/cache.py` implements bounded, expiring RAM stores for model candidates and protected GET extraction results. The prewarm route writes no observation; restart/expiry loses warming.
+
+`app/supporting.py` reads ten explicitly labelled English supporting templates using isolated parser evidence and links their claims to the independent Invoice/PO pair. It checks receipt quantities/units, buyer acceptance claims, references and adjustments, excludes duplicate/unrelated adjustments, and always retains unknown issuer authenticity/review. It does not extend the financial graph with authenticated delivery/ownership/settlement facts. The case response is an OCR-local contract, not yet adopted by consumers. Full endpoint/field/support details are in [the checklist guide](CHECKLIST_AND_DEMO.md).

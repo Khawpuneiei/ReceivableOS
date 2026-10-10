@@ -1,6 +1,6 @@
 # OCR AI service guide
 
-This file is the working guide for any coding assistant or engineer in `services/ocr-ai/`. It does not require Claude Code, a Claude account, a Claude API key, or any hosted LLM. The running service uses deterministic extraction, optional local PaddleOCR, and an optional local Qwen-VL candidate check.
+This guide does not require Claude Code or a Claude account for offline extraction. The service uses deterministic extraction, optional local PaddleOCR/Qwen-VL, and an optional hosted Anthropic vision candidate adapter authorized by the user on 2026-10-10. Hosted inference requires explicitly configured provider, model and API key; no cloud key is required by the rules path.
 
 ## Read these sources in order
 
@@ -26,6 +26,7 @@ For the active OCR/fraud work, the user directed use of `ocr/evidence-fraud-grap
 - Compare a separately uploaded invoice and PO using only values grounded in those documents. Unknown evidence stays unknown.
 - Detect exact and semantic repeat observations, selected financial inconsistencies, shared scoped bank tokens, and suspicious multi-signal clusters.
 - Return an additive graph and unsigned consumer handoff while preserving the existing `shared.schemas.ExtractedInvoice` projection where required fields are resolved.
+- Read ten explicitly labelled English supporting-document templates through `/ocr/cases/verify`, linking claims to an uploaded Invoice/PO. Keep issuer authentication unknown, balances non-authoritative, and cases in review. General bank statements, identity documents, legal contracts and native e-invoice XML are not implemented.
 
 The service does not verify delivery, acceptance, tax registration, legal authenticity, bank-account ownership, PO capacity, prior financing across all lenders, creditworthiness, or permission to release funds. A match, graph, fraud score, confidence, or HTTP 200 is not authorization. Do not describe the fraud score as a probability; it is an uncalibrated aggregation of named rules.
 
@@ -53,6 +54,8 @@ The parser and OCR run in child processes with a restricted environment. The ser
 | `app/layout.py`, `app/extract.py` | Spatial rows, explicit role labels, supported line-table shape, evidence-grounded partial extraction and injection patterns |
 | `app/normalize.py`, `app/validate.py` | Locale-aware Decimal/date/currency normalization and deterministic validation |
 | `app/qwen.py` | Strict local Qwen-VL candidate schema and loopback-only HTTP call |
+| `app/llm_client.py`, `app/cache.py` | Hosted vision candidates and bounded process-local TTL caches; no disk persistence of model candidates or raw documents |
+| `app/supporting.py` | English supporting-template fields, case relationships and non-authoritative declared balances |
 | `app/compare.py` | Evidence-backed invoice/PO checks (`invoice-po-rules-v3`) |
 | `app/fingerprint.py`, `app/history.py` | Registry-v1 fingerprint, local scoped HMAC tokens and bounded atomic observation history |
 | `app/fraud.py`, `app/graph.py` | Rule findings, uncalibrated noisy-OR score and finding-scoped graph (`graph-rules-v2`, including same-supplier bank-account change candidates) |
@@ -63,7 +66,10 @@ The parser and OCR run in child processes with a restricted environment. The ser
 - `GET /health` returns `{"status":"ok","service":"ocr-ai"}`. It is liveness, not model readiness.
 - `POST /ocr/extract` accepts multipart `file`. Unresolved required shared-contract fields return 422 rather than an invented invoice. Optional `Idempotency-Key` binds observation history to the request bytes and route; a reused key with different bytes returns 409.
 - `POST /ocr/verify` accepts multipart `invoice_file` and `po_file`. It returns typed partial evidence and `match` / `mismatch` / `unknown` checks. A resolved mismatch cannot be downgraded to a match; unresolved checks require review.
-- There is no mock query mode, invoice-history GET endpoint, or HTTP reset endpoint.
+- `GET /ocr/invoices/{invoice_id}` retrieves a POST extraction result using `X-OCR-Result-Token` against `OCR_RESULT_ACCESS_TOKEN`. Results remain in RAM for 15 minutes, at most 500 entries / 8 MiB per process; expiry, eviction or restart yields 404. Missing configuration yields 503, invalid token 401. This token is demo operator access, not tenant authentication.
+- `POST /ocr/llm/prewarm` uses the same token and multipart `file`, warms configured candidate caches without writing observations. Cache scope is one process, 128 entries / 4 MiB per reader / 15 minutes. Warm the actual single-worker demo immediately before presenting; restart loses the cache.
+- `POST /ocr/cases/verify` accepts a JSON `manifest` form field and repeated `files` uploads, at most 12 files / 20 MiB combined. See `docs/CHECKLIST_AND_DEMO.md` for exact templates and request shape.
+- There is no mock query mode or HTTP reset endpoint.
 
 Current configured limits are in `app/config.py`: 10 MiB per upload, five PDF pages, 12 million pixels per page/image, 200,000 extracted text characters, parser timeout 20 seconds, Paddle/Qwen timeout 90 seconds, and two concurrent processing slots per server process. A reverse proxy still needs its own whole-request size cap. Multiple server processes multiply the slot limit.
 
@@ -72,6 +78,7 @@ Settings are read from environment variables; see `services/ocr-ai/.env.example`
 - `FINGERPRINT_HMAC_KEY` is required for the compatible extraction and observation flow. `BANK_TOKEN_HMAC_KEY` is required when a scoped bank account is tokenized. Never print or commit either key.
 - `OCR_STATE_PATH` defaults to `services/ocr-ai/.state/observations.sqlite`. The history is limited to 500 observations and stops at capacity rather than evicting duplicate evidence.
 - `OCR_PADDLE_ENABLED` and `OCR_QWEN_ENABLED` default to `0`.
+- `LLM_PROVIDER=anthropic`, `LLM_MODEL` and `LLM_API_KEY` select the optional HTTPS Messages adapter. A configured key triggers the candidate check; missing model, unsupported provider, invalid output, refusal, timeout, or oversize output causes review. Images, including their printed payment details, are sent to the configured provider; keys/prompts/images never enter service logs or persisted caches. No SDK calls or custom endpoint URLs are accepted.
 - Paddle model paths/names are passed to the restricted worker with `OCR_PADDLE_DET_DIR`, `OCR_PADDLE_REC_DIR`, and `OCR_PADDLE_REC_NAME`. Stage models before use; requests must not download model weights. Use matching detector/recognizer assets for English, Thai, or experimental Simplified Chinese. There is no automatic language router.
 - `OCR_QWEN_URL` defaults to `http://127.0.0.1:11434`; the accepted model is `qwen3-vl:4b-instruct`. Qwen must remain loopback-only, without tools, credentials, document text in logs, or authoritative field writes. It reads the first page only; a multi-page document must be reviewed for this limitation.
 - History reset is an operator-only Python capability requiring development mode and explicit reset permission. Do not add a reset HTTP route.
@@ -92,7 +99,9 @@ Numeric grouping and decimal separators require sufficient locale evidence. Mone
 
 PDF text/layout is preferred because it is fast, preserves original text evidence, and avoids OCR errors. PaddleOCR is the local scan engine and runs only for unreadable pages when enabled. Use the staged v5 detector plus the language-matched recognizer; recognition scores are not calibrated extraction accuracy.
 
-Qwen3-VL is an optional local experiment, not the primary OCR engine. It returns nullable candidates under a strict schema, has no tools or API keys, and cannot populate missing fields. Disagreement, invalid/unavailable output, or an instruction alert routes to review. The current prompt raised benign false alerts in the documented smoke cases; do not promote it as a dependable injection detector. When enabled, the current pipeline calls it for each document and limits it to page one, which adds latency and can create unnecessary review. Keep it disabled by default; any future dispatch optimization (for example, only calling it for scanned or unresolved documents) must be measured for missed alerts and preserve the candidate-only boundary.
+Qwen3-VL is an optional local experiment, not the primary OCR engine. Both vision readers return nullable candidates under a strict schema and cannot populate missing fields or execute tools. Disagreement, invalid/unavailable output, or an instruction alert routes to review. Qwen reads page one; hosted reads the bounded rendered page set (16 MiB encoded budget). Successful candidates are cached by model/provider/prompt/schema/images, with hosted account identity included without retaining its key. Failures are not cached. Qwen can raise benign false alerts; do not promote it as a dependable injection detector. Keep local engines disabled by default; stage model assets explicitly before use.
+
+QR decoding uses zxing-cpp in the restricted parser; payloads remain private and never populate invoice fields or trigger link fetches. PDF text extraction uses an infinite clip to inspect off-page content. White text is flagged when rendered background samples are light; ordinary white text on dark headers remains usable. This is a heuristic, not visual tamper or signature verification.
 
 The latest four-scan benchmark uses language-matched Paddle recognizers and records Paddle 24/28 versus Qwen candidates 28/28; English ties at 14/14, while Thai is 10/14 for Paddle and 14/14 for Qwen on two fixtures. Paddle took 9.96–10.99 seconds and Qwen 9.25–11.06 seconds in one run, but Ollama cache state and background load were uncontrolled, so these are not comparable latency targets. Four generated scans do not establish general superiority. Qwen still has false injection alerts in documented HTTP smoke cases and remains candidate-only. New service setup defaults to the English Paddle profile; Thai/Chinese model choice is explicit and there is no per-document language router. See `docs/ENGINE_BENCHMARK.json`, `docs/FINTECH_RETEST.md`, and `docs/RELIABILITY_REVIEW.md` before making engine claims.
 

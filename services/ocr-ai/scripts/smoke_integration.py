@@ -1,149 +1,50 @@
-"""Run the repository's existing mock demo with isolated OCR state and free ports."""
+"""Backward-compatible entry point for the OCR-owned end-to-end demo loop."""
 
 from __future__ import annotations
 
-import argparse
-import json
-import os
-import secrets
-import socket
-import subprocess
-import sys
-import tempfile
-import time
-from pathlib import Path
-
-import httpx
-
-SERVICE = Path(__file__).resolve().parents[1]
-REPO = SERVICE.parents[1]
+POLICY_FRAUD_REJECT_THRESHOLD = 0.30
+POLICY_REVIEW_CONFIDENCE = 0.80
 
 
-def free_port():
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
+def assess_policy_controls(invoice_payload: dict, policy_decision: dict) -> dict:
+    """Compare a real Policy response with the OCR service's documented guards."""
+    fraud_score = float(invoice_payload.get("fraud_score", 0.0))
+    injection_flags = list(invoice_payload.get("injection_flags") or [])
+    confidence = float(invoice_payload.get("confidence", 0.0))
+    if fraud_score >= POLICY_FRAUD_REJECT_THRESHOLD:
+        expected = "reject"
+        reason = "fraud_score_at_or_above_0_30"
+    elif injection_flags:
+        expected = "review"
+        reason = "injection_flags_present"
+    elif confidence < POLICY_REVIEW_CONFIDENCE:
+        expected = "review"
+        reason = "confidence_below_0_80"
+    else:
+        expected = None
+        reason = None
+    actual = str(policy_decision.get("decision", "unknown"))
+    if expected is None:
+        passed, status = None, "not_asserted"
+    else:
+        passed = actual == expected
+        status = "pass" if passed else "control_violation"
+    return {
+        "expected_decision": expected,
+        "actual_decision": actual,
+        "trigger": reason,
+        "passed": passed,
+        "status": status,
+        "policy_version": policy_decision.get("policy_version"),
+        "model_version": policy_decision.get("model_version"),
+    }
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--output", type=Path, default=SERVICE / "docs/ARCHITECTURE_INTEGRATION.json")
-    args = parser.parse_args()
-    processes = []
-    with tempfile.TemporaryDirectory(prefix="ocr-integration-") as temporary:
-        env = {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "LANG") if key in os.environ}
-        env.update(
-            PYTHONPATH=str(REPO),
-            FINGERPRINT_HMAC_KEY=secrets.token_hex(32),
-            BANK_TOKEN_HMAC_KEY=secrets.token_hex(32),
-            OCR_STATE_PATH=str(Path(temporary) / "observations.sqlite"),
-            OCR_PADDLE_ENABLED="0",
-            OCR_QWEN_ENABLED="0",
-            CHAIN_MODE="mock",
-        )
-        ports = {name: free_port() for name in ("ocr-ai", "policy-ai", "agent-wallet", "orchestrator")}
-        env.update(
-            {
-                key: f"http://127.0.0.1:{ports[name]}"
-                for key, name in (
-                    ("OCR_URL", "ocr-ai"),
-                    ("POLICY_URL", "policy-ai"),
-                    ("WALLET_URL", "agent-wallet"),
-                    ("ORCHESTRATOR_URL", "orchestrator"),
-                )
-            }
-        )
-        try:
-            with httpx.Client(trust_env=False, timeout=5) as client:
-                for name, port in ports.items():
-                    process = subprocess.Popen(
-                        [
-                            sys.executable,
-                            "-m",
-                            "uvicorn",
-                            "app.main:app",
-                            "--app-dir",
-                            str(REPO / "services" / name),
-                            "--host",
-                            "127.0.0.1",
-                            "--port",
-                            str(port),
-                        ],
-                        cwd=REPO,
-                        env=env,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
-                    processes.append(process)
-                    deadline = time.monotonic() + 15
-                    while True:
-                        if process.poll() is not None:
-                            raise RuntimeError(f"Local {name} could not start")
-                        try:
-                            response = client.get(f"http://127.0.0.1:{port}/health")
-                            response.raise_for_status()
-                            break
-                        except httpx.HTTPError:
-                            if time.monotonic() >= deadline:
-                                raise RuntimeError(f"Local {name} startup timed out") from None
-                            time.sleep(0.1)
-                invoice = REPO / "data/invoices/demo/01_happy.pdf"
-                # Use the actual checked-in demo command, unchanged.
-                demo = subprocess.run(
-                    [
-                        sys.executable,
-                        str(REPO / "services/orchestrator/run_demo.py"),
-                        str(invoice),
-                    ],
-                    env=env,
-                    cwd=REPO,
-                    capture_output=True,
-                    text=True,
-                    timeout=90,
-                    check=True,
-                )
-                payload = json.loads(demo.stdout)
-                assert payload["outcome"] == "pending_approval"
-                duplicate = client.post(
-                    env["ORCHESTRATOR_URL"] + "/flow/run",
-                    files={
-                        "file": (invoice.name, invoice.read_bytes(), "application/pdf"),
-                    },
-                )
-                duplicate.raise_for_status()
-                assert duplicate.json()["registry"]["duplicate"] is True
-                assert duplicate.json()["outcome"] == "blocked: invoice already registered"
-                report = {
-                    "status": "complete",
-                    "chain_mode": "mock",
-                    "llm_network_used": False,
-                    "source": "unchanged services/orchestrator/run_demo.py against four local HTTP services",
-                    "happy_outcome": payload["outcome"],
-                    "duplicate_outcome": duplicate.json()["outcome"],
-                    "ocr_model_version": payload["ocr"]["model_version"],
-                    "handoff_version": payload["ocr"]["handoff"]["schema_version"],
-                    "graph_version": payload["ocr"]["fraud_graph"]["schema_version"],
-                    "limitations": [
-                        "Policy and wallet in this checkout are stubs; "
-                        "no guard, signature or chain transaction tested",
-                        "Orchestrator uses an in-memory registry "
-                        "and does not consume OCR pair/handoff fields",
-                        "Happy and duplicate transport compatibility only; "
-                        "no downstream security acceptance claim",
-                    ],
-                }
-                args.output.write_text(json.dumps(report, indent=2) + "\n")
-                print(json.dumps(report))
-        finally:
-            for process in processes:
-                process.terminate()
-            for process in processes:
-                try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=5)
+    from demo_loop import main as run_demo_loop
+
+    return run_demo_loop()
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

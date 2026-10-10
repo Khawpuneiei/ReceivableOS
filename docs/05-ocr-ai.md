@@ -1,6 +1,6 @@
 # OCR AI implementation and measured results
 
-Status: OCR-owned English invoice extraction and line-unit comparison improvements are implemented on `ocr/evidence-fraud-graph`, the authorized branch. The full service suite now passes **138 tests**; Ruff check/format, compileall and `git diff --check` pass. The current pair rule is `invoice-po-rules-v3`. Shared schemas and other-service implementations remain unchanged. All document measurements here are synthetic, not production or real-world performance.
+Status: OCR-owned English invoice extraction and line-unit comparison improvements are implemented on `ocr/evidence-fraud-graph`, the authorized branch. The full service suite now passes **183 tests**; Ruff check/format, compileall and `git diff --check` pass. The current pair rule is `invoice-po-rules-v3`. Shared schemas and other-service implementations remain unchanged. All document measurements here are synthetic, not production or real-world performance.
 
 The earlier fintech retest is historical: it passed 131 tests for comparison-v2. This increment adds spatial English anchors, explicit five/six-column item-table parsing, conservative financial-row parsing, explicit OCR-local line units, and mandatory review when units are absent or differ. Quantities and unit prices compare only when both documents show the same normalized unit; no conversion or inference occurs. See [the local handoff](../services/ocr-ai/docs/HANDOFF.md) and [unit comparison ADR](../services/ocr-ai/docs/adr/0006-explicit-line-unit-comparison.md).
 
@@ -76,7 +76,7 @@ Currency/country membership uses pinned pycountry 24.6.1 ISO datasets; tested Ba
 
 LOCAL bank tokens now require printed institution evidence and use a distinct v2 namespace; missing institution forces review without a graph token. Mixed digital/scanned documents cannot silently ignore unreadable pages. Ambiguous merged columns and all observed conflicting account values are guarded/redacted. See [the bank-scope decision](../services/ocr-ai/docs/adr/0004-institution-scoped-local-bank-tokens.md).
 
-Remaining work: independently sourced vendor layouts and general tables; native Chinese financial forms; Thai recognition recovery; model false-alert/amount quality; authoritative banking identity and migration; tenant isolation, key rotation and retention; authenticated access; trusted financial ledgers; request/resource limits and broader overlay/QR/tamper handling. Mock integration checks transport through existing stub consumers; real policy/wallet/on-chain controls remain untested.
+Remaining work: independently sourced vendor layouts and general tables; native Chinese financial forms; Thai recognition recovery; model false-alert/amount quality; authoritative banking identity and migration; tenant isolation, key rotation and retention; authenticated access; trusted financial ledgers; request/resource limits and broader visual tamper handling. The OCR-owned integration loop now asserts actual Policy hard guards and records two violations: the current stub approves injected and inflated invoices. QR payload decoding is implemented in the restricted parser; real on-chain controls remain untested.
 
 ## Checks and handoff
 
@@ -105,4 +105,31 @@ The earlier [consumer packet](../services/ocr-ai/docs/CONSUMER_REVIEW.md) includ
 
 [Architecture](../services/ocr-ai/docs/ARCHITECTURE.md) separates spatial roles, deterministic validation/comparison, bounded history and typed graph export. English/Chinese/Thai header annotation matches are 336/336, 112/112 and 99/112; English includes 16 correct unresolved values. Complete line tuples are 88/88, 28/28 and 26/28. These counts cover the generated corpus only; Chinese always requires experimental review.
 
-Responses add versioned, finding-scoped graphs and an unsigned [wallet/security handoff](../services/ocr-ai/docs/HANDOFF.md) with source hashes, versions and review/risk signals. PO-only injection propagates to the compatible invoice projection. That increment passed 113 tests at the time; the current suite passes 138 tests. The unchanged mock demo returns pending approval and blocks repeat registration. No chain execution or consumer adoption is implied. Branch updates are authorized; PM review and cross-service integration remain separate.
+Responses add versioned, finding-scoped graphs and an unsigned [wallet/security handoff](../services/ocr-ai/docs/HANDOFF.md) with source hashes, versions and review/risk signals. PO-only injection propagates to the compatible invoice projection. That increment passed 113 tests at the time; the current suite passes 183 tests. The unchanged mock demo returns pending approval and blocks repeat registration. No chain execution or consumer adoption is implied. Branch updates are authorized; PM review and cross-service integration remain separate.
+
+## Checklist audit, hosted adapter and financing evidence case (10 October 2026)
+
+The user authorized an optional hosted LLM adapter in addition to local Qwen. `app/llm_client.py` centralizes Anthropic Messages calls using `LLM_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`; no cloud key means deterministic rules remain operational. Strict typed candidates cannot fill or replace grounded fields. Tests mock keyed transport, cache hit/no call, account isolation, refusals, invalid schemas, tools, oversized responses, and disagreement review. Live hosted-model accuracy is not measured.
+
+Private parser extras now include rendered pages, PDF metadata/annotations and bounded QR payloads. Off-page text is inspected without clipping. QR content never supplies invoice fields or triggers URL fetching. White-on-dark headers are treated as visible using rendered background samples. These heuristics do not verify signatures or altered pixels.
+
+[Checklist evaluator](../services/ocr-ai/docs/CHECKLIST_EVALUATION.json) prints the following table from `scripts/eval.py`. It measures rules-only synthetic documents, not the optional model's false-alert rate.
+
+| Metric | Result | Dataset / target |
+| --- | --- | --- |
+| Clean PDF exact field accuracy | 28/28 = 100% | 4 English/Thai PDFs, 7 scalar fields; >=90%, aim98% |
+| Injection catch | 16/16 = 100% | 8 attack mechanisms, 2 source twins each; >=95% |
+| Attack success, changed grounded scalar fields | 0/16 = 0% | Same 7 fields; 0% target |
+| Hard-negative false positives | 0/20 = 0% | Payment notes, benign QR and white-on-dark headers; <=5% |
+| Planted fraud precision / recall | 100% / 100% | TP8 / FP0 / FN0 / TN4 at score>=0.30; 12 sequences |
+| Supporting-case automation | 6/6 | Correct linkage, receipt shortage, unrelated credit, dispute, excess credit, missing confirmation |
+
+The independent vendor-layout development pack above remains at 77.59% header accuracy; these small template results do not establish the global >=90% target. Simplified Chinese remains experimental/review; native Chinese financial forms and Thai scan gaps remain unresolved.
+
+`GET /ocr/invoices/{id}` returns the extraction plus extras through a private operator token, using a bounded RAM result cache. `POST /ocr/llm/prewarm` warms model caches without inserting invoice observations. Both caches have a 15-minute TTL, require a single-worker demo for predictable hits, and disappear on restart. Actual local Qwen verification made 8 requests with 5 hits including every round-two request; its isolated verification server was then stopped. Prewarm the running demo again before presenting. Actual English Paddle PNG/JPEG smoke tests each returned 200, all seven evaluated fields matched, with no review. See [real model evidence](../services/ocr-ai/docs/CHECKLIST_MODEL_CHECK.json).
+
+A [12-document fictional case pack](../data/invoices/financing_case/manifest.json) adds ten labelled supporting templates to Invoice/PO: delivery note, goods receipt, buyer confirmation, credit note, remittance advice, assignment notice, company registration, masked bank confirmation, beneficial-owner declaration reference and insurance certificate. `/ocr/cases/verify` checks source-grounded references, scoped invoice party IDs, quantities/units, buyer acceptance claims, duplicate supporting references and declared adjustments. Unrelated/invalid/duplicate adjustments do not reduce the displayed balance; it is never an authoritative ledger. Issuer authenticity remains unknown and all supporting cases require review. No registry, bank, signature, legal, ownership or settlement verification is implied.
+
+Generation through `datagen/generate.py --seed` now creates polished demos and the case pack; ReportLab invariant metadata makes matching-seed output byte-identical. Regression label PDFs remain temporary rather than reintroduced as old checked-in samples. [Fresh-clone verification](../services/ocr-ai/docs/RELEASE_CHECK.json) installs only core/dev requirements, generates data, starts on port8001, runs pytest/Ruff and checks POST/GET without a cloud key or local-model dependency. See [full checklist and usage](../services/ocr-ai/docs/CHECKLIST_AND_DEMO.md).
+
+Release remains pending: Policy still fails two hard guards, live hosted inference needs provider configuration, global held-out accuracy is unproven, and PM review/PR merge is not completed. The supplied phrase “Sun 12 Oct” conflicts with the 2026 project calendar: 12 October 2026 is Monday.

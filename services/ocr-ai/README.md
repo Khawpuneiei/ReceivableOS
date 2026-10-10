@@ -6,6 +6,8 @@ Current architecture uses source geometry for separate panels and explicit line 
 
 Current synthetic API, graph, privacy, and fraud-scenario coverage is recorded in [the OCR and fraud validation report](docs/FRAUD_VALIDATION.md).
 The removed flat fixtures and the retained evaluation corpora are listed in [the invoice fixture cleanup record](docs/INVOICE_FIXTURE_CLEANUP.md).
+The broader ReceivableOS evidence-document inventory, current support boundaries, and staged integration recommendations are in the [document catalog](docs/DOCUMENT_CATALOG.md).
+The rule-by-rule comparison of this service's `CLAUDE.md` against current code and the demo result is in the [OCR service guide review](docs/CLAUDE_REVIEW.md).
 
 For a polished business-document sample derived from the original Siam Fresh Pack / Mekong Basket synthetic fixture data, see the [invoice showcase](../../data/invoices/showcase/README.md). It includes an invoice, its matching PO, raster previews, and refreshed clean, injected, inflated-total, and duplicate demo examples.
 
@@ -32,10 +34,10 @@ services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/stage_paddle.py
 ollama serve
 # In another terminal:
 ollama pull qwen3-vl:4b-instruct
-PYTHONPATH=. services/ocr-ai/.venv/bin/python -m uvicorn app.main:app --app-dir services/ocr-ai --env-file services/ocr-ai/.env.local --host 127.0.0.1 --port 8001
+OCR_PADDLE_ENABLED=1 OCR_QWEN_ENABLED=1 PYTHONPATH=. services/ocr-ai/.venv/bin/python -m uvicorn app.main:app --app-dir services/ocr-ai --env-file services/ocr-ai/.env.local --host 127.0.0.1 --port 8001
 ```
 
-The generated settings enable both engines with English as the default profile. Embedded PDF text/layout is preferred; scans use explicitly configured local `PP-OCRv5_mobile_det` and `en_PP-OCRv5_mobile_rec` directories. Request workers do not stage/download models. Thai and Chinese recognizers are available as explicit per-service profiles; the current service does not automatically route each document by language. Qwen uses loopback Ollama, a fixed system prompt, a strict nullable schema, no tools or credentials, and the first page only. It contributes disagreements/alerts, never authoritative replacement values. Additional HTTP smoke documents produced false injection alerts and amount disagreements even after a perfect four-scan candidate benchmark. Null candidates cannot fill missing OCR evidence. Unavailable or invalid Qwen output requires review; missing scan OCR returns 422.
+Fresh setup disables local models; enable them explicitly after staging, with English as the default profile. Embedded PDF text/layout is preferred; scans use explicitly configured local `PP-OCRv5_mobile_det` and `en_PP-OCRv5_mobile_rec` directories. Request workers do not stage/download models. Thai and Chinese recognizers are available as explicit per-service profiles; the current service does not automatically route each document by language. Qwen uses loopback Ollama, a fixed system prompt, a strict nullable schema, no tools or credentials, and the first page only. It contributes disagreements/alerts, never authoritative replacement values. Additional HTTP smoke documents produced false injection alerts and amount disagreements even after a perfect four-scan candidate benchmark. Null candidates cannot fill missing OCR evidence. Unavailable or invalid Qwen output requires review; missing scan OCR returns 422.
 
 Model selection and measured limitations are recorded in [ENGINE_BENCHMARK.json](docs/ENGINE_BENCHMARK.json) and [the engine decision](docs/adr/0002-local-paddle-and-qwen.md). The default Ollama `4b` tag resolved to Thinking in this experiment; use the explicit Instruct tag. Model tags can change; record and review their digest when updating.
 
@@ -93,7 +95,7 @@ services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/eval.py
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/benchmark_engines.py
 ```
 
-Generation is offline with the checked-in SIL OFL Noto Thai font. The 32 labeled regression inputs and five aliases are generated into temporary directories by tests and evaluations; they are not checked in as a flat set of duplicate PDFs. Evaluations use temporary stores and ephemeral secrets; they never reset operational history. [EVALUATION.json](docs/EVALUATION.json) reports extraction by language/type, injection twins, independent pair checks, and planted duplicate/graph sequences. Engine results separately report scanned-document failures and latency. All results are synthetic-only, with no independent real-world holdout and no fraud precision/recall claim.
+Generation is offline with the checked-in SIL OFL Noto Thai font. The 32 labeled regression inputs and five aliases are generated into temporary directories by tests and evaluations; they are not checked in as a flat set of duplicate PDFs. Evaluations use temporary stores and ephemeral secrets; they never reset operational history. [EVALUATION.json](docs/EVALUATION.json) reports extraction by language/type, injection twins, independent pair checks, and planted duplicate/graph sequences. Engine results separately report scanned-document failures and latency. All results are synthetic-only. The new checklist evaluator reports planted-signal precision/recall on 12 sequences, without an independent real-world holdout or production fraud accuracy claim.
 
 ## External fictional invoice challenge set
 
@@ -143,4 +145,41 @@ Reproduce the current architecture checks from this directory with staged models
 .venv/bin/python scripts/smoke_integration.py
 ```
 
-Integration uses temporary state/free ports, runs the existing mock demo and stops its servers. Policy/Wallet remain stubs; this checks transport compatibility, not downstream fraud controls.
+The integration loop creates synthetic invoices and a matching PO in a temporary directory, runs extraction and evidence checks, repeats the invoice, exercises invoice-to-PO mismatch and injection cases, sends those results to the live local Policy stub, and runs the planted duplicate/shared-account/cluster fraud sequences. It starts local services on free loopback ports, uses temporary state and ephemeral HMAC keys, and removes generated documents when finished. It writes the sanitized result to `docs/DEMO_LOOP_RESULTS.json` without raw bank data or graph node IDs.
+
+The exercised request shapes are:
+
+- `POST /flow/run`: `multipart/form-data` with `file` (invoice PDF) and optional `mandate_id`. The orchestrator calls `POST /ocr/extract` with multipart `file`, then sends `POST /policy/decide` JSON shaped as `{"invoice": <ExtractedInvoice>, "supplier_profile": <object>, "buyer_profile": <object>}`.
+- `POST /ocr/verify`: `multipart/form-data` with `invoice_file` and `po_file` (both PDFs). It returns comparison checks and an OCR-local fraud handoff. The current shared Policy request has no typed PO-comparison or graph-handoff fields, so the loop exercises the Policy stub with the compatible invoice projection and reports the missing integration contract.
+- Result: JSON at `docs/DEMO_LOOP_RESULTS.json`; raw OCR responses and HMAC/graph identifiers are not copied into it.
+
+```bash
+# Quick HTTP loop without the additional synthetic fraud sequence evaluation:
+.venv/bin/python scripts/smoke_integration.py --skip-fraud-eval
+# Make a known Policy hard-guard violation fail the command (expected with the current stub):
+.venv/bin/python scripts/smoke_integration.py --strict
+```
+
+The current Policy endpoint always returns its demo approval and does not enforce injection, high-fraud-score, or low-confidence guards. The result therefore distinguishes OCR/fraud checks from downstream Policy controls and reports `completed_with_policy_gaps` rather than treating successful HTTP transport as a security pass. Wallet is also a stub; `pending_approval` is not an executed payment or chain transaction. This integration loop changes only OCR-owned files and does not alter the shared contract or downstream service owners' code.
+
+## Checklist release and multi-document demo
+
+[Complete checklist, diagram, document fields and request examples](docs/CHECKLIST_AND_DEMO.md) cover the new hosted adapter, QR defence, protected result retrieval, cache prewarm and the 12-document financing case. [Release evidence](docs/RELEASE_CHECK.json), [metrics](docs/CHECKLIST_EVALUATION.json), [case automation](docs/CASE_LOOP_RESULTS.json) and [real model checks](docs/CHECKLIST_MODEL_CHECK.json) separate offline, mocked hosted, actual local model and downstream Policy results.
+
+From this service directory:
+
+```bash
+.venv/bin/python scripts/release_check.py --fresh
+# Fail on the current downstream Policy violations too:
+.venv/bin/python scripts/release_check.py --strict
+# Requires explicitly staged local models:
+.venv/bin/python scripts/model_check.py
+# Against the running single-worker demo; token comes from private .env.local:
+.venv/bin/python scripts/prewarm_llm.py
+```
+
+GET `/ocr/invoices/{id}` and POST `/ocr/llm/prewarm` require `X-OCR-Result-Token`. Results and candidate caches expire after 15 minutes and are lost on restart. Prewarm avoids history observations, so warming the demo does not create duplicate-fraud findings. Run it immediately before the demo.
+
+Hosted vision is optional: set `LLM_PROVIDER=anthropic`, `LLM_MODEL` to an available vision model and `LLM_API_KEY` privately. The adapter sends rendered pages to Anthropic Messages, validates its nullable schema, and caches successful candidates. Disagreements or failures require review; model proposals cannot replace grounded values. Live hosted inference has not been verified without a configured cloud account/key. See [provider vision documentation](https://platform.claude.com/docs/en/build-with-claude/vision).
+
+`POST /ocr/cases/verify` accepts `manifest` plus repeated `files`. Supporting templates require explicit English labels and digital PDF text; general supporting-document scans/layouts are not yet supported. Every case retains unknown issuer authenticity and review, even when all document claims match. There is no financing authority in this endpoint.

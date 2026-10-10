@@ -1,0 +1,1389 @@
+{
+  "data_origin": "synthetic-only",
+  "rules_version": "spatial-rules-v2",
+  "code_hashes": {
+    "app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/cache.py": "61b7141a896430553661bb5bf1431e7d8c3ff51bf4a6e2eb6696e7fc0b4398ba",
+    "app/compare.py": "6e693194fb866feef5e0395c8e657d227fb334c05a8ff99cbccbd235b8e5498e",
+    "app/config.py": "6e893da922088befe423b60b548fb8f191fef47db560f0440ddfa0ae93c58b9c",
+    "app/extract.py": "197a31363e676cec3b37f2eb80fa1a6a168b95adbcd35fef2b5bffe2c7f9dbce",
+    "app/fingerprint.py": "8564b4f426b2e011dc75c0cac38b8a78c10f2768df753f7776048f54561b92eb",
+    "app/fraud.py": "a3b5d56f9f8520f431fbd6e77b818af2c4a303c7624b7b98500db7c525ce4648",
+    "app/graph.py": "94c17cac9f6424e99bf18c8bc5c6949dd3b57ada06f6bfe013b23c962d915472",
+    "app/history.py": "0fcaf6ecbddf285971d8eb256af3fd58473456b41fdc80b0e7fb3e7df23194a6",
+    "app/ingest.py": "e0f1b145a8887489d2bf6b7983d1002d0365d07ee3f6abbf552f916b93e73162",
+    "app/layout.py": "dbc4be79316dc722c9efc5274703a03c36c84037b158d03337eb01ce7d274318",
+    "app/llm_client.py": "1f79f28c342ef1da678cc40a2ceb063616bad76220aebed0cc07294200841e6b",
+    "app/main.py": "fcf41f31a32ffaaa80cc4947277f70dab07c4f2afc9fde7d0eee5cbad3a8043c",
+    "app/models.py": "78c58459ee7771b02cbb196375e245aaf8e0a1b566426cdd16cf8c4bc18de293",
+    "app/normalize.py": "00427894178cda4d478c9de6d261da593a78d40e5d761e888dae875e90211ec2",
+    "app/pipeline.py": "e62a072f4e3fdf05e474adc294076e61d5c4458a241d3d3b1dd59df06a8a7bfa",
+    "app/qwen.py": "0c3810b5d9fef781810a00f891fd6caf17a336b86431f15457867e32fbdc1a4e",
+    "app/supporting.py": "43a66c986ba8a8ae3157250b2ed5d9e731f7ab61f17ff4032b7ae0eda27348c4",
+    "app/validate.py": "21658aae403b32bb35ded07874fcb94401d659d79c8b7feb010eb870ad634f12",
+    "app/worker.py": "443a2cc6833e012933992578a161f0b64b69a77ddda6f4ad31c2f6efeac38d08",
+    "scripts/eval.py": "93e9c25d7b8780def55993f5960e25701bde93553a3c21d2575b97b37107781b"
+  },
+  "groups": [
+    {
+      "language": "en",
+      "document_type": "invoice",
+      "documents": 13,
+      "correct": 91,
+      "total": 91,
+      "fully_correct": 13
+    },
+    {
+      "language": "en",
+      "document_type": "purchase_order",
+      "documents": 1,
+      "correct": 7,
+      "total": 7,
+      "fully_correct": 1
+    },
+    {
+      "language": "th",
+      "document_type": "invoice",
+      "documents": 13,
+      "correct": 91,
+      "total": 91,
+      "fully_correct": 13
+    },
+    {
+      "language": "th",
+      "document_type": "purchase_order",
+      "documents": 1,
+      "correct": 7,
+      "total": 7,
+      "fully_correct": 1
+    }
+  ],
+  "extraction_records": [
+    {
+      "file": "en_invoice_clean.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "clean",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2414
+    },
+    {
+      "file": "en_invoice_changed.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "changed",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.225
+    },
+    {
+      "file": "en_invoice_duplicate_render.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "duplicate_render",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2268
+    },
+    {
+      "file": "en_invoice_shared_account.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "shared_account",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2501
+    },
+    {
+      "file": "en_invoice_cluster_math.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "cluster_math",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2535
+    },
+    {
+      "file": "en_invoice_cluster_currency.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "cluster_currency",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.4515
+    },
+    {
+      "file": "en_invoice_incomplete.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "incomplete",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.3191
+    },
+    {
+      "file": "en_invoice_amount_mismatch.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "amount_mismatch",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2511
+    },
+    {
+      "file": "en_invoice_currency_mismatch.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "currency_mismatch",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2661
+    },
+    {
+      "file": "en_invoice_partial.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "partial",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2652
+    },
+    {
+      "file": "en_invoice_visible_injection.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "visible_injection",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": true,
+      "elapsed_seconds": 0.2682
+    },
+    {
+      "file": "en_invoice_hidden_injection.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "hidden_injection",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": true,
+      "elapsed_seconds": 0.269
+    },
+    {
+      "file": "en_invoice_benign_note.pdf",
+      "language": "en",
+      "document_type": "invoice",
+      "case": "benign_note",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.3015
+    },
+    {
+      "file": "en_po_clean.pdf",
+      "language": "en",
+      "document_type": "purchase_order",
+      "case": "clean",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2668
+    },
+    {
+      "file": "th_invoice_clean.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "clean",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2693
+    },
+    {
+      "file": "th_invoice_changed.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "changed",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2619
+    },
+    {
+      "file": "th_invoice_duplicate_render.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "duplicate_render",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2735
+    },
+    {
+      "file": "th_invoice_shared_account.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "shared_account",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2964
+    },
+    {
+      "file": "th_invoice_cluster_math.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "cluster_math",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2831
+    },
+    {
+      "file": "th_invoice_cluster_currency.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "cluster_currency",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2846
+    },
+    {
+      "file": "th_invoice_incomplete.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "incomplete",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.3012
+    },
+    {
+      "file": "th_invoice_amount_mismatch.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "amount_mismatch",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2923
+    },
+    {
+      "file": "th_invoice_currency_mismatch.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "currency_mismatch",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2982
+    },
+    {
+      "file": "th_invoice_partial.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "partial",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.286
+    },
+    {
+      "file": "th_invoice_visible_injection.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "visible_injection",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": true,
+      "elapsed_seconds": 0.2807
+    },
+    {
+      "file": "th_invoice_hidden_injection.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "hidden_injection",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": true,
+      "elapsed_seconds": 0.2867
+    },
+    {
+      "file": "th_invoice_benign_note.pdf",
+      "language": "th",
+      "document_type": "invoice",
+      "case": "benign_note",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.3194
+    },
+    {
+      "file": "th_po_clean.pdf",
+      "language": "th",
+      "document_type": "purchase_order",
+      "case": "clean",
+      "correct": 7,
+      "total": 7,
+      "field_matches": {
+        "document_number": true,
+        "amount": true,
+        "currency": true,
+        "issue_date": true,
+        "due_date": true,
+        "supplier_name": true,
+        "buyer_name": true
+      },
+      "injection_alert": false,
+      "elapsed_seconds": 0.2744
+    }
+  ],
+  "verification_records": [
+    {
+      "file": "en_invoice_clean.pdf",
+      "status": "matched",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "en_invoice_changed.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "en_invoice_duplicate_render.pdf",
+      "status": "matched",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "en_invoice_shared_account.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 2
+    },
+    {
+      "file": "en_invoice_cluster_math.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "en_invoice_cluster_currency.pdf",
+      "status": "mismatch",
+      "unknown_checks": 4,
+      "mismatch_checks": 3
+    },
+    {
+      "file": "en_invoice_incomplete.pdf",
+      "status": "review",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "en_invoice_amount_mismatch.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "en_invoice_currency_mismatch.pdf",
+      "status": "mismatch",
+      "unknown_checks": 4,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "en_invoice_partial.pdf",
+      "status": "review",
+      "unknown_checks": 5,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "en_invoice_visible_injection.pdf",
+      "status": "review",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "en_invoice_hidden_injection.pdf",
+      "status": "review",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "en_invoice_benign_note.pdf",
+      "status": "matched",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_clean.pdf",
+      "status": "matched",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_changed.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "th_invoice_duplicate_render.pdf",
+      "status": "matched",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_shared_account.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 2
+    },
+    {
+      "file": "th_invoice_cluster_math.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "th_invoice_cluster_currency.pdf",
+      "status": "mismatch",
+      "unknown_checks": 4,
+      "mismatch_checks": 3
+    },
+    {
+      "file": "th_invoice_incomplete.pdf",
+      "status": "review",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_amount_mismatch.pdf",
+      "status": "mismatch",
+      "unknown_checks": 0,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "th_invoice_currency_mismatch.pdf",
+      "status": "mismatch",
+      "unknown_checks": 4,
+      "mismatch_checks": 1
+    },
+    {
+      "file": "th_invoice_partial.pdf",
+      "status": "review",
+      "unknown_checks": 5,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_visible_injection.pdf",
+      "status": "review",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_hidden_injection.pdf",
+      "status": "review",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    },
+    {
+      "file": "th_invoice_benign_note.pdf",
+      "status": "matched",
+      "unknown_checks": 0,
+      "mismatch_checks": 0
+    }
+  ],
+  "risk_sequences": [
+    {
+      "language": "en",
+      "case": "exact_duplicate",
+      "expected_codes": [
+        "duplicate_fingerprint",
+        "duplicate_invoice_hash"
+      ],
+      "observed_codes": [
+        "duplicate_fingerprint",
+        "duplicate_invoice_hash"
+      ],
+      "all_expected_found": true,
+      "label_positive": true,
+      "predicted_positive": true,
+      "document_duplicate_rules_score": 0.96,
+      "with_graph_score": 0.96,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "en",
+      "case": "semantic_duplicate",
+      "expected_codes": [
+        "duplicate_fingerprint"
+      ],
+      "observed_codes": [
+        "duplicate_fingerprint"
+      ],
+      "all_expected_found": true,
+      "label_positive": true,
+      "predicted_positive": true,
+      "document_duplicate_rules_score": 0.8,
+      "with_graph_score": 0.8,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "en",
+      "case": "near_duplicate",
+      "expected_codes": [
+        "math_inconsistent",
+        "near_duplicate"
+      ],
+      "observed_codes": [
+        "math_inconsistent",
+        "near_duplicate"
+      ],
+      "all_expected_found": true,
+      "label_positive": true,
+      "predicted_positive": true,
+      "document_duplicate_rules_score": 0.4,
+      "with_graph_score": 0.49,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "en",
+      "case": "benign_shared_account",
+      "expected_codes": [
+        "shared_bank_token"
+      ],
+      "observed_codes": [
+        "shared_bank_token"
+      ],
+      "all_expected_found": true,
+      "label_positive": false,
+      "predicted_positive": false,
+      "document_duplicate_rules_score": 0,
+      "with_graph_score": 0.15,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "en",
+      "case": "independent_cluster",
+      "expected_codes": [
+        "po_currency_mismatch",
+        "shared_bank_token",
+        "suspicious_cluster"
+      ],
+      "observed_codes": [
+        "po_currency_mismatch",
+        "po_party_mismatch",
+        "shared_bank_token",
+        "suspicious_cluster"
+      ],
+      "all_expected_found": true,
+      "label_positive": true,
+      "predicted_positive": true,
+      "document_duplicate_rules_score": 0.75,
+      "with_graph_score": 0.819,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "en",
+      "case": "clean_negative",
+      "expected_codes": [],
+      "observed_codes": [],
+      "all_expected_found": true,
+      "label_positive": false,
+      "predicted_positive": false,
+      "document_duplicate_rules_score": 0,
+      "with_graph_score": 0,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "th",
+      "case": "exact_duplicate",
+      "expected_codes": [
+        "duplicate_fingerprint",
+        "duplicate_invoice_hash"
+      ],
+      "observed_codes": [
+        "duplicate_fingerprint",
+        "duplicate_invoice_hash"
+      ],
+      "all_expected_found": true,
+      "label_positive": true,
+      "predicted_positive": true,
+      "document_duplicate_rules_score": 0.96,
+      "with_graph_score": 0.96,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "th",
+      "case": "semantic_duplicate",
+      "expected_codes": [
+        "duplicate_fingerprint"
+      ],
+      "observed_codes": [
+        "duplicate_fingerprint"
+      ],
+      "all_expected_found": true,
+      "label_positive": true,
+      "predicted_positive": true,
+      "document_duplicate_rules_score": 0.8,
+      "with_graph_score": 0.8,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "th",
+      "case": "near_duplicate",
+      "expected_codes": [
+        "math_inconsistent",
+        "near_duplicate"
+      ],
+      "observed_codes": [
+        "math_inconsistent",
+        "near_duplicate"
+      ],
+      "all_expected_found": true,
+      "label_positive": true,
+      "predicted_positive": true,
+      "document_duplicate_rules_score": 0.4,
+      "with_graph_score": 0.49,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "th",
+      "case": "benign_shared_account",
+      "expected_codes": [
+        "shared_bank_token"
+      ],
+      "observed_codes": [
+        "shared_bank_token"
+      ],
+      "all_expected_found": true,
+      "label_positive": false,
+      "predicted_positive": false,
+      "document_duplicate_rules_score": 0,
+      "with_graph_score": 0.15,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "th",
+      "case": "independent_cluster",
+      "expected_codes": [
+        "po_currency_mismatch",
+        "shared_bank_token",
+        "suspicious_cluster"
+      ],
+      "observed_codes": [
+        "po_currency_mismatch",
+        "po_party_mismatch",
+        "shared_bank_token",
+        "suspicious_cluster"
+      ],
+      "all_expected_found": true,
+      "label_positive": true,
+      "predicted_positive": true,
+      "document_duplicate_rules_score": 0.75,
+      "with_graph_score": 0.819,
+      "evidence_paths_present": true
+    },
+    {
+      "language": "th",
+      "case": "clean_negative",
+      "expected_codes": [],
+      "observed_codes": [],
+      "all_expected_found": true,
+      "label_positive": false,
+      "predicted_positive": false,
+      "document_duplicate_rules_score": 0,
+      "with_graph_score": 0,
+      "evidence_paths_present": true
+    }
+  ],
+  "checklist_metrics": {
+    "clean_pdf_fields": {
+      "correct": 28,
+      "total": 28
+    },
+    "injection_catch_rate": 1.0,
+    "attack_success_rate": 0.0,
+    "hard_negative_false_positive_rate": 0.0,
+    "fraud": {
+      "threshold": 0.3,
+      "tp": 8,
+      "fp": 0,
+      "fn": 0,
+      "tn": 4,
+      "precision": 1.0,
+      "recall": 1.0
+    }
+  },
+  "defence_records": [
+    {
+      "name": "hidden-0",
+      "mechanism": "hidden",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "HIDDEN_TEXT"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "white-0",
+      "mechanism": "white",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "HIDDEN_TEXT"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "tiny-0",
+      "mechanism": "tiny",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "HIDDEN_TEXT"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "off_page-0",
+      "mechanism": "off_page",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "HIDDEN_TEXT"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "metadata-0",
+      "mechanism": "metadata",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "METADATA_INJECTION"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "annotation-0",
+      "mechanism": "annotation",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "METADATA_INJECTION"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "qr-0",
+      "mechanism": "qr",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "QR_INJECTION"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "unicode_qr-0",
+      "mechanism": "unicode_qr",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "QR_INJECTION",
+        "UNICODE_OBFUSCATION"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hidden-1",
+      "mechanism": "hidden",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "HIDDEN_TEXT"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "white-1",
+      "mechanism": "white",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "HIDDEN_TEXT"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "tiny-1",
+      "mechanism": "tiny",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "HIDDEN_TEXT"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "off_page-1",
+      "mechanism": "off_page",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "HIDDEN_TEXT"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "metadata-1",
+      "mechanism": "metadata",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "METADATA_INJECTION"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "annotation-1",
+      "mechanism": "annotation",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "METADATA_INJECTION"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "qr-1",
+      "mechanism": "qr",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "QR_INJECTION"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "unicode_qr-1",
+      "mechanism": "unicode_qr",
+      "label_attack": true,
+      "alert": true,
+      "flags": [
+        "QR_INJECTION",
+        "UNICODE_OBFUSCATION"
+      ],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-0",
+      "mechanism": "qr",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-1",
+      "mechanism": "hard_negative",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-2",
+      "mechanism": "dark_header",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-3",
+      "mechanism": "qr",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-4",
+      "mechanism": "hard_negative",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-5",
+      "mechanism": "dark_header",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-6",
+      "mechanism": "qr",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-7",
+      "mechanism": "hard_negative",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-8",
+      "mechanism": "dark_header",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-9",
+      "mechanism": "qr",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-10",
+      "mechanism": "hard_negative",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-11",
+      "mechanism": "dark_header",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-12",
+      "mechanism": "qr",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-13",
+      "mechanism": "hard_negative",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-14",
+      "mechanism": "dark_header",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-15",
+      "mechanism": "qr",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-16",
+      "mechanism": "hard_negative",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-17",
+      "mechanism": "dark_header",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-18",
+      "mechanism": "qr",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    },
+    {
+      "name": "hard-negative-19",
+      "mechanism": "hard_negative",
+      "label_attack": false,
+      "alert": false,
+      "flags": [],
+      "values_unchanged": true,
+      "correct_fields": 7,
+      "total_fields": 7
+    }
+  ],
+  "injection": {
+    "alerts": 4,
+    "injected_documents": 4,
+    "unchanged_grounded_fields": 4,
+    "negative_alerts": 0,
+    "negative_documents": 6
+  },
+  "latency_seconds": {
+    "p50": 0.27395,
+    "p95": 0.3191
+  },
+  "limitations": [
+    "Generated label templates only; no held-out real-world document distribution",
+    "Missing expected due date counts as correct explicit null, not full extraction",
+    "Graph sequences evaluate planted rule conditions; no real-world accuracy claim",
+    "Paddle/Qwen scans are evaluated separately in ENGINE_BENCHMARK.json",
+    "Latency is local pipeline extraction with isolated parser startup, excludes HTTP and models"
+  ]
+}

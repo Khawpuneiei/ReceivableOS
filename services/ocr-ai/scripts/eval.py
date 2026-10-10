@@ -16,6 +16,7 @@ from pathlib import Path
 SERVICE = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(SERVICE), str(SERVICE.parents[1])]
 from datagen.generate import generate  # noqa: E402
+from datagen.security_corpus import corpus  # noqa: E402
 
 from app.config import Settings  # noqa: E402
 from app.pipeline import extract, extract_invoice, verify  # noqa: E402
@@ -52,6 +53,7 @@ def evaluate(output: Path | None = None):
     rows = []
     signals = []
     pair_rows = []
+    defence_rows = []
     with (
         tempfile.TemporaryDirectory(prefix="ocr-evaluation-fixtures-") as fixture_temporary,
         tempfile.TemporaryDirectory(prefix="ocr-evaluation-") as temporary,
@@ -134,6 +136,8 @@ def evaluate(output: Path | None = None):
                         "expected_codes": sorted(expected),
                         "observed_codes": sorted(found),
                         "all_expected_found": expected <= found,
+                        "label_positive": sequence != "benign_shared_account",
+                        "predicted_positive": response.fraud_score >= 0.30,
                         "document_duplicate_rules_score": score(baseline),
                         "with_graph_score": response.fraud_score,
                         "evidence_paths_present": all(
@@ -151,6 +155,38 @@ def evaluate(output: Path | None = None):
                         ),
                     }
                 )
+            response = extract_invoice(invoice("clean"), settings(root / f"{language}-negative.sqlite"), None)
+            signals.append(
+                {
+                    "language": language,
+                    "case": "clean_negative",
+                    "expected_codes": [],
+                    "observed_codes": response.fraud_flags,
+                    "all_expected_found": not response.fraud_flags,
+                    "label_positive": False,
+                    "predicted_positive": response.fraud_score >= 0.30,
+                    "document_duplicate_rules_score": response.fraud_score,
+                    "with_graph_score": response.fraud_score,
+                    "evidence_paths_present": True,
+                }
+            )
+        for index, item in enumerate(corpus()):
+            cfg = settings(root / f"defence-{index}.sqlite")
+            baseline = extract(item["clean"], "invoice", cfg)
+            attacked = extract(item["content"], "invoice", cfg)
+            before, after = values(baseline.document), values(attacked.document)
+            defence_rows.append(
+                {
+                    "name": item["name"],
+                    "mechanism": item["mechanism"],
+                    "label_attack": item["attack"],
+                    "alert": bool(attacked.injection_flags),
+                    "flags": attacked.injection_flags,
+                    "values_unchanged": before == after,
+                    "correct_fields": sum(before[field] == after[field] for field in FIELDS),
+                    "total_fields": len(FIELDS),
+                }
+            )
     groups = defaultdict(list)
     for row in rows:
         groups[(row["language"], row["document_type"])].append(row)
@@ -177,6 +213,31 @@ def evaluate(output: Path | None = None):
         )
         unchanged += row["field_matches"] == base["field_matches"] and row["correct"] == row["total"]
     latencies = sorted(row["elapsed_seconds"] for row in rows)
+    attacks = [r for r in defence_rows if r["label_attack"]]
+    hard_negatives = [r for r in defence_rows if not r["label_attack"]]
+    tp = sum(r["label_positive"] and r["predicted_positive"] for r in signals)
+    fp = sum(not r["label_positive"] and r["predicted_positive"] for r in signals)
+    fn = sum(r["label_positive"] and not r["predicted_positive"] for r in signals)
+    tn = sum(not r["label_positive"] and not r["predicted_positive"] for r in signals)
+    clean = [r for r in rows if r["case"] == "clean"]
+    metrics = {
+        "clean_pdf_fields": {
+            "correct": sum(r["correct"] for r in clean),
+            "total": sum(r["total"] for r in clean),
+        },
+        "injection_catch_rate": sum(r["alert"] for r in attacks) / len(attacks),
+        "attack_success_rate": sum(not r["values_unchanged"] for r in attacks) / len(attacks),
+        "hard_negative_false_positive_rate": sum(r["alert"] for r in hard_negatives) / len(hard_negatives),
+        "fraud": {
+            "threshold": 0.30,
+            "tp": tp,
+            "fp": fp,
+            "fn": fn,
+            "tn": tn,
+            "precision": tp / (tp + fp) if tp + fp else 0,
+            "recall": tp / (tp + fn) if tp + fn else 0,
+        },
+    }
     report = {
         "data_origin": "synthetic-only",
         "rules_version": "spatial-rules-v2",
@@ -188,6 +249,8 @@ def evaluate(output: Path | None = None):
         "extraction_records": rows,
         "verification_records": pair_rows,
         "risk_sequences": signals,
+        "checklist_metrics": metrics,
+        "defence_records": defence_rows,
         "injection": {
             "alerts": sum(r["injection_alert"] for r in injected),
             "injected_documents": len(injected),
@@ -209,6 +272,23 @@ def evaluate(output: Path | None = None):
     }
     target = output or SERVICE / "docs/EVALUATION.json"
     target.write_text(json.dumps(report, indent=2) + "\n")
+    print("| Metric (synthetic, rules-only) | Result | Target |")
+    print("| --- | --- | --- |")
+    print(
+        f"| Clean PDF field accuracy (7 fields, {len(clean)} PDFs) | "
+        f"{metrics['clean_pdf_fields']['correct'] / metrics['clean_pdf_fields']['total']:.1%} "
+        "| >=90%, aim98% |"
+    )
+    print(f"| Injection catch ({len(attacks)} PDFs) | {metrics['injection_catch_rate']:.1%} | >=95% |")
+    print(f"| Attack success (changed 7 fields) | {metrics['attack_success_rate']:.1%} | 0% |")
+    print(
+        f"| Hard-negative false positives ({len(hard_negatives)} PDFs) | "
+        f"{metrics['hard_negative_false_positive_rate']:.1%} | <=5% |"
+    )
+    print(
+        f"| Planted fraud precision / recall ({len(signals)} sequences) | "
+        f"{metrics['fraud']['precision']:.1%} / {metrics['fraud']['recall']:.1%} | >=90% / >=90% |"
+    )
     print(
         json.dumps(
             {

@@ -1,0 +1,15 @@
+# OCR evidence extraction, fraud graph and checklist automation
+
+Uploaded invoices now produce grounded fields, deterministic validation and explainable duplicate/shared-account/cluster risk signals instead of a fixed OCR stub. A separately uploaded PO can be compared with explicit match/mismatch/unknown checks. Local Paddle reads scans; Qwen and the new optional keyed Anthropic adapter supply strict candidates that cannot replace source-grounded values.
+
+The latest increment adds private QR inspection, off-page text detection, visible white-on-dark handling, expiring model caches, protected result retrieval and observation-free demo prewarm. A reproducible 12-document synthetic financing case checks ten labelled supporting templates, references, receipt quantities, acceptance claims and declared adjustments, including duplicate-credit handling. Cases retain unknown issuer authenticity and mandatory review.
+
+Scope: OCR service, its synthetic/publicly licensed fixtures and `docs/05-ocr-ai.md`. Shared schemas and other-owner service implementations are unchanged. The accumulated branch also contains earlier PDF fixture attribute metadata and historical OCR work; those are preserved, not introduced by the latest checklist increment.
+
+Validation: 183 service tests pass in the working environment and a local clean clone plus current OCR patch with a fresh core/dev venv. Dependency check, Ruff check/format and diff checks pass. The clean clone generates fixtures, starts on8001 and passes POST extraction / protected GET without a cloud key or local model dependency. Actual local Paddle PNG/JPEG each matches all seven evaluated fields; Qwen prewarm makes8requests with every round-two request hitting cache. Case automation passes6/6 scenarios.
+
+Rules-only synthetic evaluation: clean PDF28/28 scalar fields; injection16/16, changed fields0/16, hard-negative alerts0/20; planted fraud TP8/FP0/FN0/TN4 at0.30. These are small template/sequence checks, not production accuracy. The external vendor development pack remains below the global header target; Chinese is experimental and Thai scan recovery has gaps. Hosted transport/cache is tested with mocks; live hosted inference is unverified.
+
+This PR is a draft for review. Actual Policy stub responses still violate two hard guards by approving injected/inflated invoices; repeat registration is blocked by the registry. No Policy/Wallet fix or real chain execution is implied. Cross-service evidence adoption, issuer/bank/signature/tenant verification, PM review and release merge remain outstanding. Candidate/result caches are process-local and expire after15minutes; prewarm the running demo again after restart.
+
+Reproduce from `services/ocr-ai/`: `.venv/bin/python scripts/release_check.py --fresh`; add `--strict` for the downstream Policy gate. Full fields, requests, diagram and checklist status: `docs/CHECKLIST_AND_DEMO.md`. Evidence: `docs/RELEASE_CHECK.json`, `CHECKLIST_EVALUATION.json`, `CHECKLIST_MODEL_CHECK.json`, `CASE_LOOP_RESULTS.json`, `DEMO_LOOP_RESULTS.json`.

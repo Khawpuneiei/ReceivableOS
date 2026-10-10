@@ -40,3 +40,12 @@ _Avoid_: Approval, fraud verdict
 
 **Observed Invoice History**:
 Previously processed invoice evidence available to this OCR context. It is distinct from a ledger of financed invoices or accepted PO allocations.
+
+**Receivable Evidence Case**:
+A collection of separately issued documents claiming facts about one receivable, including its order, fulfillment, acceptance and adjustments. The collection can contain conflicting or unverified claims.
+
+**Declared Outstanding Balance**:
+The invoice amount less linked credit and payment claims stated in supporting documents. It is distinct from a verified settlement or financing balance.
+
+**Issuer Verification**:
+Independent confirmation of a document's origin and the issuer's authority to make its claims. Consistent document text alone does not establish it.
