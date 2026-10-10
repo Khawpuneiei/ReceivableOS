@@ -661,6 +661,11 @@ mode with no backend; total code ≤ ~400 lines; screenshot of each state saved 
 **Pitch pack (with PM and Finance):** you own the "how the AI decides" slides: decision pipeline, rules-as-data,
 calibration plot + AUC/Brier, the mandate JSON, and the blocked-attack screenshot. Finance owns the market numbers;
 P owns the story and deck.
+Constraints from the official rules: everything in English, presentation ≤ 10 minutes, optional demo video ≤ 5
+minutes, final submission 20 Oct 22:59 Bangkok (12 Oct noon stays the internal freeze). The technical document must
+cover **core algorithms**: you write that section for the credit decision (rule pipeline, pricing formula, model,
+calibration) and the mandate compiler (parser, validation, never-looser guarantee). Owners per deliverable are in
+`docs/01-architecture.md` §2.1.
 
 ---
 
