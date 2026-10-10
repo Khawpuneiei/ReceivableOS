@@ -14,10 +14,6 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-import numpy as np
-import onnxruntime as ort
-from tokenizers import Tokenizer
-
 MODEL_NAME = "protectai-deberta-v3-v2-onnx"
 MODEL_FILE = "model.onnx"
 MODEL_SHA256 = "f0ea7f239f765aedbde7c9e163a7cb38a79c5b8853d3f76db5152172047b228c"
@@ -28,6 +24,10 @@ class OnnxInjectionClassifier:
     name = MODEL_NAME
 
     def __init__(self, model_dir: Path) -> None:
+        # Lazy imports: the service starts without the ONNX runtime when the classifier is off.
+        import onnxruntime as ort
+        from tokenizers import Tokenizer
+
         config = json.loads((model_dir / "config.json").read_text(encoding="utf-8"))
         id2label = {int(k): str(v).upper() for k, v in config["id2label"].items()}
         self._injection_ids = [i for i, label in id2label.items() if label == "INJECTION"]
@@ -39,6 +39,8 @@ class OnnxInjectionClassifier:
 
     def score(self, text: str) -> float:
         """Probability that the text is an injection, from the softmax over the two logits."""
+        import numpy as np
+
         encoded = self._tokenizer.encode(text)
         feed = {
             "input_ids": np.array([encoded.ids], dtype=np.int64),

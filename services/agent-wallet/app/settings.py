@@ -35,12 +35,11 @@ class Settings(BaseSettings):
     wallet_human_review_above: Decimal = Decimal("837500.00")
     wallet_payee_allowlist: str | None = None
 
-    # Human tokens, HMAC keys and flags
+    # Tokens, the fingerprint key and flags
     wallet_owner_token: str | None = None
     wallet_approver_token: str | None = None
+    wallet_risk_oracle_token: str | None = None  # X-Risk-Oracle-Token for POST /wallet/approve (TX-2)
     fingerprint_hmac_key: str | None = None  # same value as ocr-ai
-    decision_hmac_key: str | None = None
-    require_signed_decision: bool = False
     agent_canary: str | None = None
     injection_model_dir: str | None = None  # local folder with the pinned classifier; unset = rules only
     # log (default): classifier flags are audited only. hold: flags wait for an approver. block: flags reject.

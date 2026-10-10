@@ -32,13 +32,16 @@ POST /wallet/register
 
 `seller` is the registry id. Never send an address: the payee registry is the only source of payees.
 
-**2. Policy decision → approve (TX-2)**, only when `decision == "approve"`.
+**2. Policy decision → approve (TX-2)**, only when `decision == "approve"`. Send the header `X-Risk-Oracle-Token`. The
+wallet refuses the approval unless `decision` is the decision it names, its hash recomputes, and `limit` and
+`fee_rate` equal the decision's.
 
 ```json
 POST /wallet/approve
 {
   "idempotency_key": "<invoice_id>:approve",
   "decision_id": "<decision.decision_id>",
+  "decision": "<the whole policy decision object>",
   "decision_hash": "<decision.decision_hash>",
   "invoice_fingerprint": "<ocr.invoice_fingerprint>",
   "limit": "<decision.limit>",

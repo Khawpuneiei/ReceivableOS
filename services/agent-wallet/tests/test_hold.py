@@ -58,6 +58,7 @@ def hash_of(d: dict) -> str:
 def held(monkeypatch):
     monkeypatch.setenv("WALLET_OWNER_TOKEN", "owner-test-token")
     monkeypatch.setenv("WALLET_APPROVER_TOKEN", "approver-test-token")
+    monkeypatch.setenv("WALLET_RISK_ORACLE_TOKEN", "risk-oracle-test-token")
     monkeypatch.setenv("INJECTION_MODEL_DIR", "unused")  # any non-empty value turns the classifier on
     monkeypatch.setenv("INJECTION_CLASSIFIER_ACTION", "hold")
     get_settings.cache_clear()
@@ -89,6 +90,7 @@ def open_receivable(client, reasons: list[str]) -> None:
         json={
             "idempotency_key": "fl_1:approve",
             "decision_id": "dec_1",
+            "decision": d,
             "decision_hash": hash_of(d),
             "invoice_fingerprint": FP,
             "limit": "524300.00",
@@ -96,6 +98,7 @@ def open_receivable(client, reasons: list[str]) -> None:
             "model_version": "pd-lgbm-0.1.0",
             "policy_version": "policy-0.1.0",
         },
+        headers={"X-Risk-Oracle-Token": "risk-oracle-test-token"},
     )
 
 

@@ -5,6 +5,7 @@ Owner: Agent AI engineer. Endpoints follow CLAUDE.md 6.1; models come from share
 
 import hmac
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
@@ -71,7 +72,15 @@ def _check_token(expected: str | None, given: str | None) -> None:
 def create_app(service: WalletService | None = None) -> FastAPI:
     svc = service or build_service()
     settings = get_settings()
-    app = FastAPI(title="agent-wallet")
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        # Mock mode starts with the demo mandate and lender liquidity, so `uvicorn app.main:app` runs as is.
+        if settings.chain_mode == "mock" and svc.mandate is None:
+            bootstrap_demo(svc)
+        yield
+
+    app = FastAPI(title="agent-wallet", lifespan=lifespan)
 
     @app.get("/health")
     def health() -> dict:
@@ -88,7 +97,10 @@ def create_app(service: WalletService | None = None) -> FastAPI:
         return svc.register(req)
 
     @app.post("/wallet/approve", response_model=WalletResult)
-    def approve(req: WalletApproveRequest) -> WalletResult:
+    def approve(
+        req: WalletApproveRequest, x_risk_oracle_token: str | None = Header(default=None)
+    ) -> WalletResult:
+        _check_token(settings.wallet_risk_oracle_token, x_risk_oracle_token)  # only the risk oracle approves
         return svc.approve(req)
 
     @app.post("/wallet/settle", response_model=WalletResult)

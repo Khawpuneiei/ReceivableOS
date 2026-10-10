@@ -52,6 +52,7 @@ def hash_of(decision: dict) -> str:
 def client(monkeypatch):
     monkeypatch.setenv("WALLET_OWNER_TOKEN", "owner-test-token")
     monkeypatch.setenv("WALLET_APPROVER_TOKEN", "approver-test-token")
+    monkeypatch.setenv("WALLET_RISK_ORACLE_TOKEN", "risk-oracle-test-token")
     monkeypatch.setenv("AGENT_CANARY", CANARY)
     get_settings.cache_clear()
     service = build_service(clock=Clock(NOW))
@@ -77,6 +78,7 @@ def approve_body(decision: dict, key: str = "fl_1:approve") -> dict:
     return {
         "idempotency_key": key,
         "decision_id": "dec_1",
+        "decision": decision,
         "decision_hash": hash_of(decision),
         "invoice_fingerprint": FP,
         "limit": decision["limit"],
@@ -112,7 +114,11 @@ def execute_body(
 
 def open_receivable(client, face: str = "749000.00", limit: str = "524300.00", decision: dict | None = None):
     assert client.post("/wallet/register", json=register_body(face=face)).json()["status"] == "executed"
-    approve = client.post("/wallet/approve", json=approve_body(decision or decision_dict(limit=limit)))
+    approve = client.post(
+        "/wallet/approve",
+        json=approve_body(decision or decision_dict(limit=limit)),
+        headers={"X-Risk-Oracle-Token": "risk-oracle-test-token"},
+    )
     assert approve.json()["status"] == "executed"
 
 

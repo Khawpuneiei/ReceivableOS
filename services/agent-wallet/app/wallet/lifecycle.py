@@ -30,10 +30,13 @@ from app.models import (
     Payee,
     RegisterIntent,
     SettleIntent,
+    canonical_hash,
+    canonical_json,
 )
 from app.money import apr_to_bps
 from app.wallet.store import Hold, ReceivableFact, Store
 from shared.money import fee_rate_30d_to_apr
+from shared.schemas import Decision as DecisionKind
 from shared.schemas import (
     GuardCheck,
     TxStatus,
@@ -115,9 +118,10 @@ class WalletService:
             checks=checks,
         )
 
-    def _scan_blocks(self, request: Any) -> WalletResult | None:
-        """L2 for requests without a draw. There is no approval path for these, so a hold blocks too."""
-        report = scan_payload(request.model_dump(mode="json"), self.canary, self.classifier)
+    def _scan_blocks(self, request: Any, exclude: set[str] | None = None) -> WalletResult | None:
+        """L2 for requests without a draw. There is no approval path for these, so a hold blocks too.
+        `exclude` leaves out fields that are scanned where money moves (the decision, at the draw)."""
+        report = scan_payload(request.model_dump(mode="json", exclude=exclude), self.canary, self.classifier)
         if report.canary_hit:
             return self._blocked([GuardCheck(layer="L2", code="CanaryLeak", passed=False)])
         if report.rule_flagged or (report.classifier_flagged and self.classifier_action in ("hold", "block")):
@@ -227,8 +231,11 @@ class WalletService:
         return fact.invoice_id if fact else fingerprint
 
     @staticmethod
-    def _default_key(fingerprint: str, action: str) -> str:
-        return hashlib.sha256(f"{fingerprint}:{action}".encode()).hexdigest()
+    def _request_key(req: WalletRequest) -> str:
+        """Default key for a draw sent without one: a hash of the whole body.
+        A different draw never shares it, so a retry replays only the identical request."""
+        body = req.model_dump(mode="json", exclude={"idempotency_key"})
+        return hashlib.sha256(canonical_json(body).encode()).hexdigest()
 
     # ----- TX-1: register -----
 
@@ -275,6 +282,25 @@ class WalletService:
         return self._run("approve", invoice_id, key, lambda: self._approve(req))
 
     def _approve(self, req: WalletApproveRequest) -> WalletResult:
+        # The approval must name an approve decision and match it: the hash covers the decision, and the limit
+        # and fee are separate fields, so they are compared with it too.
+        decision = req.decision
+        if decision is None:
+            return self._offchain_block("SchemaInvalid", "L0")
+        recomputed = canonical_hash(
+            decision.model_dump(mode="json", exclude={"decision_hash", "valid_until"})
+        )
+        matches = (
+            recomputed == req.decision_hash.lower()
+            and req.limit == decision.limit
+            and req.fee_rate == decision.fee_rate
+        )
+        checks = [
+            GuardCheck(layer="L1", code="NotApproved", passed=decision.decision == DecisionKind.approve),
+            GuardCheck(layer="L1", code="DecisionTampered", passed=matches),
+        ]
+        if not all(c.passed for c in checks):
+            return self._blocked(checks)
         max_apr_bps = apr_to_bps(fee_rate_30d_to_apr(req.fee_rate))
         try:
             intent = ApproveIntent(
@@ -285,7 +311,7 @@ class WalletService:
             )
         except ValidationError:
             return self._offchain_block("SchemaInvalid", "L0")
-        if (blocked := self._scan_blocks(req)) is not None:
+        if (blocked := self._scan_blocks(req, exclude={"decision"})) is not None:
             return blocked
         res = self.ledger.approve(intent)
         fact = self.store.receivables.get(req.invoice_fingerprint)
@@ -297,7 +323,7 @@ class WalletService:
 
     def execute(self, req: WalletRequest) -> WalletResult:
         fingerprint = req.invoice_fingerprint or ""
-        key = req.idempotency_key or self._default_key(fingerprint, "draw")
+        key = req.idempotency_key or self._request_key(req)
         return self._run("draw", req.invoice_id, key, lambda: self._execute(req, fingerprint))
 
     def _execute(self, req: WalletRequest, fingerprint: str) -> WalletResult:

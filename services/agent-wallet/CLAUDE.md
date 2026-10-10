@@ -275,7 +275,7 @@ nothing is submitted if any blocking check fails.
 | L3 | `amount ≤ max_amount_per_tx`; rolling 24h total ≤ `daily_cap` | `AmountAboveTxCap`, `DailyCapExceeded` |
 | L3 | payee resolves, is allowlisted and equals the bound seller; target contract allowlisted | `PayeeNotAllowed`, `TargetNotAllowed` |
 | L3 | receivable registered, not already drawn; duplicate `invoice_fingerprint` at register (a re-saved PDF has a new `doc_hash` but the same fingerprint) | `NotRegistered`, `AlreadyDrawn`, `DuplicateReceivable` |
-| L3 | mandate active, not expired; wallet not paused | `MandateExpired`, `Paused` |
+| L3 | mandate active, from its `valid_from` and not expired; the request names the active mandate; wallet not paused | `MandateNotYetValid`, `MandateExpired`, `MandateMismatch`, `Paused` |
 | L4 | escalate to `pending_approval` (not block) if amount **≥** `human_review_above`, or (defence in depth) the request carries non-empty injection flags or `fraud_score ≥ 0.5` while the decision still says approve | `NeedsHumanApproval` |
 | L5 | `PolicyGuard`/`Vault`/`Registry` re-check on-chain: target, payee, limit, advance, APR, tx cap, daily cap, expiry, pause, duplicate, not approved, already drawn | same strings |
 
@@ -308,7 +308,7 @@ selectors (verify on your node; if custom errors decode fine, either works). Fou
 ```
 
 - Every write carries `idempotency_key` (architecture: e.g. `fl_123:draw`); default when missing:
-  `sha256(invoice_fingerprint + ":" + action)`. A repeat returns the stored result and never sends a second tx;
+  `sha256` of the canonical request body without the key, so a missing fingerprint cannot make two draws share a key. A repeat returns the stored result and never sends a second tx;
   a repeated "buyer paid" settles once.
 - An on-chain revert is `blocked` with `chain_ref` = the reverted tx hash (FISCO gives reverted txs a hash and a
   receipt with non-zero status). `failed` is for infrastructure errors.
@@ -402,7 +402,7 @@ live in `app/models.py`.
 | Method | Path | Body | Chain |
 |---|---|---|---|
 | `POST` | `/wallet/register` | `{idempotency_key, invoice_id, invoice_fingerprint, doc_hash, face_value, currency, due_date, seller}` (`seller` = registry id; if absent, the only `SELLER:` entry in the mandate) | TX‑1 `AgentWallet.execute → Registry.register` |
-| `POST` | `/wallet/approve` | `{idempotency_key, decision_id, decision_hash, invoice_fingerprint, limit, fee_rate, model_version, policy_version}` (+ optional full `decision` so L1 can recompute the hash) | TX‑2 `Registry.approve` (riskOracle) |
+| `POST` | `/wallet/approve` | `{idempotency_key, decision_id, decision_hash, invoice_fingerprint, limit, fee_rate, model_version, policy_version}` + `decision` (required: its hash, limit and fee are checked against the approval) and the header `X-Risk-Oracle-Token` | TX‑2 `Registry.approve` (riskOracle) |
 | `POST` | `/wallet/execute` | 6.2 | TX‑4 draw |
 | `POST` | `/wallet/settle` | `{idempotency_key, invoice_id, invoice_fingerprint, doc_hash?, amount_paid, paid_at? (date)}` | TX‑5 repay + waterfall |
 | `POST` | `/wallet/mandate/activate` | `{mandate_id, mandate}` + `X-Owner-Token` | `PolicyGuard.setMandate` (+ payees/targets) |
@@ -640,7 +640,7 @@ Existing (`main` + PR #9): `WALLET_URL`, `SETTLEMENT_TOKEN=tTHB`, `CHAIN_MODE=mo
 `WALLET_AMOUNT_DECIMALS=2`, `WALLET_MAX_TX_AMOUNT`, `WALLET_HUMAN_REVIEW_ABOVE`, `WALLET_PAYEE_ALLOWLIST`,
 `FINGERPRINT_HMAC_KEY` (same value as ocr-ai), `LLM_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`.
 To add: `CHAIN_OWNER_KEY_PATH`, `CHAIN_APPROVER_KEY_PATH`, `CHAIN_RISK_ORACLE_KEY_PATH`, `WALLET_DAILY_CAP=3000000.00`,
-`WALLET_OWNER_TOKEN`, `WALLET_APPROVER_TOKEN`, `DEMO_MODE=0`, `DECISION_HMAC_KEY`, `REQUIRE_SIGNED_DECISION=false`,
+`WALLET_OWNER_TOKEN`, `WALLET_APPROVER_TOKEN`, `WALLET_RISK_ORACLE_TOKEN`, `DEMO_MODE=0`,
 `AGENT_CANARY`, `PLATFORM_FEE_RATE=0.003`.
 Demo values agreed with the Policy and Controls threads: `WALLET_MAX_TX_AMOUNT=1500000.00`, `WALLET_DAILY_CAP=3000000.00`,
 `WALLET_HUMAN_REVIEW_ABOVE=837500.00` (inclusive), as set in PR #9's `.env.example`. Env values are platform ceilings and defaults; the active mandate can only tighten them. **All wallet

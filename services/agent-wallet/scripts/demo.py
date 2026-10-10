@@ -1,13 +1,13 @@
 """Demo walkthrough (CLAUDE.md section 9) against a running agent-wallet service. Owner: Agent AI engineer.
 
-Start the service first, with the tokens and (for the on-chain revert steps) DEMO_MODE=1:
+Start the service first, with the tokens and (for the on-chain revert steps) DEMO_MODE=1. In mock mode the
+service starts with the demo mandate and lender liquidity, so no seeding step is needed before the demo:
 
-    WALLET_OWNER_TOKEN=... WALLET_APPROVER_TOKEN=... DEMO_MODE=1 \
+    WALLET_OWNER_TOKEN=... WALLET_APPROVER_TOKEN=... WALLET_RISK_ORACLE_TOKEN=... DEMO_MODE=1 \
         python -m uvicorn app.main:app --app-dir services/agent-wallet --port 8003
 
 Then, from the repo root:
 
-    python services/agent-wallet/scripts/seed_demo.py
     python services/agent-wallet/scripts/demo.py
 
 Every transaction hash printed here is a MOCK hash (prefix `mock:`). It is not a chain hash.
@@ -58,10 +58,11 @@ def decision_hash(d: dict) -> str:
 
 
 class Demo:
-    def __init__(self, url: str, owner: str, approver: str) -> None:
+    def __init__(self, url: str, owner: str, approver: str, risk_oracle: str) -> None:
         self.http = httpx.Client(base_url=url, timeout=60)
         self.owner = {"X-Owner-Token": owner}
         self.approver = {"X-Approver-Token": approver}
+        self.risk_oracle = {"X-Risk-Oracle-Token": risk_oracle}
 
     def say(self, title: str) -> None:
         print(f"\n== {title}")
@@ -111,13 +112,15 @@ class Demo:
             json={
                 "idempotency_key": f"{invoice}:approve",
                 "decision_id": "dec_demo",
+                "decision": d,
                 "decision_hash": decision_hash(d),
                 "invoice_fingerprint": fingerprint(invoice),
-                "limit": limit,
-                "fee_rate": 0.009,
+                "limit": d["limit"],
+                "fee_rate": d["fee_rate"],
                 "model_version": "pd-lgbm-0.1.0",
                 "policy_version": "policy-0.1.0",
             },
+            headers=self.risk_oracle,
         ).json()
 
     def draw(
@@ -150,8 +153,8 @@ class Demo:
         return self.http.post("/wallet/execute", json=body).json()
 
 
-def run(url: str, owner: str, approver: str) -> int:
-    demo = Demo(url, owner, approver)
+def run(url: str, owner: str, approver: str, risk_oracle: str) -> int:
+    demo = Demo(url, owner, approver, risk_oracle)
     health = demo.http.get("/health").json()
     print(f"service: {health}")
 
@@ -268,11 +271,15 @@ def main() -> int:
     parser.add_argument("--url", default=os.getenv("WALLET_URL", "http://127.0.0.1:8003"))
     parser.add_argument("--owner-token", default=os.getenv("WALLET_OWNER_TOKEN"))
     parser.add_argument("--approver-token", default=os.getenv("WALLET_APPROVER_TOKEN"))
+    parser.add_argument("--risk-oracle-token", default=os.getenv("WALLET_RISK_ORACLE_TOKEN"))
     args = parser.parse_args()
-    if not (args.owner_token and args.approver_token):
-        print("set WALLET_OWNER_TOKEN and WALLET_APPROVER_TOKEN, or pass both flags", file=sys.stderr)
+    if not (args.owner_token and args.approver_token and args.risk_oracle_token):
+        print(
+            "set WALLET_OWNER_TOKEN, WALLET_APPROVER_TOKEN and WALLET_RISK_ORACLE_TOKEN, or pass the flags",
+            file=sys.stderr,
+        )
         return 2
-    return run(args.url, args.owner_token, args.approver_token)
+    return run(args.url, args.owner_token, args.approver_token, args.risk_oracle_token)
 
 
 if __name__ == "__main__":

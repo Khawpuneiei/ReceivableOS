@@ -48,6 +48,7 @@ def hash_of(decision: dict) -> str:
 def wallet(monkeypatch):
     monkeypatch.setenv("WALLET_OWNER_TOKEN", "owner-test-token")
     monkeypatch.setenv("WALLET_APPROVER_TOKEN", "approver-test-token")
+    monkeypatch.setenv("WALLET_RISK_ORACLE_TOKEN", "risk-oracle-test-token")
     get_settings.cache_clear()
     service = build_service(clock=Clock(NOW))
     bootstrap_demo(service)
@@ -76,6 +77,7 @@ def open_and_draw(client, amount: str = "524300.00", apr: float = 0.1095, key: s
         json={
             "idempotency_key": "fl_1:approve",
             "decision_id": "dec_1",
+            "decision": decision,
             "decision_hash": hash_of(decision),
             "invoice_fingerprint": FP,
             "limit": amount,
@@ -83,6 +85,7 @@ def open_and_draw(client, amount: str = "524300.00", apr: float = 0.1095, key: s
             "model_version": "pd-lgbm-0.1.0",
             "policy_version": "policy-0.1.0",
         },
+        headers={"X-Risk-Oracle-Token": "risk-oracle-test-token"},
     )
     body = {
         "decision": {**decision, "decision_hash": hash_of(decision)},

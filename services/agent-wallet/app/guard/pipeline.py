@@ -85,7 +85,9 @@ def check_draw(
         amount = intent.amount
         approved_apr_bps = apr_to_bps(fee_rate_30d_to_apr(fact.fee_rate)) if fact.fee_rate is not None else 0
         if m is not None:
+            add("L3", "MandateNotYetValid", ctx.now >= m.valid_from)
             add("L3", "MandateExpired", m.expires_at is None or ctx.now < m.expires_at)
+            add("L3", "MandateMismatch", req.mandate_id is None or req.mandate_id == m.mandate_id)
             mandate_apr_bps = int(m.max_apr * BPS)
             add("L3", "AprAboveMandate", intent.apr_bps <= min(mandate_apr_bps, approved_apr_bps))
             add("L3", "AmountAboveTxCap", amount <= m.max_amount_per_tx)
