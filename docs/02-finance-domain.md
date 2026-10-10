@@ -336,9 +336,9 @@ On-chain token: a simulated THB stablecoin **tTHB** (1 tTHB = 1 THB, 2 decimals)
 
 **Why the seller accepts ~16% annualised all-in:** the alternatives for a Thai SME rejected by banks (P5) are paying suppliers late, owner's personal credit, or informal lending, which is typically far more expensive **(est.)**; and it costs nothing when unused.
 
-### 11.1 Business-plan outline (in case Finance owns it)
+### 11.1 Business-plan outline
 
-Past FinTechathon winners submitted a business plan alongside the code. If P assigns it to Finance, this is the skeleton; each line points to the section above that already holds the content.
+Past FinTechathon winners submitted a business plan alongside the code. The pitch pack (deck + business plan) is co-owned by **PM + Policy AI eng + Finance**; Finance writes the problem, market, business-model and risk sections. This is the skeleton; each line points to the section above that already holds the content.
 
 1. **Problem**: SMEs wait 45–65+ days for cash and most are refused credit; lenders refuse because of fraud and double financing (§7 P5, P8, P13, P17).
 2. **Solution**: ReceivableOS, an AI-underwritten, on-chain receivable with an agent wallet bounded by the seller's mandate (§1, §6).
@@ -361,9 +361,10 @@ Past FinTechathon winners submitted a business plan alongside the code. If P ass
 | **Sat 11 Oct 12:00** | Policy thresholds table | advance_rate and fee_rate by buyer rating (A/B/C) × confirmed/unconfirmed; reject rules (duplicate, PO mismatch > 5%, tenor > 120 d, overdue); review rules | Policy AI |
 | **Sat 11 Oct 15:00** | Sample documents | Invoice, PO and delivery note for the happy path plus V1, V2, V4 (Thai + English text, realistic layout, PDF/PNG) | OCR AI |
 | **Sat 11 Oct 18:00** | Credit features list + sanity ranges | Features for buyer and seller (payment history, rating, tenor, amount vs history, dilution rate) with realistic ranges for synthetic data | Policy AI (credit model) |
-| **Sat 11 Oct 20:00** | Pain-point slide | Pick 4 numbers from §7, re-check each link opens and says what we claim, mark estimates | P (pitch) |
-| **Sun 12 Oct 10:00** | Business-model slide + judge Q&A sheet | §11 table on one slide; 8–10 likely judge questions with answers (legal assignment, why not just use NITMX TDR, who bears default, why ~16% all-in is fair, regulation) | P (pitch) |
-| **Sun 12 Oct 14:00** | Demo walk-through check | Watch the end-to-end demo and confirm every amount on screen matches §10 | Whole team |
+| **Sat 11 Oct 20:00** | Pain-point slide | Pick 4 numbers from §7, re-check each link opens and says what we claim, mark estimates | Pitch pack |
+| **Sat 11 Oct 22:00** | Business-plan draft (Finance sections of §11.1) | Problem, market, business model, competition, risk/compliance; 2–3 pages | Pitch pack (PM + Policy AI eng + Finance) |
+| **Sun 12 Oct 10:00** | Business-model slide + judge Q&A sheet | §11 table on one slide; 8–10 likely judge questions with answers (legal assignment, why not just use NITMX TDR, who bears default, why ~16% all-in is fair, regulation) | Pitch pack |
+| **Sun 12 Oct 14:00** | Demo walk-through check | Watch the end-to-end demo and confirm every amount on screen matches §10 (demo data is integrated by PM; §10 is its finance source) | Whole team |
 
 These dates assume the team's own MVP date of 12 Oct. The competition's preliminary round reportedly closes 2 Nov, so if P moves the internal deadline, shift the dates but keep the order.
 
