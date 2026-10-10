@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import secrets
@@ -25,6 +26,9 @@ def free_port():
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output", type=Path, default=SERVICE / "docs/ARCHITECTURE_INTEGRATION.json")
+    args = parser.parse_args()
     processes = []
     with tempfile.TemporaryDirectory(prefix="ocr-integration-") as temporary:
         env = {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "LANG") if key in os.environ}
@@ -128,9 +132,7 @@ def main():
                         "no downstream security acceptance claim",
                     ],
                 }
-                (SERVICE / "docs/ARCHITECTURE_INTEGRATION.json").write_text(
-                    json.dumps(report, indent=2) + "\n"
-                )
+                args.output.write_text(json.dumps(report, indent=2) + "\n")
                 print(json.dumps(report))
         finally:
             for process in processes:

@@ -6,6 +6,7 @@ import json
 import re
 import unicodedata
 
+from app.config import REVIEW_CONFIDENCE
 from app.models import DocumentExtraction
 from app.normalize import normalize_country, normalize_reference
 
@@ -35,7 +36,7 @@ def legacy_fingerprint(doc: DocumentExtraction, key: str) -> str:
 
 def entity_token(party, key: str) -> str | None:
     fields = [party.country, party.identifier_scheme, party.legal_identifier]
-    if any(field.status != "present" or field.confidence < 0.8 for field in fields):
+    if any(field.status != "present" or field.confidence < REVIEW_CONFIDENCE for field in fields):
         return None
     values = [unicodedata.normalize("NFC", field.value).strip() for field in fields]
     return "entity:v1:" + token(key, "legal-entity-v1", values)
@@ -47,14 +48,18 @@ def semantic_fingerprint(doc: DocumentExtraction, key: str) -> str | None:
     if (
         not supplier
         or not buyer
-        or any(field.status != "present" or field.confidence < 0.8 for field in fields)
+        or any(field.status != "present" or field.confidence < REVIEW_CONFIDENCE for field in fields)
     ):
         return None
+    # Decimal.normalize() rounds to the ambient precision; identity must not do so.
+    amount = format(doc.amount.value, "f")
+    if "." in amount:
+        amount = amount.rstrip("0").rstrip(".")
     values = [
         supplier,
         buyer,
         normalize_reference(doc.document_number.value),
-        format(doc.amount.value.normalize(), "f"),
+        amount,
         doc.currency.value,
         doc.issue_date.value.isoformat(),
     ]

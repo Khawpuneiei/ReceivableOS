@@ -8,6 +8,7 @@ from typing import Annotated, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.config import REVIEW_CONFIDENCE
 from shared.schemas import ExtractedInvoice
 
 Digest = Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")]
@@ -195,6 +196,7 @@ class ConsumerHandoff(LocalModel):
     document_hashes: list[Digest] = Field(min_length=1, max_length=2)
     extraction_version: Literal["spatial-rules-v2"] = "spatial-rules-v2"
     graph_rule_version: Literal["graph-rules-v1"] = "graph-rules-v1"
+    comparison_version: Literal["invoice-po-rules-v2"] = "invoice-po-rules-v2"
     review_required: bool
     review_reasons: list[str] = Field(default_factory=list, max_length=100)
     injection_flags: list[str] = Field(default_factory=list, max_length=100)
@@ -232,6 +234,22 @@ class InvoicePoVerificationResult(LocalModel):
     def validate_pair(self) -> InvoicePoVerificationResult:
         if self.invoice.document_type != "invoice" or self.purchase_order.document_type != "purchase_order":
             raise ValueError("Verification requires an invoice and a purchase order")
+        has_mismatch = any(check.status == "mismatch" for check in self.checks)
+        if has_mismatch and self.status != "mismatch":
+            raise ValueError("Resolved mismatches cannot be downgraded")
+        if (
+            self.status != "matched"
+            and self.compatible_invoice
+            and self.compatible_invoice.confidence >= REVIEW_CONFIDENCE
+        ):
+            raise ValueError("Unmatched projections must require consumer review")
+        if self.handoff:
+            if self.handoff.document_hashes != [self.invoice.doc_hash, self.purchase_order.doc_hash]:
+                raise ValueError("Handoff must bind both uploaded documents")
+            if self.handoff.review_required != (self.status != "matched"):
+                raise ValueError("Handoff review must agree with pair status")
+            if self.compatible_invoice and self.handoff.observation_id != self.compatible_invoice.invoice_id:
+                raise ValueError("Handoff observation must agree with compatible invoice")
         invoice_refs = {ref.ref_id for ref in self.invoice.evidence}
         po_refs = {ref.ref_id for ref in self.purchase_order.evidence}
         for check in self.checks:

@@ -1,7 +1,10 @@
 """Independent invoice/PO checks on declared currency and tax bases."""
 
+from decimal import Decimal
+
+from app.config import REVIEW_CONFIDENCE
 from app.models import ComparisonCheck, DocumentExtraction, FieldValue
-from app.normalize import minor_unit, normalize_reference
+from app.normalize import normalize_reference
 
 
 def compare_documents(invoice: DocumentExtraction, po: DocumentExtraction) -> list[ComparisonCheck]:
@@ -15,16 +18,16 @@ def compare_documents(invoice: DocumentExtraction, po: DocumentExtraction) -> li
         *,
         normalize=lambda x: x,
         eligible: bool = True,
-        numeric: bool = False,
     ) -> None:
         resolved = (
             eligible
             and left.status == right.status == "present"
-            and min(left.confidence, right.confidence) >= 0.8
+            and min(left.confidence, right.confidence) >= REVIEW_CONFIDENCE
         )
         if resolved:
             a, b = normalize(left.value), normalize(right.value)
-            same = abs(a - b) <= minor_unit(invoice.currency.value) if numeric else a == b
+            # Printed amounts and commercial prices are facts, not rounding estimates.
+            same = a == b
             status = "match" if same else "mismatch"
         else:
             status = "unknown"
@@ -81,7 +84,6 @@ def compare_documents(invoice: DocumentExtraction, po: DocumentExtraction) -> li
             getattr(po, name),
             "AMOUNT_BASIS",
             eligible=same_currency and same_basis,
-            numeric=True,
         )
     left_lines = {line.sku.value: line for line in invoice.lines if line.sku.value}
     right_lines = {line.sku.value: line for line in po.lines if line.sku.value}
@@ -112,21 +114,18 @@ def compare_documents(invoice: DocumentExtraction, po: DocumentExtraction) -> li
                 left.unit_price,
                 right.unit_price,
                 "LINE_UNIT_PRICE",
-                eligible=same_currency,
-                numeric=True,
+                eligible=same_currency and same_basis,
             )
-    partial = bool(
-        left_lines
-        and right_lines
-        and any(
-            sku in right_lines
-            and left.quantity.value is not None
-            and right_lines[sku].quantity.value is not None
-            and left.quantity.value < right_lines[sku].quantity.value
-            for sku, left in left_lines.items()
-        )
-    )
-    if partial:
+    partial_skus = {
+        sku
+        for sku, left in left_lines.items()
+        if unique_lines
+        and sku in right_lines
+        and left.quantity.status == right_lines[sku].quantity.status == "present"
+        and min(left.quantity.confidence, right_lines[sku].quantity.confidence) >= REVIEW_CONFIDENCE
+        and left.quantity.value < right_lines[sku].quantity.value
+    }
+    if partial_skus:
         # Uploads contain order terms, not a trusted allocation ledger. Do not infer remaining capacity.
         checks.append(
             ComparisonCheck(
@@ -134,7 +133,14 @@ def compare_documents(invoice: DocumentExtraction, po: DocumentExtraction) -> li
             )
         )
         for check in checks:
-            if check.field in {"subtotal", "tax_amount", "amount"} or check.field.endswith(".quantity"):
+            partial_quantity = check.field in {f"line_items.{sku}.quantity" for sku in partial_skus}
+            partial_amount = (
+                check.field in {"subtotal", "tax_amount", "amount"}
+                and check.status != "unknown"
+                and Decimal(check.invoice_value) <= Decimal(check.po_value)
+            )
+            # Lower quantities need allocation evidence; proven over-order terms stay mismatches.
+            if partial_quantity or partial_amount:
                 check.status = "unknown"
                 check.rule_code = "PARTIAL_ALLOCATION_EVIDENCE_REQUIRED"
     return checks

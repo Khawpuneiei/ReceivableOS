@@ -376,9 +376,10 @@ def verify(
         if compatible.review_required:
             compatible.confidence = min(compatible.confidence, REVIEW_CONFIDENCE - 0.01)
     reasons = [
+        *(["PAIR_MISMATCH_REQUIRES_REVIEW"] if any(check.status == "mismatch" for check in checks) else []),
         *invoice_result.document.review_reasons,
         *po_result.document.review_reasons,
-        *(check.rule_code for check in checks if check.status == "unknown"),
+        *(check.rule_code for check in checks if check.status in {"unknown", "mismatch"}),
         *(item.code for item in findings),
     ]
     status = (

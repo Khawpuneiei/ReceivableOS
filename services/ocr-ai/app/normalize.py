@@ -9,6 +9,8 @@ import pycountry
 from babel.core import UnknownLocaleError
 from babel.numbers import get_currency_precision, parse_decimal
 
+from app.config import MAX_NUMERIC_DIGITS, MAX_NUMERIC_SCALE, MAX_NUMERIC_TEXT_CHARS
+
 
 def normalize_currency(raw: str) -> str:
     code = raw.strip().upper()
@@ -36,6 +38,8 @@ def minor_unit(currency: str) -> Decimal:
 
 
 def normalize_number(raw: str, locale: str | None) -> Decimal:
+    if len(raw) > MAX_NUMERIC_TEXT_CHARS or re.search(r"[eE]", raw):
+        raise ValueError("Financial number size or notation is unsupported")
     text = "".join(str(unicodedata.decimal(char)) if char.isdecimal() else char for char in raw.strip())
     if locale:
         try:
@@ -50,6 +54,12 @@ def normalize_number(raw: str, locale: str | None) -> Decimal:
         result = Decimal(text)
     if not result.is_finite() or result < 0:
         raise ValueError("Financial numbers must be finite and nonnegative")
+    if (
+        len(result.as_tuple().digits) > MAX_NUMERIC_DIGITS
+        or result.adjusted() >= MAX_NUMERIC_DIGITS
+        or result.as_tuple().exponent < -MAX_NUMERIC_SCALE
+    ):
+        raise ValueError("Financial number precision exceeds supported bounds")
     return result
 
 

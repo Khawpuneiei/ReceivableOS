@@ -1,9 +1,10 @@
 """Deterministic checks; no OCR/model certainty can override missing evidence."""
 
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from zoneinfo import ZoneInfo
 
+from app.config import FINANCIAL_DECIMAL_PRECISION, REVIEW_CONFIDENCE
 from app.models import DocumentExtraction
 from app.normalize import minor_unit, thai_tax_id_valid
 
@@ -11,7 +12,14 @@ CRITICAL_FIELDS = ("document_number", "issue_date", "due_date", "amount", "curre
 
 
 def validate_document(doc: DocumentExtraction) -> DocumentExtraction:
+    with localcontext(prec=FINANCIAL_DECIMAL_PRECISION):
+        return _validate_document(doc)
+
+
+def _validate_document(doc: DocumentExtraction) -> DocumentExtraction:
     reasons = list(doc.review_reasons)
+    if doc.document_type == "invoice" and doc.amount.value is not None and doc.amount.value <= 0:
+        reasons.append("NON_POSITIVE_INVOICE_AMOUNT")
     required = (
         CRITICAL_FIELDS if doc.document_type == "invoice" else ("document_number", "currency", "amount")
     )
@@ -37,12 +45,19 @@ def validate_document(doc: DocumentExtraction) -> DocumentExtraction:
         reasons.append("NO_LINE_EVIDENCE")
     for index, line in enumerate(doc.lines):
         if any(
-            field.status != "present" or field.confidence < 0.8
+            field.status != "present" or field.confidence < REVIEW_CONFIDENCE
             for field in (line.description, line.sku, line.quantity, line.unit_price, line.total)
         ):
             reasons.append(f"LINE_EVIDENCE_UNRESOLVED:{index}")
     if doc.currency.value:
         tolerance = minor_unit(doc.currency.value)
+
+        def arithmetic(delta: Decimal, mismatch: str, scope: str) -> None:
+            if abs(delta) > tolerance:
+                reasons.append(mismatch)
+            elif delta:
+                reasons.append(f"ARITHMETIC_ROUNDING_REQUIRES_REVIEW:{scope}")
+
         for name in ("amount", "subtotal", "tax_amount"):
             field = getattr(doc, name)
             if field.value is not None and field.value % tolerance:
@@ -53,8 +68,11 @@ def validate_document(doc: DocumentExtraction) -> DocumentExtraction:
                 and line.unit_price.value is not None
                 and line.total.value is not None
             ):
-                if abs(line.quantity.value * line.unit_price.value - line.total.value) > tolerance:
-                    reasons.append(f"LINE_MATH_MISMATCH:{index}")
+                arithmetic(
+                    line.quantity.value * line.unit_price.value - line.total.value,
+                    f"LINE_MATH_MISMATCH:{index}",
+                    f"line:{index}",
+                )
         if (
             doc.lines
             and doc.subtotal.value is not None
@@ -66,16 +84,17 @@ def validate_document(doc: DocumentExtraction) -> DocumentExtraction:
                 for reason in reasons
             )
         ):
-            if (
-                abs(sum((line.total.value for line in doc.lines), Decimal(0)) - doc.subtotal.value)
-                > tolerance
-            ):
-                reasons.append("LINE_SUM_MISMATCH")
+            arithmetic(
+                sum((line.total.value for line in doc.lines), Decimal(0)) - doc.subtotal.value,
+                "LINE_SUM_MISMATCH",
+                "subtotal",
+            )
         if all(getattr(doc, name).value is not None for name in ("amount", "subtotal", "tax_amount")):
-            if abs(doc.subtotal.value + doc.tax_amount.value - doc.amount.value) > tolerance:
-                reasons.append("TOTAL_MISMATCH")
+            arithmetic(
+                doc.subtotal.value + doc.tax_amount.value - doc.amount.value, "TOTAL_MISMATCH", "total"
+            )
     for field in [*(getattr(doc, name) for name in required), doc.supplier.name, doc.buyer.name]:
-        if field.status == "present" and field.confidence < 0.8:
+        if field.status == "present" and field.confidence < REVIEW_CONFIDENCE:
             reasons.append("LOW_FIELD_CONFIDENCE")
     doc.review_reasons = list(dict.fromkeys(reasons))
     return doc
