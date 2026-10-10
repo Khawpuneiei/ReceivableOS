@@ -15,6 +15,7 @@ from typing import Any
 from ledger.base import ChainResult, LedgerAdapter
 from pydantic import ValidationError
 
+from app.audit.log import AuditLog
 from app.guard.injection import Classifier, scan_payload
 from app.guard.pipeline import GuardContext, check_draw
 from app.models import (
@@ -66,6 +67,7 @@ class WalletService:
         self.classifier = classifier
         self.mandate: Mandate | None = None
         self.paused = False
+        self.audit = AuditLog()
 
     # ----- helpers -----
 
@@ -150,14 +152,70 @@ class WalletService:
         checks.append(GuardCheck(layer="L5", code=code, passed=False))
         return WalletResult(status=TxStatus.blocked, block_reason=code, checks=checks, **common)
 
-    def _idempotent(self, key: str, run: Callable[[], WalletResult]) -> WalletResult:
+    def _run(self, action: str, invoice_id: str, key: str, run: Callable[[], WalletResult]) -> WalletResult:
+        """Idempotent write. A repeat returns the stored result, sends nothing, and is audited."""
         if key in self.store.results:
             stored = self.store.results[key]
             replay = GuardCheck(layer="IDEM", code="IdempotentReplay", passed=True)
-            return stored.model_copy(update={"checks": [*stored.checks, replay]})
+            result = stored.model_copy(update={"checks": [*stored.checks, replay]})
+            self._audit(invoice_id, action, result, event="REPLAY")
+            return result
         result = run()
         self.store.results[key] = result
+        self._audit(invoice_id, action, result)
         return result
+
+    def _audit(
+        self,
+        invoice_id: str,
+        action: str,
+        result: WalletResult,
+        event: str | None = None,
+        actor: str = "agent",
+    ) -> None:
+        """One CHECK entry per guard check, then the outcome. A settlement is anchored on chain afterwards."""
+        self.store.txs[result.tx_id] = (invoice_id, result)
+        ref = result.audit_ref
+        if event is None:
+            for check in result.checks:
+                data = {"layer": check.layer, "code": check.code, "passed": check.passed}
+                self.audit.record(
+                    invoice_id=invoice_id,
+                    audit_ref=ref,
+                    action=action,
+                    event="CHECK",
+                    actor=actor,
+                    tx_id=result.tx_id,
+                    data=data,
+                )
+            outcome = {TxStatus.executed: "EXECUTED", TxStatus.blocked: "BLOCKED"}
+            event = outcome.get(result.status, "NEEDS_APPROVAL")
+        data = {"block_reason": result.block_reason, "chain": result.chain, "chain_ref": result.chain_ref}
+        self.audit.record(
+            invoice_id=invoice_id,
+            audit_ref=ref,
+            action=action,
+            event=event,
+            actor=actor,
+            tx_id=result.tx_id,
+            data=data,
+        )
+        if action == "settle" and result.status == TxStatus.executed:
+            head = self.audit.head
+            anchor = self.ledger.anchor_audit(head, len(self.audit.entries))
+            self.audit.record(
+                invoice_id=invoice_id,
+                audit_ref=ref,
+                action="anchor",
+                event="ANCHORED",
+                actor=actor,
+                tx_id=result.tx_id,
+                data={"head": head, "entries": len(self.audit.entries), "chain_ref": anchor.tx_hash},
+            )
+
+    def _invoice_of(self, fingerprint: str) -> str:
+        fact = self.store.receivables.get(fingerprint)
+        return fact.invoice_id if fact else fingerprint
 
     @staticmethod
     def _default_key(fingerprint: str, action: str) -> str:
@@ -167,7 +225,7 @@ class WalletService:
 
     def register(self, req: WalletRegisterRequest) -> WalletResult:
         key = req.idempotency_key
-        return self._idempotent(key, lambda: self._register(req))
+        return self._run("register", req.invoice_id, key, lambda: self._register(req))
 
     def _register(self, req: WalletRegisterRequest) -> WalletResult:
         seller_id = req.seller or self._default_seller_id() or ""
@@ -204,7 +262,8 @@ class WalletService:
 
     def approve(self, req: WalletApproveRequest) -> WalletResult:
         key = req.idempotency_key
-        return self._idempotent(key, lambda: self._approve(req))
+        invoice_id = self._invoice_of(req.invoice_fingerprint)
+        return self._run("approve", invoice_id, key, lambda: self._approve(req))
 
     def _approve(self, req: WalletApproveRequest) -> WalletResult:
         max_apr_bps = apr_to_bps(fee_rate_30d_to_apr(req.fee_rate))
@@ -230,7 +289,7 @@ class WalletService:
     def execute(self, req: WalletRequest) -> WalletResult:
         fingerprint = req.invoice_fingerprint or ""
         key = req.idempotency_key or self._default_key(fingerprint, "draw")
-        return self._idempotent(key, lambda: self._execute(req, fingerprint))
+        return self._run("draw", req.invoice_id, key, lambda: self._execute(req, fingerprint))
 
     def _execute(self, req: WalletRequest, fingerprint: str) -> WalletResult:
         resolved = self._payee_address(req.payee)
@@ -283,7 +342,7 @@ class WalletService:
 
     def settle(self, req: WalletSettleRequest) -> WalletResult:
         key = req.idempotency_key
-        return self._idempotent(key, lambda: self._settle(req))
+        return self._run("settle", req.invoice_id, key, lambda: self._settle(req))
 
     def _settle(self, req: WalletSettleRequest) -> WalletResult:
         try:
@@ -313,17 +372,22 @@ class WalletService:
     # ----- human approval, kill switch, mandate -----
 
     def confirm(self, tx_id: str, approve: bool) -> WalletResult:
+        invoice_id = self.store.txs.get(tx_id, ("unknown", None))[0]
         pending_id = self.store.pending.pop(tx_id, None)
         if pending_id is None:
-            return self._offchain_block("NotPending", "L4")
-        if not approve:
-            return self._offchain_block("ApprovalDeclined", "L4")
-        return self._finish(self.ledger.confirm(pending_id))
+            result = self._offchain_block("NotPending", "L4")
+        elif not approve:
+            result = self._offchain_block("ApprovalDeclined", "L4")
+        else:
+            result = self._finish(self.ledger.confirm(pending_id))
+        self._audit(invoice_id, "draw", result, actor="approver")
+        return result
 
     def pause(self, on: bool) -> WalletResult:
         result = self._finish(self.ledger.pause(on))
         if result.status == TxStatus.executed:
             self.paused = on
+        self._audit("wallet", "pause" if on else "unpause", result, actor="operator")
         return result
 
     def activate_mandate(self, mandate_dict: dict, max_tx: Decimal, daily_cap: Decimal) -> Mandate:

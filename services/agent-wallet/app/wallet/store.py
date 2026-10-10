@@ -26,3 +26,5 @@ class Store:
         self.receivables: dict[str, ReceivableFact] = {}  # invoice_fingerprint -> fact
         self.pending: dict[str, int] = {}  # wallet tx_id -> ledger pending id
         self.spends: list[tuple[datetime, Decimal]] = []  # draws and pending draws, for the 24h cap
+        # tx_id -> (invoice_id, result), for GET /wallet/tx
+        self.txs: dict[str, tuple[str, WalletResult]] = {}

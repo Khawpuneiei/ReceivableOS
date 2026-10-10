@@ -137,6 +137,24 @@ def create_app(service: WalletService | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="no mandate active")
         return {"mandate_id": svc.mandate.mandate_id, "mandate_hash": svc.mandate.mandate_hash}
 
+    def _audit_view(entries: list[dict]) -> dict:
+        return {"entries": entries, "verified": svc.audit.verify()}  # whole-chain check, not just these rows
+
+    @app.get("/wallet/audit/{invoice_id}")
+    def audit_by_invoice(invoice_id: str) -> dict:
+        return _audit_view(svc.audit.for_invoice(invoice_id))
+
+    @app.get("/wallet/audit/ref/{audit_ref}")
+    def audit_by_ref(audit_ref: str) -> dict:
+        return _audit_view(svc.audit.for_ref(audit_ref))
+
+    @app.get("/wallet/tx/{tx_id}", response_model=WalletResult)
+    def get_tx(tx_id: str) -> WalletResult:
+        found = svc.store.txs.get(tx_id)
+        if found is None:
+            raise HTTPException(status_code=404, detail="unknown tx_id")
+        return found[1]
+
     return app
 
 
