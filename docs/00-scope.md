@@ -100,7 +100,7 @@ Input: multipart `file` (PDF/PNG/JPG). Output:
   "invoice_fingerprint": "sha256:..."
 }
 ```
-Two hashes, both additions to the base contract: `doc_hash` is sha256 of the file bytes (audit trail); `invoice_fingerprint` is a hash of the normalised content (supplier tax id, buyer tax id, invoice_no, amount, issue date). **Duplicate detection keys on `invoice_fingerprint`**, because re-saving a PDF changes `doc_hash`. See `docs/05`.
+Two hashes, both additions to the base contract: `doc_hash` is sha256 of the file bytes (audit trail); `invoice_fingerprint` is a hash of the normalised invoice content (exact fields defined in `docs/05`). **Duplicate detection keys on `invoice_fingerprint`**, because re-saving a PDF changes `doc_hash`. See `docs/05`.
 
 ### 4.2 Policy service — `POST /policy/decide`
 Input: `{ "invoice": <4.1 output>, "supplier_profile": {...}, "buyer_profile": {...} }`. Output:
