@@ -1,0 +1,40 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+**/accounts/
+**/conf/*.crt
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+# data and models
+*.sqlite
+*.db
+data/*
+!data/invoices/
+models/*.bin
+models/*.pkl
+
+# node / contracts
+node_modules/
+artifacts/
+cache/
+out/
+services/agent-wallet/contracts/build/
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store

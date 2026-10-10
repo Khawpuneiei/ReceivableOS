@@ -1,0 +1,31 @@
+{
+  "supplier_profile": {
+    "name": "Siam Fresh Pack Co., Ltd.",
+    "tax_id": "0105559000000",
+    "wallet_address": "0xSUPPLIER",
+    "years_trading": 3,
+    "revenue_thb": "62000000.00",
+    "invoices_financed_count": 12,
+    "invoices_total": 36,
+    "paid_on_time": 34,
+    "historical_default_rate": 0.0,
+    "dilution_rate": 0.02,
+    "kyc_valid": true,
+    "kyc_expiry": "2027-06-30",
+    "current_exposure": "0.00",
+    "facility_limit": "3000000.00"
+  },
+  "buyer_profile": {
+    "name": "Mekong Basket Retail PCL",
+    "tax_id": "0107559000001",
+    "internal_rating": "A-",
+    "revenue_thb": "18000000000.00",
+    "on_time_payment_rate": 0.97,
+    "avg_days_late": 1.5,
+    "buyer_confirmed": true,
+    "relationship_months": 36,
+    "sector": "retail",
+    "current_exposure": "0.00",
+    "buyer_limit": "10000000.00"
+  }
+}
