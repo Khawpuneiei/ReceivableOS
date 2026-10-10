@@ -146,6 +146,7 @@ class ExtractedInvoice(BaseModel):
     fraud_score: float                 # 0–1
     fraud_flags: list[str] = []        # codes, see vocabulary below
     doc_hash: str                      # "sha256:<64 hex of the raw file bytes>"
+    invoice_fingerprint: str           # "0x<64 hex>", content hash; the registry keys on it (§8.4)
 ```
 
 If `shared/schemas.py` on `main` differs from this when you start, **follow the file** and adjust `app/models.py`; don't edit `shared/`.
@@ -173,7 +174,6 @@ class FraudFinding(BaseModel):
 class OcrExtractResponse(ExtractedInvoice):
     supplier: PartyDetail
     buyer: PartyDetail
-    invoice_fingerprint: str          # "0x<64 hex>", canonical content hash, bytes32 for the registry (§8.4)
     po_no: str | None = None
     subtotal: Decimal | None = None
     tax_amount: Decimal | None = None
