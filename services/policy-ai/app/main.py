@@ -1,33 +1,50 @@
-"""policy-ai: financing policy and credit risk model.
+"""policy-ai: financing policy and credit risk model (services/policy-ai/CLAUDE.md).
 
-Stub: returns the fixed demo decision from docs/02-finance-domain.md.
-Replace the body of `decide` with the real policy and model.
+POST /policy/decide runs the YAML rule set and the PD model; no LLM is ever called on this path.
+GET /policy/rules returns the active rule set for the dashboard.
 """
 
-from decimal import Decimal
+import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
-from shared.schemas import Decision, PolicyDecision, PolicyRequest
+from app import decision, model
+from app.rules import active_rules
+from app.schemas import PolicyDecisionExt, PolicyRequestExt
 
+log = logging.getLogger("policy-ai")
 app = FastAPI(title="policy-ai")
+decision.default_mandate()  # load and check the default mandate now, so a bad file stops startup
 
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "policy-ai"}
+    return {
+        "status": "ok",
+        "service": "policy-ai",
+        "policy_version": active_rules().version,
+        "model_version": model.MODEL_VERSION,
+    }
 
 
-@app.post("/policy/decide", response_model=PolicyDecision)
-def decide(req: PolicyRequest) -> PolicyDecision:
-    advance_rate = Decimal("0.70")
-    return PolicyDecision(
-        decision=Decision.approve,
-        advance_rate=advance_rate,
-        limit=(req.invoice.amount * advance_rate).quantize(Decimal("0.01")),
-        fee_rate=Decimal("0.009"),
-        risk_score=0.18,
-        reasons=["stub: policy not implemented yet"],
-        model_version="stub",
-        policy_version="stub",
+@app.get("/policy/rules")
+def policy_rules() -> dict:
+    rules = active_rules()
+    return {"version": rules.version, "rules": rules.model_dump(mode="json")}
+
+
+@app.post("/policy/decide", response_model=PolicyDecisionExt)
+def decide(req: PolicyRequestExt) -> PolicyDecisionExt:
+    try:
+        result = decision.decide(req)
+    except decision.InvalidRequest as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    # ids and outcome only: no profile or invoice text in the logs
+    log.info(
+        "decision_id=%s invoice_id=%s decision=%s decision_hash=%s",
+        result.decision_id,
+        req.invoice.invoice_id,
+        result.decision.value,
+        result.decision_hash,
     )
+    return result
