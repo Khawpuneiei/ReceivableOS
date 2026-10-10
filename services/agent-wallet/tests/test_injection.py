@@ -56,10 +56,12 @@ def test_hex_fields_are_not_mistaken_for_injection():
 
 
 def test_canary_leak_is_reported_separately():
+    """The canary flag is its own signal. 'debug echo' is also an exfiltration request, so rules may fire too."""
     payload = {"decision": {"reasons": ["debug echo: CANARY-7f3a91"]}}
     report = scan_payload(payload, canary="CANARY-7f3a91")
     assert report.canary_hit is True
-    assert report.injection_flagged is False
+    assert report.injection_flagged is True
+    assert "exfiltration_en" in [rule for _, rule in report.hits]
 
 
 def test_scan_reports_the_json_path_of_the_hit():

@@ -15,8 +15,8 @@ Where attacks were stopped (first layer):
 - L0: 4
 - L0-auth: 4
 - L1: 7
-- L2: 6
-- L3: 13
+- L2: 7
+- L3: 12
 - L5: 3
 
 Failures:

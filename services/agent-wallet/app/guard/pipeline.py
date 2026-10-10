@@ -62,8 +62,8 @@ def check_draw(
 
     # L2: untrusted text. Injection rules first, then the canary.
     report = scan_payload(req.model_dump(mode="json"), ctx.canary, ctx.classifier)
+    add("L2", "CanaryLeak", not report.canary_hit)  # a leaked canary is the strongest signal: report it first
     add("L2", "InjectionSuspected", not report.injection_flagged)
-    add("L2", "CanaryLeak", not report.canary_hit)
 
     # L3: mandate and spending. Needs a registered receivable.
     add("L3", "NotRegistered", fact is not None)
