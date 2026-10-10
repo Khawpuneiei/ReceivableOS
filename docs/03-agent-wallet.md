@@ -117,9 +117,9 @@ file-based keys and a single approver. Mapping in `docs/01-architecture.md` sect
 
 | Item | Status |
 |---|---|
-| Contracts + Foundry tests | _not started_ |
-| Mock ledger + endpoints | _not started_ |
-| FISCO chain + deploy (due 15 Oct) | _not started_ |
-| Guard L0–L4 | _not started_ |
-| Eval: ASR / catch rate / scanner recall | _— / — / —_ |
-| Demo tx hashes (TX‑1…TX‑5, 2 reverts, anchor) | _0 / 8_ |
+| Contracts + Foundry tests | Done locally: five contracts compile with solc 0.8.11, 23 Foundry tests pass. Not deployed. PR #17 |
+| Mock ledger + endpoints | Done: register, approve, execute, settle, confirm, pause, mandate, audit, holds. 102 pytest tests pass. PR #17 |
+| FISCO chain + deploy (due 15 Oct) | Not started. Needs a Docker-hosted FISCO node (download approval pending). No deploy script or FISCO adapter yet |
+| Guard L0–L4 | Done for draws: L0–L4 checks, hold-for-approval, hash-chained audit log, anchoring at settlement |
+| Eval: ASR / catch rate / scanner recall | Seed set (guard on): ASR 0/38, caught 38/38, benign blocked 0/11. Held-out v3 (rules only): caught 14/24. The classifier is audit-only by default |
+| Demo tx hashes (TX‑1…TX‑5, 2 reverts, anchor) | 0 on chain of 8. The mock demo runs 15 steps: 11 go through the mock chain and 4 are stopped off-chain (`eval/demo_tx_hashes.md`) |
