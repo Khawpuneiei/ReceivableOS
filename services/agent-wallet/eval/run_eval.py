@@ -324,9 +324,9 @@ def scanner_flags(result: dict, canary: str) -> bool:
     return report.injection_flagged or report.canary_hit
 
 
-def run_all(skip_offchain: bool) -> tuple[list[dict], str]:
+def run_all(skip_offchain: bool, cases_path: Path = CASES) -> tuple[list[dict], str]:
     canary = "CANARY-" + secrets.token_hex(6)
-    cases = [json.loads(line) for line in CASES.read_text(encoding="utf-8").splitlines() if line.strip()]
+    cases = [json.loads(line) for line in cases_path.read_text(encoding="utf-8").splitlines() if line.strip()]
     rows = []
     for case in cases:
         result = run_case(case, canary, skip_offchain)
@@ -411,11 +411,13 @@ def render(stats: dict, skip_offchain: bool) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-offchain", action="store_true", help="DEMO_MODE bypass: chain alone")
+    parser.add_argument("--cases", type=Path, default=CASES, help="JSONL case file (default: cases.jsonl)")
     args = parser.parse_args()
-    rows, _ = run_all(args.skip_offchain)
+    rows, _ = run_all(args.skip_offchain, args.cases)
     stats = summarise(rows)
     text = render(stats, args.skip_offchain)
-    REPORT.write_text(text, encoding="utf-8")
+    report = REPORT if args.cases == CASES else REPORT.with_name(f"report_{args.cases.stem}.md")
+    report.write_text(text, encoding="utf-8")
     print(text)
     return 1 if stats["failures"] or stats["unauthorized"] else 0
 
