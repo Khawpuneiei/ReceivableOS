@@ -1,0 +1,25 @@
+# ocr-ai
+
+Owner: OCR AI engineer. Scope: invoice OCR, OCR/document injection defence, fraud detection.
+
+Endpoint: `POST /ocr/extract` on port 8001, plus `GET /health`. Request and response models are in [`shared/schemas.py`](../../shared/schemas.py).
+
+Design doc: [`docs/05-ocr-ai.md`](../../docs/05-ocr-ai.md). Assistant instructions for this service: `CLAUDE.md` in this folder (added by the service owner).
+
+Status: stub. The endpoint returns a fixed response that matches the contract so the end-to-end demo runs.
+
+## Run
+
+From the repo root, with `.env` in place:
+
+```bash
+pip install -r services/ocr-ai/requirements.txt
+python -m uvicorn app.main:app --app-dir services/ocr-ai --port 8001 --reload
+```
+
+## Test
+
+```bash
+pytest services/ocr-ai
+ruff check services/ocr-ai
+```
