@@ -24,10 +24,10 @@
 | Seat | Owns | Delivers to the demo |
 |---|---|---|
 | OCR AI engineer | Invoice reading, prompt-injection detection in documents, fraud signals | "Here is the invoice as data, and here is why it looks safe or suspicious." |
-| Policy AI engineer | Credit risk model, financing decision, mandate (rules) compiler | "Approve 70% (THB 524,300) at 0.9% per 30 days, and here are the reasons." |
-| Agent Wallet engineer | Smart contracts, on-chain guard, wallet service, agent guardrails | "Paid. Here is the transaction hash." or "Blocked, and here is why." |
-| PM (P) | Orchestrator that chains the steps, the demo UI, seed data, mock lenders, submission package | The single screen the judges watch and the story around it. |
-| Finance | Realistic numbers, demo invoices and company profiles, the pain-point slide | Credible inputs and the "why this matters" numbers. |
+| Policy AI engineer | Credit risk model, financing decision, mandate (rules) compiler, demo UI design, pitch pack (with PM and Finance) | "Approve 70% (THB 524,300) at 0.9% per 30 days, and here are the reasons." |
+| Agent Wallet engineer | The whole on-chain layer (all contracts, chain deployment, mock ledger), wallet service, agent guardrails | "Paid. Here is the transaction hash." or "Blocked, and here is why." |
+| PM (P) | Integration: orchestrator, mock lenders, rechecking every module's demo data, submission package, pitch pack (with Policy and Finance), research on spending limits, human approval, audit log and the KYC/AML and privacy stance | The story around the demo and a flow that works end to end. |
+| Finance | Realistic numbers and the demo scenario, the pain-point slide, pitch pack (with PM and Policy) | Credible inputs and the "why this matters" numbers. |
 
 **The demo in six steps.**
 
@@ -81,7 +81,7 @@ From `FISCO-BCOS/hackathon` (2019–2024 entries; the repo archives submissions 
 
 ```mermaid
 flowchart LR
-    UI[Demo UI<br/>Streamlit · PM] --> ORC[Orchestrator<br/>FastAPI · PM]
+    UI[Demo UI<br/>Streamlit · Policy AI eng] --> ORC[Orchestrator<br/>FastAPI · PM]
     ORC -->|POST /ocr/extract| OCR[OCR AI<br/>extract · injection · fraud]
     ORC -->|POST /policy/decide| POL[Policy AI<br/>credit risk · decision · mandate]
     ORC -->|quotes| LEN[Mock lenders<br/>in orchestrator]
@@ -106,9 +106,9 @@ flowchart LR
 | `services/policy-ai` | Policy AI eng | Invoice + profiles + mandate in, decision out. Owns the PD model and the natural-language-to-mandate compiler. |
 | `services/agent-wallet` | Agent Wallet eng | Only component holding keys. Re-validates every request, builds calldata deterministically, submits through `AgentWallet`. Owns the ledger interface and all Solidity (in `services/agent-wallet/contracts/`). |
 | `services/orchestrator` | PM | Runs the flow state machine, calls the three services in order, holds mock lenders and selects the offer, stores the audit trail. |
-| `ui/` | PM | One-page demo on port 3000: upload, evidence panel, decision and reasons, offers, tx hashes with receipts (WeBASE block-browser link if we run WeBASE), attack buttons. |
+| `ui/` | Policy AI eng (design and build), PM wires it to the orchestrator | One-page demo on port 3000: upload, evidence panel, decision and reasons, offers, tx hashes with receipts (WeBASE block-browser link if we run WeBASE), attack buttons. |
 | `shared/` | PM | Pydantic schemas and JSON fixtures that every service imports, so contracts cannot drift. |
-| `data/` | Finance + OCR eng | Demo invoices (PDF/PNG), supplier and buyer profiles, fraud and injection cases, synthetic training set for the PD model. |
+| `data/`, `integration/samples/` | Each engineer for their module, P rechecks | OCR: demo invoices, injection and fraud cases. Policy: profiles and the PD training set. Agent Wallet: attack transactions. Scenario numbers come from Finance (`docs/02`). |
 
 ### 3.2 On-chain versus off-chain
 
@@ -416,7 +416,7 @@ ReceivableOS/
 ├── integration/
 │   ├── run_demo.py               # CLI driver of the full flow
 │   └── samples/                  # demo invoices, profiles, attack cases (Finance + OCR)
-├── ui/                         + # PM: Streamlit demo screen, port 3000
+├── ui/                         + # Policy AI eng: Streamlit demo screen, port 3000
 └── data/training/              + # synthetic PD training set (Policy + Finance)
 ```
 ---
@@ -428,9 +428,9 @@ ReceivableOS/
 | When | OCR AI | Policy AI | Agent Wallet | PM | Finance |
 |---|---|---|---|---|---|
 | 10 Oct pm | Stub `/ocr/extract` returning fixtures; pdfplumber path for text PDFs | Stub `/policy/decide`; rule-based decision from profiles | Contracts `MockStable`, `Registry`; mock ledger; start FISCO 4-node chain | Contract PR to `shared/schemas.py` + fixtures merged first; orchestrator skeleton | 3 demo invoices, 5 supplier + 5 buyer profiles, numbers for pitch |
-| 11 Oct am | Real extraction + `doc_hash` + duplicate check | Synthetic dataset (with Finance), PD model v1 + calibration | `Vault`, `PolicyGuard`, `AgentWallet` + forge tests for every revert | Orchestrator runs end to end on stubs; UI v1 | Validate realistic advance rates, APRs, PD ranges |
+| 11 Oct am | Real extraction + `doc_hash` + duplicate check | Synthetic dataset (with Finance), PD model v1 + calibration, UI v1 | `Vault`, `PolicyGuard`, `AgentWallet` + forge tests for every revert | Orchestrator runs end to end on stubs; recheck demo data | Validate realistic advance rates, APRs, PD ranges |
 | 11 Oct pm | Injection detector + fraud flags; attack fixtures A1, A2 | Hard rules, reasons, `decision_hash`; mandate compiler | Deploy to FISCO; `fisco` backend; register/approve/execute/settle endpoints | First full run on FISCO with real hashes | Pain-point slide + sources |
-| 12 Oct am | Image fallback; accuracy check on demo set | Metrics (AUROC, Brier) in README | Demo-mode bypass for on-chain revert; Base Sepolia deploy only if P chose it | Attack buttons A1–A6; audit view | Review all numbers on screen |
+| 12 Oct am | Image fallback; accuracy check on demo set | Metrics (AUROC, Brier) in README; UI attack buttons A1–A6 and audit view | Demo-mode bypass for on-chain revert; Base Sepolia deploy only if P chose it | Wire UI to orchestrator; spending-limit, approval, audit and KYC/privacy notes | Review all numbers on screen |
 | 12 Oct pm | Freeze, README | Freeze, README | Freeze, contracts README with console / python-sdk call screenshots | Tx evidence page, security self-assessment, record backup demo video | Deck finance section |
 
 Freeze rule: after 12 Oct 18:00 only bug fixes merge.
