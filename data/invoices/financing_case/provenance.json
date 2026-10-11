@@ -1,0 +1,23 @@
+{
+  "seed": 20261001,
+  "origin": "fictional-generated",
+  "issuer_verified": false,
+  "references": [
+    "https://docs.oasis-open.org/ubl/UBL-2.3.html",
+    "https://docs.peppol.eu/poacc/billing/3.0/"
+  ],
+  "sha256": {
+    "invoice.pdf": "e0f79e9f7016820ab4ba2179e67b1f54b5c91d0840426f76c5348ccdab02e06b",
+    "purchase_order.pdf": "82b2b8fe29d7eed61ee3361449f8d92640548fd3b7f7ba924c8b64964e14b833",
+    "delivery_note.pdf": "d6c93dffefc245c9d14f8e3e3e7793f2a4294624f3d835aa28f493d7423cd65e",
+    "goods_receipt.pdf": "47343dcb9ed10fcad6e7815587df2eb01cc964e9aff11099a639a6020998ad27",
+    "buyer_confirmation.pdf": "8462ea0f9298b071d434441b3f59621c9cacb6f0586c33712d05105ea72213c0",
+    "credit_note.pdf": "b0213a49213595ef15687fd143918e8a142058e510e807438cac018315eb77fb",
+    "remittance_advice.pdf": "b739a3668c4844226846b12ef324bd963cd0a0675b5c44fa79a21cccde3de159",
+    "assignment_notice.pdf": "c337a7f1f0feb6111ae7fde62ef1ab13250a8b4cd7477a024d5777c3ae0ee8f6",
+    "company_registration.pdf": "979e6292d45d4624b2e7095f7bfa5e391d03be0c72787f34ea2407931127e463",
+    "bank_confirmation.pdf": "aa405388d454fb953a41ed2d7ea2d74b1dda5bddcfdcc9bc3ed294d328245954",
+    "beneficial_ownership.pdf": "f7db5e646f746d0e08e36361c2899088e69b1043e9f29a6e6ca7b6340fe90fe6",
+    "insurance_certificate.pdf": "bbb4cd7c4a54c8b6e28511c22c7f0774552d2415b521209fa6079010309973ce"
+  }
+}

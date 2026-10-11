@@ -1,0 +1,39 @@
+{
+  "fixtureId": "03-arabic",
+  "title": "Arabic invoice",
+  "tests": "Arabic supplier and product text with right-to-left layout.",
+  "language": "ar",
+  "direction": "rtl",
+  "supplier": {
+    "name": "شركة الخليج الغذائية التجريبية ذ.م.م",
+    "legalName": "شركة الخليج الغذائية التجريبية ذ.م.م",
+    "address": "المستودع 12، القوز، دبي، الإمارات العربية المتحدة",
+    "taxRegistration": null
+  },
+  "billTo": "شركة البقالة النموذجية ذ.م.م، دبي",
+  "invoiceNumber": "INV-2026-003",
+  "invoiceDate": "2026-08-03",
+  "currency": "AED",
+  "taxLabel": "ضريبة القيمة المضافة 5%",
+  "taxRate": 0.05,
+  "subtotal": 60,
+  "discount": 0,
+  "tax": 3,
+  "freight": 0,
+  "duty": 0,
+  "total": 63,
+  "notes": [],
+  "lines": [
+    {
+      "description": "مياه غازية 330 مل",
+      "supplierSku": "SUP-WAT-330",
+      "barcode": "6290000000016",
+      "quantity": 24,
+      "unit": "EA",
+      "unitPrice": 2.5,
+      "discount": 0,
+      "tax": 0,
+      "lineTotal": 60
+    }
+  ]
+}

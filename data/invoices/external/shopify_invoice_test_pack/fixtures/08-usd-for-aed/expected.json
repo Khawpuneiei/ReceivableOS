@@ -1,0 +1,43 @@
+{
+  "fixtureId": "08-usd-for-aed",
+  "title": "USD supplier invoice for an AED merchant",
+  "tests": "Explicit foreign currency for FX-policy tests.",
+  "language": "en",
+  "direction": "ltr",
+  "supplier": {
+    "name": "Fictional Atlantic Imports Inc.",
+    "legalName": "Fictional Atlantic Imports Inc.",
+    "address": "200 Example Avenue, Newark, NJ, USA",
+    "taxRegistration": null
+  },
+  "billTo": "Example Grocery Trading LLC, Dubai (AED Shopify store)",
+  "invoiceNumber": "INV-2026-008",
+  "invoiceDate": "2026-08-08",
+  "currency": "USD",
+  "merchantCurrency": "AED",
+  "taxLabel": null,
+  "taxRate": null,
+  "subtotal": 160,
+  "discount": 0,
+  "tax": 0,
+  "freight": 12,
+  "duty": 0,
+  "total": 172,
+  "notes": [
+    "Invoice currency is USD. Do not silently treat amounts as AED.",
+    "Preserve the original currency in the audit trail and apply an explicit FX policy."
+  ],
+  "lines": [
+    {
+      "description": "Import Snack Mix 400g",
+      "supplierSku": "SUP-SNK-400",
+      "barcode": "6290000000207",
+      "quantity": 50,
+      "unit": "EA",
+      "unitPrice": 3.2,
+      "discount": 0,
+      "tax": 0,
+      "lineTotal": 160
+    }
+  ]
+}

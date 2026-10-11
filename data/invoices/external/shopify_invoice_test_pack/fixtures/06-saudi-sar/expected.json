@@ -1,0 +1,43 @@
+{
+  "fixtureId": "06-saudi-sar",
+  "title": "Saudi SAR invoice",
+  "tests": "SAR, bilingual text and regional tax fields.",
+  "language": "ar-en",
+  "direction": "ltr",
+  "supplier": {
+    "name": "Fictional Najd Trading Co. / شركة نجد التجارية التجريبية",
+    "legalName": "Fictional Najd Trading Co.",
+    "address": "Riyadh, Saudi Arabia / الرياض، المملكة العربية السعودية",
+    "taxRegistration": "310123456700003"
+  },
+  "billTo": "Example Riyadh Grocery LLC / شركة بقالة الرياض النموذجية",
+  "invoiceNumber": "INV-2026-006",
+  "invoiceDate": "2026-08-06",
+  "currency": "SAR",
+  "taxLabel": "VAT 15% (example)",
+  "taxRate": 0.15,
+  "subtotal": 660,
+  "discount": 0,
+  "tax": 99,
+  "freight": 0,
+  "duty": 0,
+  "total": 759,
+  "notes": [
+    "15% is an example tax line for extraction tests. Confirm current treatment with an adviser.",
+    "QR / e-invoice artefacts are omitted; this fixture tests bilingual line items, not ZATCA compliance."
+  ],
+  "lines": [
+    {
+      "description": "Instant Coffee 200g",
+      "descriptionArabic": "قهوة سريعة التحضير 200 جم",
+      "supplierSku": "SUP-COF-200",
+      "barcode": "6280000000017",
+      "quantity": 30,
+      "unit": "EA",
+      "unitPrice": 22,
+      "discount": 0,
+      "tax": 0,
+      "lineTotal": 660
+    }
+  ]
+}
