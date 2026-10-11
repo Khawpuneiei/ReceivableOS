@@ -1,4 +1,4 @@
-Fix the PM review blockers while keeping the invoice extraction contract unchanged. Restore the orchestrator's original text fixture with exact-byte development-only compatibility; add explicit dev HMAC fallback for both keys, correct numeric-run reference normalization, restore CLAUDE.md §8.4, and demonstrate a re-saved semantic duplicate with different raw bytes.
+Fix the PM review blockers while keeping the invoice extraction contract unchanged. Restore the orchestrator's original text fixture with exact-byte development-only compatibility; add explicit dev HMAC fallback for both keys and the reviewer-requested one-line BANK_TOKEN_HMAC_KEY in root .env.example, correct numeric-run reference normalization, restore CLAUDE.md §8.4, and demonstrate a re-saved semantic duplicate with different raw bytes.
 
 Hosted image upload now requires a separate opt-in. Per-key single-flight fixes global cache contention for hosted/Qwen readers; the controlled two-call mock benchmark measured 0.5177 →0.2580 seconds with identical call counts. Regression tests cover distinct-key progress, identical-key deduplication, production fail-closed setup and raw hashes.
 
