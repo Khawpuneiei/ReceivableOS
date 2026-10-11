@@ -18,6 +18,11 @@ Run `scripts/eval.py`, `scripts/demo_order.py`, `scripts/demo_loop.py --strict -
 
 | Check | Latest result |
 |---|---|
+| Clean PDF scalar fields (four generated documents) | 28/28 |
+| Planted injection mechanisms | Catch rate 100%; attack success 0% |
+| Clean/hard-negative injection false-positive rate | 0% on the generated set |
+| Labelled planted fraud set | TP8 / FP0 / FN0 / TN4; precision and recall 100% on 12 scenarios |
+| Supporting-document loop | 6/6 |
 | Ordered four-PDF evidence gates | 4/4: happy, injected, inflated, re-saved duplicate |
 | Scores in that order | 0.00, 0.00, 0.40, 0.80 |
 | Strict integration, actual local Policy guards | 7/7 checks; zero control violations; unchanged PM text demo reaches review |

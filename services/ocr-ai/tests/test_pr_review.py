@@ -21,6 +21,7 @@ def test_reference_numeric_runs_are_normalized_before_joining():
     assert normalize_reference("INV-2026-0042") == normalize_reference("INV-2026-42")
     assert normalize_reference("INV-2026-0042") != normalize_reference("INV-202-60042")
     assert normalize_reference("ＩＮＶ/２０２６/００４２") == "INV202642"
+    assert normalize_reference("INV-๒๐๒๖-๐๐๔๒") == "INV202642"
 
 
 @pytest.mark.parametrize("development,status", [("1", 200), ("0", 503)])
