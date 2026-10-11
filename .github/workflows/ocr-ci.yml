@@ -1,0 +1,54 @@
+name: OCR checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ocr-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ocr-checks:
+    name: OCR checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: services/ocr-ai
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      OCR_PADDLE_ENABLED: "0"
+      OCR_QWEN_ENABLED: "0"
+      OCR_HOSTED_VISION_ENABLED: "0"
+      LLM_API_KEY: ""
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: services/ocr-ai/requirements*.txt
+      - name: Install standalone OCR dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Check dependency consistency
+        run: python -m pip check
+      - name: Lint and format
+        run: |
+          python -m ruff check .
+          python -m ruff format --check .
+      - name: Run OCR regressions
+        run: python -m pytest -q
+      - name: Regenerate consumer API evidence
+        run: python scripts/consumer_review.py
+      - name: Verify ordered demo
+        run: python scripts/demo_order.py
