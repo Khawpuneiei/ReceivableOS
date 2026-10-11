@@ -1,37 +1,37 @@
 # FISCO deployment transactions
 
-Chain chain0, group group0, FISCO BCOS 3.16.4 (Air, 4 nodes). Deployed 2026-10-11T07:33:55+00:00.
+Chain chain0, group group0, FISCO BCOS 3.16.4 (Air, 4 nodes). Deployed 2026-10-11T12:22:51+00:00.
 Every hash below is a FISCO BCOS transaction hash. The receipts are in eval/fisco-receipts/.
 
 Contracts (addresses only):
 
-- MockStable: `0x87891a0b4ac2726b7728e4d8cd53e78842592391`
-- PolicyGuard: `0x28e116d7a343874b463d7f1143d53891771eea30`
-- ReceivableRegistry: `0xf36584c180873186691fde196cf1f3e33817f31c`
-- FinancingVault: `0x5494009b57426aa4f52e551f40eec8073ba88145`
-- AgentWallet: `0xebba06f4af9b48b0e2b7164db193e074d67b068d`
+- MockStable: `0xdccaccc045b5050e52e50fa612807945ef269199`
+- PolicyGuard: `0xf9c1fa9c25fb71f1c66d0bd5d9f0821bec66255d`
+- ReceivableRegistry: `0x06dde0313ca13fddf6694526adb619b71e3c7ddb`
+- FinancingVault: `0xfc44b99facd92dadd45af80c4c4195f57a2a22fc`
+- AgentWallet: `0x3c661557db69eee1fbae6e7217d6d9dcadcae964`
 
 | block | tx hash | kind | created contract | result |
 |---|---|---|---|---|
-| 138 | `0x61d5be9108fcb6ce3f291bfe7dbc10cd210df0d08d31a2e474ed85441ee12264` | deploy | 0x87891a0b4ac2726b7728e4d8cd53e78842592391 | ok |
-| 139 | `0x05c556b42f26cf83205260ddc00bdf2677fa0e354adb07b0f4d16b42b9d42cb5` | deploy | 0x28e116d7a343874b463d7f1143d53891771eea30 | ok |
-| 140 | `0x3820068eecc39334139e10c1d152970132272e763bb0cae5ed6f10a63b06ad53` | deploy | 0xf36584c180873186691fde196cf1f3e33817f31c | ok |
-| 141 | `0x95caade8c09f40448654a43a57a5c6f0ae6ec23931d40b502e11313d3d7ab8e7` | deploy | 0x5494009b57426aa4f52e551f40eec8073ba88145 | ok |
-| 142 | `0xfeadc96b7af9ab9454dc6f53b52ab469cc049272c6037c6963c30e79958e9a72` | deploy | 0xebba06f4af9b48b0e2b7164db193e074d67b068d | ok |
-| 143 | `0x390213867b7a236ebe4c153285ac5ea8f7fb89bd84ccbbe8fd5460306b0b9673` | call | - | ok |
-| 144 | `0x15041c39e63c00c4503854f09dcfd4126ef14bacc9bc3b71ba8df43135234c35` | call | - | ok |
-| 145 | `0x19fd412a9539f8aa9d423698e882af729906b5788ce8be1da1c9357f10706383` | call | - | ok |
-| 146 | `0x31f88d1731c80db2e965cd06760374f641eb76b27625f6c456ca9c63e40fd870` | call | - | ok |
-| 147 | `0xa3feed70f1da7817ed9d858af344d1314b338a556a5b7c2551b21893fab03f55` | call | - | ok |
-| 148 | `0x9a5d8d6059eca0f9ceff305783f5e027c1ad0fcc0f6da987a5dca0e6b1afab5f` | call | - | ok |
-| 149 | `0x9f171d860026eed55a5c7ce2c5c6c7df9a860232be060e3aec75880f730414a6` | call | - | ok |
-| 150 | `0x4b3eb1b535cb7e69d4273d8fefdc7d353ebb8f17e900e96c835855b719b07ff0` | call | - | ok |
-| 151 | `0x13fc8c5fd1e41cf0a966fe226dfec73e5c9b03de05bf7d8a277a2656a99b7d2a` | call | - | ok |
-| 152 | `0xa390e85465e8d8cc4b6ca447b99c1c1f4863d453a963103afc1fa36c27fae0ee` | call | - | ok |
-| 153 | `0x711da9f246e4a30d7d5e7bf71e84b89d170f22ae3e801a8fb83f731216cc273b` | call | - | ok |
-| 154 | `0x7f920f77722d205fcb24b6cc0c20eab5fc7a38c86ab808b8628bc073cbf345c5` | call | - | ok |
-| 155 | `0x67089bff3c5890bc3a861d2d7e1d9f98f54193de8c3a25f4f5499be8cb4dc6cd` | call | - | ok |
-| 156 | `0xfd28ed4c188dca80eb2ffe14cc02fe8b384f86ddbd60873e9bb5160b12843f37` | call | - | ok |
-| 157 | `0x414b4067d27925efb0de3afde2aa9089d2d05530b122fd3df38bf46481839239` | call | - | ok |
-| 158 | `0xe08e70f7b10da758351d338673f8711116e2bfeb7dcb549eb5aa77b6dc093745` | call | - | ok |
-| 159 | `0xf6f059587543f2cab5693111069d1c2931c831287f747dfcf2dc204857aa3e54` | call | - | ok |
+| 179 | `0xd531b46806d3b0f082f7e8fc9e598bb3039d59e46e83017c199fd5d54da689e1` | deploy | 0xdccaccc045b5050e52e50fa612807945ef269199 | ok |
+| 180 | `0x48589f6b4be2aa7ce5b01cbbc7b59cefab877f4c0597c2caa4621e6c94d4d568` | deploy | 0xf9c1fa9c25fb71f1c66d0bd5d9f0821bec66255d | ok |
+| 181 | `0xabfe7f75170e5689da0d87e23101f98a60281e02b1e7be3de2f0b95c1818e648` | deploy | 0x06dde0313ca13fddf6694526adb619b71e3c7ddb | ok |
+| 182 | `0xd6ae79efc6d57ce2c142aba78cd8e3364b1c0eb84b0d09c80471186230072cf2` | deploy | 0xfc44b99facd92dadd45af80c4c4195f57a2a22fc | ok |
+| 183 | `0xcb2347a85ab5f1767c37fb97884acad1185f17caeba567e31c3b8dc36681435b` | deploy | 0x3c661557db69eee1fbae6e7217d6d9dcadcae964 | ok |
+| 184 | `0x769d0c3ba69cf9576bd96067530201bdee1235e591193dd0a6eaa401c538bf00` | call | - | ok |
+| 185 | `0x6da3b84474b725bc49fc09b38cd0f2d5a4663e316ab96c725062d9bd17ef5edc` | call | - | ok |
+| 186 | `0x0cca67c953fca9e2ba35ea473ab6e3099ec5d1da539a97847f03de4f2df9e2d9` | call | - | ok |
+| 187 | `0xe72808e1a550b0c2edc6457cba2b9d3c4bacb246b457ccf7aecb856a8fcbf091` | call | - | ok |
+| 188 | `0x679142e1d1fe849e6c9d319d87ac8e3e9445a565f6ee0af90ca60cadd08c89de` | call | - | ok |
+| 189 | `0x3d04db9274207ccb8635ae8e1cf82c22e697a0c3c277fac6fe54fdd27eb51a52` | call | - | ok |
+| 190 | `0x12687b0b384b22e2f83c9cfe51faf7b1562faf48ff1950f53b06ae3eaa0e3b8a` | call | - | ok |
+| 191 | `0x7a052bea0456771d2ecab8a7754d0862cfb09be8651d667f0b1de6688b62a292` | call | - | ok |
+| 192 | `0x1e633c4e95f9f88cde34594dd3f424c973f81da4003fdb9b0bee388a0cdfe8f1` | call | - | ok |
+| 193 | `0xf878e5ebdbbea2c1715b2f6b45015abd78fec3b42f831228fbb1d4eee291e4f3` | call | - | ok |
+| 194 | `0x6863b026f55df0a6ba0ddc89a935a43c3766be92425b8421ac9836e7ca95a982` | call | - | ok |
+| 195 | `0xf146749ba7ee740c6daad36f31be4a33f4023e7efc916d84c72304e30d15342d` | call | - | ok |
+| 196 | `0x0caeb16b634bda2deb2d9c95ebf2c60c07c26c3a1159957cf7318f21ff02efc0` | call | - | ok |
+| 197 | `0x57874e4fbd2bfa636557878b335e2a193189051be4e0dc007630f2b24384dab0` | call | - | ok |
+| 198 | `0x16a5c8ef01e859cb88270d660ce714d002b4f2191d6ba9b3f16814ad3b4e3931` | call | - | ok |
+| 199 | `0x750a8d12293d8d06f83dcb9c44ea19cd69499c644882a2b3602ad3fff507a9f5` | call | - | ok |
+| 200 | `0x81ebd4b13db1f6f998338c42f7b598aeb57a9eb6be235e638a8a09474ab9e5d7` | call | - | ok |

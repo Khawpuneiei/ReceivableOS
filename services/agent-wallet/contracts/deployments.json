@@ -22,7 +22,7 @@
     "chain_id": "chain0",
     "group": "group0",
     "rpc": "https://127.0.0.1:20200 (and 20201-20203)",
-    "deployed_at": "2026-10-11T07:33:55+00:00",
+    "deployed_at": "2026-10-11T12:22:51+00:00",
     "roles": {
       "deployer": "0x0af701e5362e65BF70f4B31973E9eA30CBfa5494",
       "agent": "0x88514a6e4a34E219e0bcFa8Eb395Ee4Ef023f014",
@@ -31,11 +31,11 @@
       "buyer": "0x23B7f266825abDB08A7Fd357ABD9DC48487e72a6"
     },
     "contracts": {
-      "MockStable": "0x87891a0b4ac2726b7728e4d8cd53e78842592391",
-      "PolicyGuard": "0x28e116d7a343874b463d7f1143d53891771eea30",
-      "ReceivableRegistry": "0xf36584c180873186691fde196cf1f3e33817f31c",
-      "FinancingVault": "0x5494009b57426aa4f52e551f40eec8073ba88145",
-      "AgentWallet": "0xebba06f4af9b48b0e2b7164db193e074d67b068d"
+      "MockStable": "0xdccaccc045b5050e52e50fa612807945ef269199",
+      "PolicyGuard": "0xf9c1fa9c25fb71f1c66d0bd5d9f0821bec66255d",
+      "ReceivableRegistry": "0x06dde0313ca13fddf6694526adb619b71e3c7ddb",
+      "FinancingVault": "0xfc44b99facd92dadd45af80c4c4195f57a2a22fc",
+      "AgentWallet": "0x3c661557db69eee1fbae6e7217d6d9dcadcae964"
     },
     "mandate_hash": "0xe3e29223892826754f08e64179a6aeab9e2d87561bb79a2087dfe1cd516288e7"
   }
