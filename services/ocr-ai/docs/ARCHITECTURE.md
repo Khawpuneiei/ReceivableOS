@@ -55,9 +55,9 @@ Simplified Chinese supports explicit aliases plus ISO dates, ISO currencies and 
 
 ## Integration handoff
 
-`/ocr/extract` preserves the unchanged shared required fields, with additive `fraud_graph` (`ocr-graph-v1`) and `handoff` (`ocr-handoff-v1`). `/ocr/verify` adds those fields at the outer pair level; `compatible_invoice` remains the shared projection. PO injection propagates into that projection's injection flags and caps confidence below 0.80. HTTP 200 or a non-null projection does not authorize financing.
+`/ocr/extract` preserves the unchanged shared required fields, with additive `fraud_graph` (`ocr-graph-v2`) and `handoff` (`ocr-handoff-v1`). `/ocr/verify` adds those fields at the outer pair level; `compatible_invoice` remains the shared projection. PO injection propagates into that projection's injection flags and caps confidence below 0.80. HTTP 200 or a non-null projection does not authorize financing.
 
-The handoff binds an observation ID to the one or two uploaded document hashes, versions, review/injection reasons, fraud codes and score. It explicitly states `financial_authority=false`, `bank_ownership_verified=false`, and `authenticity=unsigned_service_response`. Registry fingerprint v1 and local fingerprint/bank v2 are separate namespaces. [Consumer handling](HANDOFF.md) describes the concrete adoption checklist and [examples](ARCHITECTURE_CONSUMER_EXAMPLES.json) show actual multipart outputs.
+The handoff binds an observation ID to the one or two uploaded document hashes, versions, review/injection reasons, fraud codes and score. It explicitly states `financial_authority=false`, `bank_ownership_verified=false`, and `authenticity=unsigned_service_response`. Registry fingerprint v1 and local fingerprint/bank v2 are separate namespaces. [Consumer handling](HANDOFF.md) describes the concrete adoption checklist and how to regenerate current API examples without committing generated reports.
 
 Wallet/security owners must define service authentication, freshness/replay handling, response/request binding, evidence retention and key rotation. Policy must enforce review/injection/risk rules; registry and wallet must independently enforce duplicate financing, PO allocations, verified payees and mandates. These remain owner decisions, not implemented guarantees here. No other-service imports or shared schema edits were needed.
 
