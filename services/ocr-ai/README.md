@@ -38,7 +38,7 @@ services/ocr-ai/.venv/bin/python services/ocr-ai/datagen/generate.py --output da
 PYTHONPATH=. services/ocr-ai/.venv/bin/python -m uvicorn app.main:app --app-dir services/ocr-ai --env-file services/ocr-ai/.env.local --host 127.0.0.1 --port 8001
 ```
 
-Setup creates ignored `.env.local` with private random `FINGERPRINT_HMAC_KEY`, `BANK_TOKEN_HMAC_KEY` and `OCR_RESULT_ACCESS_TOKEN`, mode 0600; existing configuration is preserved. It disables hosted/local models. Keep keys stable across restarts and consumers. Root `.env.example` does not contain the bank key: use the service setup or supply **both** HMAC keys explicitly. No root or shared-service change is required.
+Setup creates ignored `.env.local` with private random `FINGERPRINT_HMAC_KEY`, `BANK_TOKEN_HMAC_KEY` and `OCR_RESULT_ACCESS_TOKEN`, mode 0600; existing configuration is preserved. It disables hosted/local models. Keep keys stable across restarts and consumers. Root `.env.example` now includes `BANK_TOKEN_HMAC_KEY` alongside the fingerprint key, as requested in review. Use the service setup or supply **both** HMAC keys explicitly. This is the sole one-line root configuration change; shared schemas and other services are unchanged.
 
 For a fictional **development-only no-key** run, including the PM's unchanged default text demo:
 

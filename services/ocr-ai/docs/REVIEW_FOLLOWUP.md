@@ -6,7 +6,7 @@ Branch: `ocr/evidence-fraud-graph`. Shared schemas and other-service implementat
 | Review request | Change / verification |
 |---|---|
 | Keep orchestrator's default text sample | Original `data/invoices/demo_invoice.txt` restored unchanged. Explicit development-only, exact-byte allowlist; source-offset extraction and raw hash. Modified text →415. Missing jurisdiction/unit →review. Actual unchanged `run_demo.py` tested without arguments against a fresh mock registry |
-| No-key development setup | `OCR_DEVELOPMENT_MODE=1` supplies separate public demo HMAC keys, warning once per setting; default production mode stays fail-closed. README documents random-key setup, both keys and explicit development run |
+| No-key development setup | `OCR_DEVELOPMENT_MODE=1` supplies separate public demo HMAC keys, warning once per setting; default production mode stays fail-closed. Root `.env.example` adds the reviewer-requested one-line bank-key setting; README documents random-key setup, both keys and explicit development run |
 | PR size and generated reports | 32 generated JSON reports removed from version control. 167 rendered/source corpus files and 34 experimental documents/files split out of core. Core retains service/tests, four PDFs, legacy text and a licensed Thai test font. Tests generate their corpus in temporary directories |
 | Reference normalization | Strip numeric-run leading zeros before joining separators. Unit test plus multipart/HMAC/duplicate-rule regression: `INV-2026-0042` equals `INV-2026-42` and differs from `INV-202-60042` |
 | Restore guide §8.4 | Registry-v1 raw hash, canonical fields, HMAC, numeric-run order, dev key and migration caveat documented under the exact cited section |
