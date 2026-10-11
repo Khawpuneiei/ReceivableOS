@@ -1,0 +1,107 @@
+# Synthetic invoice generator for the credit model (services/policy-ai/CLAUDE.md section 8.3).
+# Every number the generator uses lives here so Finance can tune it without touching code.
+# The data is openly synthetic: labels come from the known latent logistic model in `latent`.
+# FINANCE-TBD marks values Finance confirms at the Oct 11 18:00 feature-range sign-off.
+
+seed: 20261010
+n_invoices: 200000               # 20k left ~12 tier-A defaults in training; 200k gives ~130
+n_buyers: 300
+n_suppliers: 800
+first_cohort: "2024-10"            # 24 monthly cohorts, 2024-10 .. 2026-09
+n_cohorts: 24
+currency: THB
+output: data/training/synthetic_invoices.csv   # relative to the repo root; git-ignored
+
+buyers:
+  latent_noise_sd: 0.35            # tier = noisy bucket of a latent credit quality
+  tier_shares: {A: 0.30, B: 0.40, C: 0.22, D: 0.08}
+  ratings:                         # internal_rating consistent with the tier (profiles.py maps it back)
+    A: [AAA, AA+, AA, AA-, A+, A, A-]
+    B: [BBB+, BBB, BBB-]
+    C: [BB+, BB, BB-]
+    D: [B+, B, B-, CCC+]
+  late_rate_mean: {A: 0.03, B: 0.08, C: 0.15, D: 0.30}   # FINANCE-TBD
+  late_rate_concentration: 40      # beta(a, b) with a + b = this
+  days_late_per_late_rate: 50      # avg_days_late ~ late_rate x this x lognormal noise
+  days_late_noise_sd: 0.3
+  limit_median: {A: 15000000, B: 8000000, C: 4000000, D: 2000000}
+  limit_sd_log: 0.6
+  relationship_months_max: 120
+  sectors: {retail: 0.35, manufacturing: 0.25, food: 0.15, construction: 0.10, logistics: 0.10, other: 0.05}
+  confirmed_share: {A: 0.80, B: 0.72, C: 0.62, D: 0.50}  # overall ~70%
+
+suppliers:
+  years_gamma_shape: 2.0
+  years_gamma_scale: 4.0
+  years_max: 30
+  financed_per_year: 3.0           # invoices financed so far ~ Poisson(years x this)
+  invoices_total_per_year: 10.0
+  on_time_beta: [30, 2]            # share of past invoices paid on time
+  historical_default_share_zero: 0.80
+  historical_default_beta: [1, 40]
+  dilution_beta: [2, 60]           # FINANCE-TBD; ~3% mean, 0-10%
+  dilution_retail_bump: 0.015      # suppliers that mostly sell to retail dilute more
+  retail_focused_share: 0.45
+  retail_buyer_share_if_focused: 0.75
+  facility_median: 3000000
+  facility_sd_log: 0.5
+  kyc_valid_share: 0.98
+
+invoices:
+  amount_median: 400000            # THB, log-normal
+  amount_sd_log: 0.9
+  amount_min: 20000
+  amount_max: 5000000
+  tenor_peaks: [30, 45, 60, 90]    # 45 = Thai large-buyer payment rule
+  tenor_peak_weights: [0.30, 0.30, 0.25, 0.15]
+  tenor_jitter_sd: 4
+  tenor_min: 15
+  tenor_max: 120
+  age_mean_days: 8                 # days from issue to decision, geometric
+  age_max_days: 60
+  confidence_beta: [40, 2]
+  fraud_score_beta: [1.5, 20]
+  exposure_share_max: 0.5          # current exposure ~ U(0, this) x limit
+
+missing_shares:                    # share of rows where the profile omits the key
+  buyer.avg_days_late: 0.05
+  supplier.dilution_rate: 0.04
+  supplier.historical_default_rate: 0.04
+
+drift:
+  last_cohorts: 6
+  late_rate_multiplier: 1.15       # +15% late rates in the drifted cohorts
+
+# Label: y = 1 if the buyer doesn't pay within 60 days after due_date (or dilution > 20%).
+# logit p = intercept + sum(beta_i x_i) + tier x tenor + N(0, noise_sd); y ~ Bernoulli(p).
+# The intercept puts the shared demo profile (Siam Fresh Pack -> Mekong Basket Retail, tier A, confirmed)
+# at a noise-free latent PD of 0.0027 (about 0.0028 once the noise is averaged in), close to Finance's
+# happy path of ~0.003; the base rate then lands near 4% (FINANCE-TBD 2-8%).
+latent:
+  intercept: -3.908
+  noise_sd: 0.3
+  beta:
+    tier_ord: 0.8
+    late_payment_rate: 4.0
+    avg_days_late: 0.02
+    confirmed: -0.5
+    log1p_relationship_months: -0.15
+    log1p_years_in_business: -0.15
+    log1p_invoices_financed: -0.10
+    historical_default_rate: 4.0
+    dilution_rate: 4.0
+    on_time_ratio: -1.0
+    log_amount_centred: 0.10       # ln(amount / amount_median)
+    tenor_days: 0.006
+    invoice_age_days: 0.01
+    amount_to_buyer_limit: 1.0
+    ocr_confidence: -0.5
+    fraud_score: 2.0
+    tier_x_tenor_30d: 0.12         # tier_ord x tenor_days / 30
+  sector:
+    retail: 0.10
+    manufacturing: 0.0
+    food: 0.05
+    construction: 0.30
+    logistics: 0.10
+    other: 0.15

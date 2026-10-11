@@ -1,0 +1,11 @@
+{
+  "scenario": "V2 inflated amount, OCR flags a PO mismatch",
+  "decision": "reject",
+  "advance_rate": "0.00",
+  "limit": "0.00",
+  "fee_rate": "0.00",
+  "must_contain": [
+    "KO.PO_MISMATCH"
+  ],
+  "note": "REVIEW.LINE_ITEMS_MISMATCH may co-hit; reject wins"
+}

@@ -1,0 +1,15 @@
+{
+  "scenario": "Happy path",
+  "decision": "approve",
+  "advance_rate": "0.70",
+  "limit": "524300.00",
+  "fee_rate": "0.009",
+  "apr": "0.1095",
+  "risk_score": {
+    "max": 0.00347
+  },
+  "must_contain": [
+    "TERMS.MANDATE_CAP",
+    "PRICING.RISK_FEE"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "scenario": "Scenario 8 with no mandate at all",
+  "decision": "approve",
+  "advance_rate": "0.75",
+  "limit": "561750.00",
+  "fee_rate": "0.009",
+  "apr": "0.1095",
+  "risk_score": {
+    "max": 0.0057
+  },
+  "use_default_mandate": false,
+  "must_contain": [
+    "TERMS.HAIRCUT_DILUTION",
+    "TERMS.HEADROOM"
+  ],
+  "must_not_contain": [
+    "TERMS.MANDATE_CAP",
+    "MANDATE.DEFAULT"
+  ],
+  "note": "decided with the policy default mandate switched off, to show the haircut (0.75 vs 0.80 for scenario 1)"
+}

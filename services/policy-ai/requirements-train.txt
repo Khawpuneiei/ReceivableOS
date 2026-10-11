@@ -1,0 +1,8 @@
+# Training only: the synthetic data generator and model training (training/).
+# Serving needs only requirements.txt and reads the model files as JSON / LightGBM text.
+-r requirements.txt
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.4
+lightgbm>=4.3
+matplotlib>=3.8
