@@ -180,6 +180,9 @@ class Payee(BaseModel):
 
     name: str
     address: Address
+    # The mock KYC credential flag (scope doc section 2). Only verified payees are allowlisted on chain,
+    # and the guard refuses an unverified seller. Defaults to False, so an unflagged party is not trusted.
+    kyc_verified: bool = False
 
 
 def load_mandate(path: Path) -> Mandate:

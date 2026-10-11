@@ -1,0 +1,14 @@
+[common]
+    thread_pool_size = 8
+    message_timeout_ms = 10000
+[cert]
+    ssl_type = ssl
+    ca_path=/work/nodes/127.0.0.1/sdk
+    ca_cert=ca.crt
+    sdk_key=sdk.key
+    sdk_cert=sdk.crt
+[peers]
+    node.0=127.0.0.1:20200
+    node.1=127.0.0.1:20201
+    node.2=127.0.0.1:20202
+    node.3=127.0.0.1:20203

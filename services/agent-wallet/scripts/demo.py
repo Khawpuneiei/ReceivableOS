@@ -3,15 +3,17 @@
 Start the service first, with the tokens and (for the on-chain revert steps) DEMO_MODE=1. In mock mode the
 service starts with the demo mandate and lender liquidity, so no seeding step is needed before the demo:
 
-    WALLET_OWNER_TOKEN=... WALLET_APPROVER_TOKEN=... WALLET_RISK_ORACLE_TOKEN=... DEMO_MODE=1 \
+    WALLET_OWNER_TOKEN=... WALLET_APPROVER_TOKEN=... WALLET_RISK_ORACLE_TOKEN=... \
+        WALLET_AGENT_TOKEN=... DEMO_MODE=1 \
         python -m uvicorn app.main:app --app-dir services/agent-wallet --port 8003
 
 Then, from the repo root:
 
     python services/agent-wallet/scripts/demo.py
 
-Every transaction hash printed here is a MOCK hash (prefix `mock:`). It is not a chain hash.
-The run writes eval/demo_tx_hashes.md. The FISCO BCOS hashes replace these once the chain is up.
+The labels follow the ledger the service reports. On the mock, every hash is a MOCK hash (prefix `mock:`),
+not a chain hash, and the run writes eval/demo_tx_hashes.md. On FISCO BCOS, the run writes
+eval/demo_tx_hashes_fisco.md. The receipts are saved where the service's FISCO_RECEIPTS_DIR points.
 """
 
 import argparse
@@ -31,7 +33,8 @@ from shared.schemas import PolicyDecision  # noqa: E402
 
 SELLER = "SELLER:siam-fresh-pack"
 ATTACKER = "0x" + "bad0" * 10
-RECORD: list[dict] = []  # every step, for demo_tx_hashes.md
+RECORD: list[dict] = []  # every step, for the demo_tx_hashes file
+LEDGER = "mock"  # set from the service's /health in run()
 
 
 def fingerprint(name: str) -> str:
@@ -58,11 +61,12 @@ def decision_hash(d: dict) -> str:
 
 
 class Demo:
-    def __init__(self, url: str, owner: str, approver: str, risk_oracle: str) -> None:
+    def __init__(self, url: str, owner: str, approver: str, risk_oracle: str, agent: str) -> None:
         self.http = httpx.Client(base_url=url, timeout=60)
         self.owner = {"X-Owner-Token": owner}
         self.approver = {"X-Approver-Token": approver}
         self.risk_oracle = {"X-Risk-Oracle-Token": risk_oracle}
+        self.agent = {"X-Agent-Token": agent}
 
     def say(self, title: str) -> None:
         print(f"\n== {title}")
@@ -73,7 +77,7 @@ class Demo:
             for c in body.get("checks", [])
             if not c.get("passed", True) or c["code"] == "HumanApproved"
         ]
-        where = "mock chain" if body.get("chain_ref") else "off-chain"
+        where = f"{LEDGER} chain" if body.get("chain_ref") else "off-chain"
         print(
             f"  {label:44s} {body.get('status', '?'):16s} "
             f"{body.get('block_reason') or '':22s} {where:9s} {codes}"
@@ -103,6 +107,7 @@ class Demo:
                 "due_date": "2026-11-15",
                 "seller": SELLER,
             },
+            headers=self.agent,
         ).json()
 
     def approve(self, invoice: str, limit: str, d: dict | None = None) -> dict:
@@ -150,17 +155,19 @@ class Demo:
         }
         if bypass:
             body["skip_offchain_checks"] = True
-        return self.http.post("/wallet/execute", json=body).json()
+        return self.http.post("/wallet/execute", json=body, headers=self.agent).json()
 
 
-def run(url: str, owner: str, approver: str, risk_oracle: str) -> int:
-    demo = Demo(url, owner, approver, risk_oracle)
+def run(url: str, owner: str, approver: str, risk_oracle: str, agent: str) -> int:
+    global LEDGER
+    demo = Demo(url, owner, approver, risk_oracle, agent)
     health = demo.http.get("/health").json()
+    LEDGER = health["ledger"]
     print(f"service: {health}")
 
     demo.say("1. Active mandate")
     mandate = demo.http.get("/wallet/mandate").json()
-    print(f"  {mandate['mandate_id']}  hash {mandate['mandate_hash']}  (mock ledger)")
+    print(f"  {mandate['mandate_id']}  hash {mandate['mandate_hash']}  ({LEDGER} ledger)")
 
     demo.say("2. Happy path: THB 749,000 invoice, draw 524,300 from Lender A at 10.95% APR")
     demo.show("register inv_happy", demo.register("inv_happy", "749000.00"))
@@ -170,6 +177,7 @@ def run(url: str, owner: str, approver: str, risk_oracle: str) -> int:
         "settle, buyer paid 749,000 (TX-5)",
         demo.http.post(
             "/wallet/settle",
+            headers=demo.agent,
             json={
                 "idempotency_key": "inv_happy:settle",
                 "invoice_id": "inv_happy",
@@ -242,17 +250,24 @@ def run(url: str, owner: str, approver: str, risk_oracle: str) -> int:
     events = [e["event"] for e in audit["entries"]]
     print(f"  entries {len(events)}  verified {audit['verified']}  last event {events[-1]}")
 
-    write_report()
-    print("\nwrote eval/demo_tx_hashes.md (mock hashes)")
+    out = write_report()
+    print(f"\nwrote {out.relative_to(SERVICE.parents[1]).as_posix()}")
     return 0
 
 
-def write_report() -> None:
+def write_report() -> Path:
+    if LEDGER == "mock":
+        title = "# Demo transactions (mock ledger)"
+        note = "Every hash below is a MOCK hash (prefix `mock:`), not a chain hash."
+        out = SERVICE / "eval" / "demo_tx_hashes.md"
+    else:
+        title = f"# Demo transactions ({LEDGER} ledger)"
+        note = f"Every hash below is a {LEDGER} transaction hash. Receipts go to FISCO_RECEIPTS_DIR."
+        out = SERVICE / "eval" / f"demo_tx_hashes_{LEDGER}.md"
     lines = [
-        "# Demo transactions (mock ledger)",
+        title,
         "",
-        f"Run on {date.today().isoformat()}. Every hash below is a MOCK hash (prefix `mock:`), "
-        "not a chain hash.",
+        f"Run on {date.today().isoformat()}. {note}",
         "",
         "| step | status | block reason | tx_id | chain_ref |",
         "|---|---|---|---|---|",
@@ -262,8 +277,8 @@ def write_report() -> None:
             f"| {r['step']} | {r['status']} | {r['reason'] or ''} | {r['tx_id']} "
             f"| {r['chain_ref'] or 'none (off-chain)'} |"
         )
-    out = SERVICE / "eval" / "demo_tx_hashes.md"
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return out
 
 
 def main() -> int:
@@ -272,14 +287,17 @@ def main() -> int:
     parser.add_argument("--owner-token", default=os.getenv("WALLET_OWNER_TOKEN"))
     parser.add_argument("--approver-token", default=os.getenv("WALLET_APPROVER_TOKEN"))
     parser.add_argument("--risk-oracle-token", default=os.getenv("WALLET_RISK_ORACLE_TOKEN"))
+    parser.add_argument("--agent-token", default=os.getenv("WALLET_AGENT_TOKEN"))
     args = parser.parse_args()
-    if not (args.owner_token and args.approver_token and args.risk_oracle_token):
+    tokens = [args.owner_token, args.approver_token, args.risk_oracle_token, args.agent_token]
+    if not all(tokens):
         print(
-            "set WALLET_OWNER_TOKEN, WALLET_APPROVER_TOKEN and WALLET_RISK_ORACLE_TOKEN, or pass the flags",
+            "set WALLET_OWNER_TOKEN, WALLET_APPROVER_TOKEN, WALLET_RISK_ORACLE_TOKEN and WALLET_AGENT_TOKEN, "
+            "or pass the flags",
             file=sys.stderr,
         )
         return 2
-    return run(args.url, args.owner_token, args.approver_token, args.risk_oracle_token)
+    return run(args.url, args.owner_token, args.approver_token, args.risk_oracle_token, args.agent_token)
 
 
 if __name__ == "__main__":

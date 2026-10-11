@@ -1,6 +1,6 @@
 """In-memory mirror of the five contracts (CLAUDE.md 5.6). Owner: Agent AI engineer.
 
-Same checks, same order and same revert strings as the Solidity code, so CHAIN_MODE=mock answers like FISCO.
+Same checks, same order and same revert strings as the Solidity code, so LEDGER_MODE=mock answers like FISCO.
 Hashes carry the `mock:` prefix so nobody mistakes them for chain hashes. Reverted txs still get a hash,
 as they do on chain.
 

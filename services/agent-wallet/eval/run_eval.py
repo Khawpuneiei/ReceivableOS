@@ -41,6 +41,8 @@ REPORT = SERVICE / "eval" / "report.md"
 OWNER_TOKEN = "eval-owner-token"
 APPROVER_TOKEN = "eval-approver-token"
 RISK_ORACLE_TOKEN = "eval-risk-oracle-token"
+AGENT_TOKEN = "eval-agent-token"  # what the orchestrator sends; a case with its own headers overrides it
+AGENT_HEADERS = {"X-Agent-Token": AGENT_TOKEN}
 ATTACKER = "0x" + "bad0" * 10
 START = datetime(2026, 10, 12, 9, 0, tzinfo=UTC)
 EXPIRED = datetime(2026, 12, 1, tzinfo=UTC)
@@ -162,6 +164,7 @@ class Harness:
                 "WALLET_OWNER_TOKEN": OWNER_TOKEN,
                 "WALLET_APPROVER_TOKEN": APPROVER_TOKEN,
                 "WALLET_RISK_ORACLE_TOKEN": RISK_ORACLE_TOKEN,
+                "WALLET_AGENT_TOKEN": AGENT_TOKEN,
                 "AGENT_CANARY": self.canary,
                 "DEMO_MODE": "1" if self.skip_offchain else "0",
                 **case_env,
@@ -177,6 +180,7 @@ class Harness:
             "WALLET_OWNER_TOKEN",
             "WALLET_APPROVER_TOKEN",
             "WALLET_RISK_ORACLE_TOKEN",
+            "WALLET_AGENT_TOKEN",
             "AGENT_CANARY",
             "DEMO_MODE",
             *self._case_env,
@@ -195,7 +199,7 @@ def run_setup(h: Harness, case: dict, case_id: str, tx: dict) -> None:
     for step in case.get("setup", []):
         if step == "register":
             body = substitute(deep_merge(BASE["register"], patches.get("register", {})), case_id, h.canary)
-            h.client.post("/wallet/register", json=body)
+            h.client.post("/wallet/register", json=body, headers=AGENT_HEADERS)
         elif step == "approve":
             # Non-tamper cases approve the patched decision too; tamper cases approve the original one.
             approved = base_decision(case_id) if tamper else decision
@@ -212,10 +216,10 @@ def run_setup(h: Harness, case: dict, case_id: str, tx: dict) -> None:
             signed = substitute(decision, case_id, h.canary)
             body["decision"] = {**signed, "decision_hash": decision_hash(signed)}
             body["decision_hash"] = decision_hash(signed)
-            tx["execute"] = h.client.post("/wallet/execute", json=body).json()
+            tx["execute"] = h.client.post("/wallet/execute", json=body, headers=AGENT_HEADERS).json()
         elif step == "settle":
             body = substitute(deep_merge(BASE["settle"], patches.get("settle", {})), case_id, h.canary)
-            h.client.post("/wallet/settle", json=body)
+            h.client.post("/wallet/settle", json=body, headers=AGENT_HEADERS)
         elif step == "pause":
             h.client.post("/wallet/pause", headers={"X-Approver-Token": APPROVER_TOKEN})
         elif step == "expire_mandate":
@@ -228,7 +232,8 @@ def build_call(
     """Returns (url, json body, headers) for the case request. Pure: no state is touched here."""
     endpoint = case.get("endpoint", "execute")
     patch = case.get("patch", {})
-    headers = substitute(case.get("headers") or {}, case_id, canary)
+    # Absent "headers" means the agent's credentials (CLAUDE.md 7.4); a case that sets headers replaces them.
+    headers = substitute(case["headers"] if "headers" in case else AGENT_HEADERS, case_id, canary)
     if endpoint == "execute":
         decision = effective_decision(case, case_id)
         original = base_decision(case_id)

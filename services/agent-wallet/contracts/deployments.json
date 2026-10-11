@@ -10,11 +10,32 @@
       "buyer": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65"
     },
     "contracts": {
-      "MockStable": "0x4ed7c70F96B99c776995fB64377f0d4aB3B0e1C1",
-      "PolicyGuard": "0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44",
-      "ReceivableRegistry": "0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f",
-      "FinancingVault": "0x4A679253410272dd5232B3Ff7cF5dbB88f295319",
-      "AgentWallet": "0x7a2088a1bFc9d81c55368AE168C2C02570cB814F"
+      "MockStable": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "PolicyGuard": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      "ReceivableRegistry": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "FinancingVault": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+      "AgentWallet": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
+    },
+    "mandate_hash": "0xe3e29223892826754f08e64179a6aeab9e2d87561bb79a2087dfe1cd516288e7"
+  },
+  "fisco": {
+    "chain_id": "chain0",
+    "group": "group0",
+    "rpc": "https://127.0.0.1:20200 (and 20201-20203)",
+    "deployed_at": "2026-10-11T05:46:16+00:00",
+    "roles": {
+      "deployer": "0x0af701e5362e65BF70f4B31973E9eA30CBfa5494",
+      "agent": "0x88514a6e4a34E219e0bcFa8Eb395Ee4Ef023f014",
+      "approver": "0xce55F72c08339ef91F30B63dfF117F8b65314657",
+      "risk_oracle": "0xDcC298134841eF7d1FcfF1d3B4a990709721e83c",
+      "buyer": "0x23B7f266825abDB08A7Fd357ABD9DC48487e72a6"
+    },
+    "contracts": {
+      "MockStable": "0xe7d7b002e51431b300ddc00b2c059ccc41ce4660",
+      "PolicyGuard": "0xfa17c5ae68ba134caa99f42a6d5128a99953abb6",
+      "ReceivableRegistry": "0x34ef062bc977f3fe2ef2a2eee4b445843b4adfeb",
+      "FinancingVault": "0xf5e297ed6556898b1fa58b352fce789e77eb156f",
+      "AgentWallet": "0x9c7fce897f893b43ae588c1822c0eeae68f4b5f4"
     },
     "mandate_hash": "0xe3e29223892826754f08e64179a6aeab9e2d87561bb79a2087dfe1cd516288e7"
   }

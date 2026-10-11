@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     settlement_token: str = "tTHB"
 
     # Chain: mock needs no node; fisco needs a running FISCO BCOS node
-    chain_mode: Literal["mock", "fisco"] = "mock"
+    ledger_mode: Literal["mock", "fisco"] = "mock"
     chain_rpc_url: str = "http://127.0.0.1:20200"
     chain_group_id: str = "group0"
     chain_deployments_file: str = "./services/agent-wallet/contracts/deployments.json"
@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     chain_owner_key_path: str | None = None  # mandate owner
     chain_approver_key_path: str | None = None  # Finance approver: confirm and pause
     chain_risk_oracle_key_path: str | None = None  # signs Registry.approve (TX-2)
+    fisco_sdk_dir: str | None = None  # checkout of FISCO-BCOS/python-sdk (v3); see the README
+    fisco_config_dir: str | None = None  # folder with client_config.py and bcos3_sdk_config.ini for the chain
+    fisco_receipts_dir: str | None = None  # every FISCO transaction receipt is saved here as JSON
 
     # Money: THB, 2 decimals, platform ceilings
     wallet_currency: str = "THB"
@@ -39,6 +42,7 @@ class Settings(BaseSettings):
     wallet_owner_token: str | None = None
     wallet_approver_token: str | None = None
     wallet_risk_oracle_token: str | None = None  # X-Risk-Oracle-Token for POST /wallet/approve (TX-2)
+    wallet_agent_token: str | None = None  # X-Agent-Token for register, execute and settle
     fingerprint_hmac_key: str | None = None  # same value as ocr-ai
     agent_canary: str | None = None
     injection_model_dir: str | None = None  # local folder with the pinned classifier; unset = rules only

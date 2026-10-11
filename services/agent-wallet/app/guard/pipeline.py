@@ -29,6 +29,7 @@ class GuardContext:
     canary: str | None = None
     classifier: Classifier | None = None
     classifier_action: str = "log"  # "log" audits flags, "hold" routes them to a human, "block" rejects
+    seller_kyc_verified: bool = True  # the seller's mock KYC flag, set by the service from the registry
 
 
 def check_draw(
@@ -80,6 +81,7 @@ def check_draw(
     )
     if fact is not None:
         add("L3", "PayeeNotAllowed", intent.payee_address.lower() == fact.seller_address.lower())
+        add("L3", "KycNotVerified", ctx.seller_kyc_verified)
         add("L3", "AlreadyDrawn", fact.drawn_amount is None)
         add("L3", "Paused", not ctx.paused)
         amount = intent.amount

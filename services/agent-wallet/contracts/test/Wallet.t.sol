@@ -49,7 +49,7 @@ contract WalletTest {
     function setUp() public {
         vm.warp(START);
         token = new MockStable();
-        guard = new PolicyGuard();
+        guard = new PolicyGuard(1);
         registry = new ReceivableRegistry(RISK_ORACLE);
         vault = new FinancingVault(token, PLATFORM);
         wallet = new AgentWallet(AGENT, APPROVER, guard);

@@ -1,0 +1,46 @@
+"""Client config for the FISCO BCOS 3.x Python SDK (generated for the local Air chain; not committed).
+
+Paths are as seen inside the fisco-air container: /work is services/agent-wallet/fisco-chain.
+Per-role accounts are subclasses of this config (see fisco.py), each with its own account_keyfile.
+"""
+
+from eth_utils.crypto import CRYPTO_TYPE_ECDSA, set_crypto_type
+
+
+class client_config:
+    crypto_type = "ECDSA"
+    ssl_type = crypto_type
+    set_crypto_type(crypto_type)
+    logdir = "/work/sdk/logs"
+    contract_dir = "/work/sdk/contracts"
+    contract_info_file = "/work/sdk/contract.ini"
+    account_keyfile_path = "/work/accounts"
+    account_keyfile = "deployer.pem"
+    account_password = None
+    gm_account_keyfile = ""
+    gm_account_password = None
+    solc_path = None
+    solcjs_path = None
+    gm_solc_path = None
+    background = True
+    bcos3_lib_path = "/opt/python-sdk/bcos3sdklib"
+    bcos3_config_file = "/work/sdk/bcos3_sdk_config.ini"
+    bcos3_group = "group0"
+    bcos3_check_node_version = True
+    bcos3_when_version_mismatch = "WARN"
+    bcos3_major_version = 3
+    bcos3_max_miner_version = 6
+    PROTOCOL_RPC = "rpc"
+    PROTOCOL_CHANNEL = "channel"
+    fiscoChainId = 1
+    groupid = 1
+    client_protocol = "channel"
+    remote_rpcurl = ""
+    channel_host = "127.0.0.1"
+    channel_port = 20200
+    channel_ca = ""
+    channel_node_cert = ""
+    channel_node_key = ""
+    channel_en_crt = ""
+    channel_en_key = ""
+    _ = CRYPTO_TYPE_ECDSA  # keeps the import used for readers comparing with the SDK template

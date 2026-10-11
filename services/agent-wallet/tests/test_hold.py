@@ -59,6 +59,7 @@ def held(monkeypatch):
     monkeypatch.setenv("WALLET_OWNER_TOKEN", "owner-test-token")
     monkeypatch.setenv("WALLET_APPROVER_TOKEN", "approver-test-token")
     monkeypatch.setenv("WALLET_RISK_ORACLE_TOKEN", "risk-oracle-test-token")
+    monkeypatch.setenv("WALLET_AGENT_TOKEN", "agent-test-token")
     monkeypatch.setenv("INJECTION_MODEL_DIR", "unused")  # any non-empty value turns the classifier on
     monkeypatch.setenv("INJECTION_CLASSIFIER_ACTION", "hold")
     get_settings.cache_clear()
@@ -66,7 +67,7 @@ def held(monkeypatch):
     clock = Clock(NOW)
     service = build_service(clock=clock)
     bootstrap_demo(service)
-    yield TestClient(create_app(service)), service, clock
+    yield TestClient(create_app(service), headers={"X-Agent-Token": "agent-test-token"}), service, clock
     get_settings.cache_clear()
 
 

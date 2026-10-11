@@ -7,7 +7,7 @@ each settlement (ledger.anchor_audit). Entries hold ids, hashes, amounts and cod
 
 import hashlib
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 GENESIS = "0x" + "00" * 32
@@ -39,7 +39,7 @@ class AuditLog:
     ) -> dict[str, Any]:
         body = {
             "seq": len(self.entries) + 1,
-            "ts": datetime.now(UTC).isoformat(),
+            "ts": datetime.now(timezone.utc).isoformat(),
             "invoice_id": invoice_id,
             "audit_ref": audit_ref,
             "tx_id": tx_id,
