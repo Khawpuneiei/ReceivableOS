@@ -38,3 +38,4 @@ docs/*.json
 /scripts/compare_qwen_prompt.py
 /scripts/replay_grounding.py
 /tests/test_grounding_experiment.py
+/scripts/evaluate_reliability.py
