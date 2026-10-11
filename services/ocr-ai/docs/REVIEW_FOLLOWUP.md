@@ -1,6 +1,6 @@
 # PM review follow-up — 11 October 2026
 
-Review: [PR #16, latest PM comment](https://github.com/Khawpuneiei/ReceivableOS/pull/16#issuecomment-6105621941).
+Reviews checked individually: [original PM comment](https://github.com/Khawpuneiei/ReceivableOS/pull/16#issuecomment-6101917725) and [follow-up PM comment](https://github.com/Khawpuneiei/ReceivableOS/pull/16#issuecomment-6105621941).
 Branch: `ocr/evidence-fraud-graph`. Shared schemas and other-service implementations are unchanged.
 
 | Review request | Change / verification |
@@ -15,8 +15,17 @@ Branch: `ocr/evidence-fraud-graph`. Shared schemas and other-service implementat
 | Explicit hosted opt-in | `OCR_HOSTED_VISION_ENABLED=1` required in addition to key/provider/model. Key alone produces no upload or hosted model check; transport tests use fake keys and mock responses |
 | Cache lock blocks unrelated documents | Per-key single-flight for both hosted and Qwen readers. Same key calls model once; distinct keys progress during blocked network I/O. Transient lock bookkeeping cleaned on success/failure |
 | Reset run steps | README provides operator-only reset with `OCR_DEVELOPMENT_MODE=1` and `OCR_ALLOW_RESET=1`, exact state-path warning and no reset HTTP route |
+| PM-owned root files | Root `.gitattributes` and `docs/00-scope.md` have no diff against current main, as acknowledged in the follow-up review. The only root setting addition is `BANK_TOKEN_HMAC_KEY`, explicitly requested by the reviewer. Shared schemas and other-service source have no diff |
 
 The original full work is preserved locally at `ocr/archive-before-review-20261011` (f13ec0b). [Draft companion PR #39](https://github.com/Khawpuneiei/ReceivableOS/pull/39) on `ocr/corpus-evidence` carries source data, attribution and experiment documentation. No generated evaluation JSON is committed to either PR; scripts regenerate it. The core is still a substantial implementation, but the largest report/render noise has been removed rather than hiding it in history rewriting.
+
+## Review readiness and remaining scope decision
+
+The latest remote main is `7d46da5`. A fresh audit confirms the legacy text fixture is byte-identical to main, zero generated JSON reports are tracked under core `services/ocr-ai/docs/`, zero tracked core documentation files contain absolute local home-directory paths, and 01/04 have different SHA-256 hashes. All original and follow-up requests are mapped above, including the earlier reset, root-file, hosted-opt-in and cache comments.
+
+The release check was repeated for this re-review with `scripts/release_check.py --fresh --strict`: **184 passed / 1 skipped** locally (126.00 seconds) and in the fresh environment (122.03 seconds). Installation, setup, generation, HTTP extraction/retrieval, lint/format, ordered demo, supporting cases and Policy integration passed; Policy control violations remain zero. The optional publisher-fixture skip is unchanged. Generated reports remain local and ignored.
+
+The corpus/evidence split requested by the PM is published, but core PR #16 still changes **90 files** and adds about **10,400 lines**. This exceeds the repository's approximate 400-line review target; the split must not be described as PM-approved or the size blocker as definitively closed. The PM still needs to accept the retained service scope, including invoice/PO verification, supporting-case verification, optional readers and graph signals, or request further implementation splits. Requesting a fresh review is distinct from approval or merge. The full Wallet drawdown dependency below also remains open.
 
 ## Cache measurement
 
