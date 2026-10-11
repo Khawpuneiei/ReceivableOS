@@ -80,7 +80,12 @@ def normalize_date(raw: str, locale: str | None) -> date:
 
 def normalize_reference(value: str) -> str:
     text = unicodedata.normalize("NFKC", value).upper()
-    text = re.sub(r"\d+", lambda match: match[0].lstrip("0") or "0", text)
+
+    def numeric_run(match):
+        digits = "".join(str(unicodedata.decimal(char)) for char in match[0])
+        return digits.lstrip("0") or "0"
+
+    text = re.sub(r"\d+", numeric_run, text)
     return re.sub(r"[\s\-/_\.]", "", text)
 
 
