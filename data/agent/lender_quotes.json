@@ -1,0 +1,26 @@
+{
+  "scenario": "docs/02 demo: THB 749,000 invoice from Siam Fresh Pack to Mekong Basket Retail, financed 12 Oct, tenor 34 days",
+  "invoice_face": "749000.00",
+  "mandate_id": "mdt_001",
+  "selection_rule": "highest advance whose APR is at most the mandate's max_apr; ties go to the lower APR",
+  "quotes": [
+    {
+      "lender_id": "lender_a",
+      "name": "Andaman Factoring Co., Ltd.",
+      "advance_rate": "0.70",
+      "fee_rate_per_30d": "0.0090",
+      "apr": "0.1095",
+      "note": "70% at 0.90% per 30 days is 10.95% APR"
+    },
+    {
+      "lender_id": "lender_b",
+      "name": "Isan Growth Credit Fund",
+      "advance_rate": "0.65",
+      "fee_rate_per_30d": "0.0075",
+      "apr": "0.0913",
+      "note": "65% at 0.75% per 30 days is about 9.13% APR"
+    }
+  ],
+  "chosen": "lender_a",
+  "chosen_advance": "524300.00"
+}
