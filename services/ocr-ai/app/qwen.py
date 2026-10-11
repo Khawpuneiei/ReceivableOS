@@ -58,7 +58,7 @@ def read_candidates_with_status(images: list[str], settings: Settings) -> tuple[
             sort_keys=True,
         ).encode()
     ).hexdigest()
-    with _cache.lock:
+    with _cache.singleflight(cache_key):
         cached = _cache.get(cache_key)
         if cached is not None:
             return VisionCandidates.model_validate(cached), "hit"

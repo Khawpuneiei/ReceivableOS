@@ -24,6 +24,7 @@ def main():
         f"BANK_TOKEN_HMAC_KEY={secrets.token_hex(32)}",
         f"OCR_RESULT_ACCESS_TOKEN={secrets.token_hex(32)}",
         f"OCR_STATE_PATH={SERVICE / '.state/observations.sqlite'}",
+        "OCR_HOSTED_VISION_ENABLED=0",
         "OCR_PADDLE_ENABLED=0",
         "OCR_PADDLE_REC_NAME=en_PP-OCRv5_mobile_rec",
         "OCR_QWEN_ENABLED=0",

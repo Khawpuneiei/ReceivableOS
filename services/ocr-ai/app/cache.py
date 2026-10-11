@@ -4,7 +4,8 @@ import copy
 import json
 import time
 from collections import OrderedDict
-from threading import RLock
+from contextlib import contextmanager
+from threading import Lock, RLock
 
 
 class JsonCache:
@@ -13,6 +14,28 @@ class JsonCache:
         self._entries = OrderedDict()
         self._bytes = 0
         self.lock = RLock()
+        self._flights = {}
+
+    @contextmanager
+    def singleflight(self, key):
+        """Deduplicate active misses per key; unrelated keys never wait on network I/O.
+
+        Entries exist only while callers are active. HTTP admission bounds concurrency.
+        The cache-wide lock only protects bookkeeping, never a reader's network call.
+        """
+        with self.lock:
+            flight, users = self._flights.get(key, (Lock(), 0))
+            self._flights[key] = (flight, users + 1)
+        try:
+            with flight:
+                yield
+        finally:
+            with self.lock:
+                _, users = self._flights[key]
+                if users == 1:
+                    del self._flights[key]
+                else:
+                    self._flights[key] = (flight, users - 1)
 
     def _remove(self, key):
         _, _, size = self._entries.pop(key)

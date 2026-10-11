@@ -80,8 +80,8 @@ def normalize_date(raw: str, locale: str | None) -> date:
 
 def normalize_reference(value: str) -> str:
     text = unicodedata.normalize("NFKC", value).upper()
-    text = re.sub(r"[\s\-/_\.]", "", text)
-    return re.sub(r"\d+", lambda match: str(int(match[0])), text)
+    text = re.sub(r"\d+", lambda match: match[0].lstrip("0") or "0", text)
+    return re.sub(r"[\s\-/_\.]", "", text)
 
 
 def thai_tax_id_valid(value: str) -> bool:

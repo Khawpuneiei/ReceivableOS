@@ -74,6 +74,7 @@ def test_expiration_eviction_and_defensive_copy(monkeypatch):
 
 @pytest.mark.parametrize("kind", ["valid", "tool", "extra", "invalid", "timeout", "large", "refusal"])
 def test_hosted_transport_cache_validation_and_key_isolation(monkeypatch, kind):
+    monkeypatch.setenv("OCR_HOSTED_VISION_ENABLED", "1")
     monkeypatch.setenv("LLM_API_KEY", "fake-test-key")
     monkeypatch.setenv("LLM_PROVIDER", "anthropic")
     monkeypatch.setenv("LLM_MODEL", "configured-test-model")
@@ -136,6 +137,7 @@ def test_hosted_candidate_disagreement_keeps_grounded_amount_and_prewarm_skips_o
     client, monkeypatch, tmp_path
 ):
     monkeypatch.setenv("OCR_RESULT_ACCESS_TOKEN", "test-operator-token")
+    monkeypatch.setenv("OCR_HOSTED_VISION_ENABLED", "1")
     monkeypatch.setenv("LLM_API_KEY", "fake-test-key")
     monkeypatch.setenv("LLM_MODEL", "configured-test-model")
     actual_client, calls = httpx.Client, []
@@ -189,6 +191,7 @@ def test_generated_demo_order_is_approve_review_reject_duplicate_by_evidence(cli
     assert "duplicate_fingerprint" not in injected["fraud_flags"]
     assert inflated["fraud_score"] >= 0.30 and "math_inconsistent" in inflated["fraud_flags"]
     assert duplicate["fraud_score"] >= 0.30
-    assert {"duplicate_invoice_hash", "duplicate_fingerprint"} <= set(duplicate["fraud_flags"])
-    assert happy["doc_hash"] == duplicate["doc_hash"]
+    assert "duplicate_fingerprint" in duplicate["fraud_flags"]
+    assert "duplicate_invoice_hash" not in duplicate["fraud_flags"]
+    assert happy["doc_hash"] != duplicate["doc_hash"]
     assert happy["invoice_fingerprint"] == duplicate["invoice_fingerprint"]

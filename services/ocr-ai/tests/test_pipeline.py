@@ -26,7 +26,9 @@ _FIXTURE_TEMP = tempfile.TemporaryDirectory(prefix="receivableos-ocr-regression-
 DATA = Path(_FIXTURE_TEMP.name)
 generate_fixtures(DATA, font_path=CHECKED_IN_DATA / "fonts" / "NotoSansThai-Regular.ttf")
 generate_showcase(DATA / "showcase")
-RELIABILITY_DATA = CHECKED_IN_DATA / "reliability"
+from tests.fixtures import reliability_corpus  # noqa: E402
+
+RELIABILITY_DATA = reliability_corpus()
 
 
 def upload(client, content, headers=None):

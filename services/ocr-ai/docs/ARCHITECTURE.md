@@ -61,7 +61,7 @@ The handoff binds an observation ID to the one or two uploaded document hashes, 
 
 Wallet/security owners must define service authentication, freshness/replay handling, response/request binding, evidence retention and key rotation. Policy must enforce review/injection/risk rules; registry and wallet must independently enforce duplicate financing, PO allocations, verified payees and mandates. These remain owner decisions, not implemented guarantees here. No other-service imports or shared schema edits were needed.
 
-See [the financial retest](FINTECH_RETEST.md) for the historical v2 test results and [line-unit decision](adr/0006-explicit-line-unit-comparison.md) for current v3 unit semantics. [Architecture validation](ARCHITECTURE_VALIDATION.md) and earlier artifacts retain their original measurements.
+See [the financial retest](https://github.com/Khawpuneiei/ReceivableOS/blob/ocr/corpus-evidence/services/ocr-ai/docs/FINTECH_RETEST.md) for the historical v2 test results and [line-unit decision](adr/0006-explicit-line-unit-comparison.md) for current v3 unit semantics. [Architecture validation](https://github.com/Khawpuneiei/ReceivableOS/blob/ocr/corpus-evidence/services/ocr-ai/docs/ARCHITECTURE_VALIDATION.md) and earlier artifacts retain their original measurements.
 
 ## Checklist extension and supporting evidence
 

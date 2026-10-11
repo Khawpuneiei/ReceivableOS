@@ -1,10 +1,9 @@
 """Spatial ambiguity, graph privacy and downstream evidence semantics."""
 
-from pathlib import Path
-
 import pytest
 from datagen.generate import document_lines, render_pdf
 from pydantic import ValidationError
+from tests.fixtures import reliability_corpus
 
 from app.extract import extract_document
 from app.graph import export_graph
@@ -14,7 +13,7 @@ from app.models import FraudGraph
 from app.validate import validate_document
 from app.worker import parse
 
-CORPUS = Path(__file__).resolve().parents[3] / "data/invoices/reliability"
+CORPUS = reliability_corpus()
 
 
 @pytest.mark.parametrize("language", ["en", "zh", "th"])

@@ -13,11 +13,13 @@ _cache = JsonCache()
 
 
 def configured() -> bool:
-    return bool(os.getenv("LLM_API_KEY", "").strip())
+    return os.getenv("OCR_HOSTED_VISION_ENABLED", "0") == "1" and bool(os.getenv("LLM_API_KEY", "").strip())
 
 
 def complete(messages: list[dict], schema: dict) -> tuple[dict | None, str]:
     """Anthropic Messages over HTTPS only; caller validates the returned candidate schema."""
+    if not configured():
+        return None, "disabled"
     key = os.getenv("LLM_API_KEY", "").strip()
     provider, model = os.getenv("LLM_PROVIDER", "anthropic"), os.getenv("LLM_MODEL", "")
     if not key or provider != "anthropic" or not model or len(model) > 200:
@@ -30,8 +32,8 @@ def complete(messages: list[dict], schema: dict) -> tuple[dict | None, str]:
             separators=(",", ":"),
         ).encode()
     ).hexdigest()
-    # Serialize misses to prevent duplicate billable calls for identical concurrent requests.
-    with _cache.lock:
+    # Only identical misses wait on one another; other documents can progress.
+    with _cache.singleflight(cache_key):
         cached = _cache.get(cache_key)
         if cached is not None:
             return cached, "hit"

@@ -11,7 +11,7 @@ The release loop starts OCR, Policy, Wallet, and Orchestrator on temporary loopb
 | Clean synthetic invoice | Grounded fields and evidence references; no hard guard | approve; this demo does not independently validate credit-policy suitability | Synthetic happy path only |
 | Visible injection | VISIBLE_INSTRUCTION; OCR requires review | review | Current integration guard verified |
 | PO/amount mismatch with fraud score 0.70 | po_amount_mismatch and math_inconsistent; review required | reject | High-fraud-score guard verified; this does not prove typed PO evidence reaches Policy |
-| Repeated invoice in the ordered demo | duplicate_invoice_hash and duplicate_fingerprint; score 0.96 | Registry blocks the repeated flow before Policy | Registry path verified; the ordered OCR-only demo is not a Policy call |
+| Repeated invoice in the ordered demo | duplicate_fingerprint only after cosmetic PDF re-save; score 0.80 | Registry blocks the repeated flow before Policy | Registry path verified; the ordered OCR-only demo is not a Policy call |
 
 The OCR-only ordered demo separately checks clean, injection, inflated-total (score 0.40), and duplicate evidence expectations. Policy's merged scenario fixtures and tests cover its own decision cases. Keep the distinction between an OCR evidence-gate check, an API-level Policy test, and an end-to-end Orchestrator run when presenting results.
 

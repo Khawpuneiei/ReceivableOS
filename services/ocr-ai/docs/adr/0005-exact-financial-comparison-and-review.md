@@ -1,6 +1,6 @@
 # Exact financial comparisons and consumer review invariants
 
-Status: accepted for the OCR-local MVP, 10 October 2026. Implements [Retest financial comparisons and enforce consumer review invariants](../wayfinder/tickets/fintech-retest.md).
+Status: accepted for the OCR-local MVP, 10 October 2026. Implements [Retest financial comparisons and enforce consumer review invariants](https://github.com/Khawpuneiei/ReceivableOS/blob/ocr/corpus-evidence/services/ocr-ai/docs/wayfinder/tickets/fintech-retest.md).
 
 ## Evidence
 
@@ -20,4 +20,4 @@ Financial observations are bounded to 64 source characters, 28 coefficient digit
 
 ## Consequences
 
-More discrepancies require explicit review; no acceptance, tax compliance, calibrated fraud probability or financing authority is inferred. Existing shared schemas and other service source are unchanged. The handoff gains a defaulted optional comparison version; downstream owners must recognize it when adopting the local packet. Historical evaluation artifacts retain their original source versions. Current results are linked from [the retest report](../FINTECH_RETEST.md).
+More discrepancies require explicit review; no acceptance, tax compliance, calibrated fraud probability or financing authority is inferred. Existing shared schemas and other service source are unchanged. The handoff gains a defaulted optional comparison version; downstream owners must recognize it when adopting the local packet. Historical evaluation artifacts retain their original source versions. Current results are linked from [the retest report](https://github.com/Khawpuneiei/ReceivableOS/blob/ocr/corpus-evidence/services/ocr-ai/docs/FINTECH_RETEST.md).

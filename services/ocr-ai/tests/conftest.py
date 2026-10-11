@@ -14,6 +14,7 @@ def isolated_candidate_caches(monkeypatch):
     monkeypatch.setattr("app.qwen._cache", JsonCache())
     monkeypatch.setattr("app.llm_client._cache", JsonCache())
     monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.delenv("OCR_HOSTED_VISION_ENABLED", raising=False)
 
 
 @pytest.fixture

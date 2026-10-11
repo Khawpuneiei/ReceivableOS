@@ -26,7 +26,7 @@ class EvidenceReference(LocalModel):
     ref_id: EvidenceId
     doc_hash: Digest
     page: int = Field(ge=1)
-    source: Literal["pdf_text", "image_ocr"]
+    source: Literal["pdf_text", "image_ocr", "legacy_text"]
     confidence: float = Field(ge=0, le=1)
     bbox: tuple[float, float, float, float] | None = None
     text_span: tuple[int, int] | None = None

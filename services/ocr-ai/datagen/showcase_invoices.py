@@ -463,6 +463,13 @@ def generate(output: Path = OUTPUT) -> list[Path]:
         preview = output / filename.replace(".pdf", "_preview.png")
         preview.write_bytes(image)
 
+    # A cosmetic re-save changes raw bytes while retaining every printed field.
+    with pymupdf.open(stream=invoice, filetype="pdf") as document:
+        metadata = document.metadata
+        metadata["producer"] = "ReceivableOS synthetic re-save demo"
+        document.set_metadata(metadata)
+        resaved = document.tobytes(deflate=True, no_new_id=True)
+
     demo = output.parent / "demo"
     demo.mkdir(parents=True, exist_ok=True)
     variants = profile.copy()
@@ -473,7 +480,7 @@ def generate(output: Path = OUTPUT) -> list[Path]:
         ("01_happy.pdf", invoice),
         ("02_injected.pdf", build_pdf(injected_profile, visible_injection=True)),
         ("03_inflated.pdf", build_pdf(variants)),
-        ("04_duplicate.pdf", invoice),
+        ("04_duplicate.pdf", resaved),
         ("purchase_order.pdf", purchase_order),
     ):
         path = demo / filename

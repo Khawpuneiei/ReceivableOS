@@ -1,7 +1,9 @@
 """Environment settings and deterministic limits for the OCR-owned pipeline."""
 
+import logging
 import os
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 SERVICE_DIR = Path(__file__).resolve().parents[1]
@@ -38,6 +40,24 @@ FRAUD_WEIGHTS = {
 }
 
 
+# Public demo identifiers, never suitable for live records. Match main's dev fingerprint key.
+DEV_FINGERPRINT_KEY = "receivableos-dev-fingerprint-key"
+DEV_BANK_KEY = "receivableos-dev-bank-token-key"
+
+
+@lru_cache(maxsize=2)
+def warn_dev_key(setting: str) -> None:
+    logging.getLogger("ocr-ai").warning("%s unset: using public development key; demo data only", setting)
+
+
+def hmac_key(setting: str, fallback: str, development: bool) -> str | None:
+    value = os.getenv(setting, "").strip()
+    if not value and development:
+        warn_dev_key(setting)
+        return fallback
+    return value or None
+
+
 @dataclass(frozen=True)
 class Settings:
     fingerprint_key: str | None
@@ -52,9 +72,10 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
+        development = os.getenv("OCR_DEVELOPMENT_MODE", "0") == "1"
         return cls(
-            fingerprint_key=os.getenv("FINGERPRINT_HMAC_KEY"),
-            bank_key=os.getenv("BANK_TOKEN_HMAC_KEY"),
+            fingerprint_key=hmac_key("FINGERPRINT_HMAC_KEY", DEV_FINGERPRINT_KEY, development),
+            bank_key=hmac_key("BANK_TOKEN_HMAC_KEY", DEV_BANK_KEY, development),
             state_path=Path(os.getenv("OCR_STATE_PATH", str(SERVICE_DIR / ".state" / "observations.sqlite"))),
             paddle_enabled=os.getenv("OCR_PADDLE_ENABLED", "0") == "1",
             qwen_enabled=os.getenv("OCR_QWEN_ENABLED", "0") == "1",

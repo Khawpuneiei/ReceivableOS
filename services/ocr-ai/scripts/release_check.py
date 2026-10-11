@@ -21,11 +21,11 @@ REPO = SERVICE.parents[1]
 def run(command, cwd, env, *, timeout=300):
     process = subprocess.run(command, cwd=cwd, env=env, capture_output=True, text=True, timeout=timeout)
     return {
-        "command": [str(part) for part in command],
+        "command": [str(part).replace(str(REPO), "<repo>") for part in command],
         "exit_code": process.returncode,
         "passed": process.returncode == 0,
-        "output_tail": process.stdout[-3000:],
-        "error_tail": process.stderr[-1000:] if process.returncode else "",
+        "output_tail": process.stdout[-3000:].replace(str(REPO), "<repo>"),
+        "error_tail": process.stderr[-1000:].replace(str(REPO), "<repo>") if process.returncode else "",
     }
 
 

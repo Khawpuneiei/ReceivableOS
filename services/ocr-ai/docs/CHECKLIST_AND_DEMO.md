@@ -45,7 +45,7 @@ flowchart TD
 | hidden / white / tiny / off-page / QR / Unicode | 16/16 attack PDFs ผ่าน detection; มี metadata และ annotation ด้วย; white-on-dark header เป็น hard negative |
 | ค่าถูกต้องหลัง injection / ASR0% | 0/16 attacks เปลี่ยน 7 scalar fields ที่ประเมิน; ยังไม่ครอบคลุม visual tampering ทุกแบบ |
 | catch>=95%, FPR<=5% | Rules-only catch100%, hard-negative FPR0/20; ไม่ใช่ FPR ของ Qwen/cloud model |
-| canonical keyed HMAC fingerprint | เก็บ recipe Registry v1 และ local scoped v2; มี HMAC tests, ไม่มี fallback key |
+| canonical keyed HMAC fingerprint | เก็บ recipe Registry v1 และ local scoped v2; มี HMAC tests; public demo keys เฉพาะ OCR_DEVELOPMENT_MODE=1 |
 | ชื่อ fraud rules exact | `duplicate_invoice_hash`, `duplicate_fingerprint`, `po_amount_mismatch` อยู่ในผลทดสอบจริง |
 | forged/duplicate score>=0.30, cleanต่ำกว่า | planted math/duplicate scenarios ผ่าน; invoice inflated เทียบ PO ได้0.70; ไม่ใช่ตัวตรวจลายเซ็นหรือ forgery ทั่วไป |
 | fraud precision/recall>=90% | TP8/FP0/FN0/TN4 =100%/100% บน12 labelled sequences; ยังไม่ใช่ fraud corpus จริง |
@@ -143,7 +143,7 @@ Policy guardsสำหรับ injection→review และ fraud>=0.30→rejec
 | `01_happy.pdf` | approve candidate | คะแนน fraud ต่ำกว่า 0.30, ไม่มี injection และไม่ต้อง review |
 | `02_injected.pdf` | review | `VISIBLE_INSTRUCTION`, review required; เลข 0143 ไม่ซ้ำ happy invoice 0142 |
 | `03_inflated.pdf` | reject | `math_inconsistent`, fraud score 0.40; เลข 0144 แยกจากอีกสองใบ |
-| `04_duplicate.pdf` | reject | byte-identical กับ 01 และแสดง `duplicate_invoice_hash` กับ `duplicate_fingerprint`, fraud score 0.96 |
+| `04_duplicate.pdf` | reject | re-saved จาก 01: raw hash ต่างกัน แต่ `duplicate_fingerprint` ตรงกัน, fraud score 0.80; exact-byte duplicate มี regression test แยก |
 
 ผลทั้ง 4 รายการผ่านใน [ordered demo report](DEMO_ORDER_CHECK.json) ด้วย `.venv/bin/python scripts/demo_order.py`; `release_check.py --fresh` เรียก loop นี้ให้อัตโนมัติด้วย การทดสอบนี้ยืนยัน OCR evidence gate โดยไม่เรียก Policy endpoint ส่วน [actual Policy integration result](DEMO_LOOP_RESULTS.json) ยืนยัน injected→review และ fraud score0.70→reject โดยมี 0 control violations; ยังไม่ได้ส่ง exact OCR 4-file sequence เข้า Policy ครบทั้งชุด และ duplicate ถูก Registry block ก่อนถึง Policy
 

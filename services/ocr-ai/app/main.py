@@ -114,8 +114,9 @@ async def extract(
     file: UploadFile = File(...), idempotency_key: str | None = Header(None)
 ) -> OcrExtractResponse:
     with processing_slot():
-        content = await read_upload(file)
-        result = await run_in_threadpool(extract_invoice, content, Settings.from_env(), idempotency_key)
+        settings = Settings.from_env()
+        content = await read_upload(file, allow_legacy_demo=settings.development_mode)
+        result = await run_in_threadpool(extract_invoice, content, settings, idempotency_key)
         if os.getenv("OCR_RESULT_ACCESS_TOKEN"):
             _results.put(result_scope() + "|" + result.invoice_id, result.model_dump(mode="json"))
         return result

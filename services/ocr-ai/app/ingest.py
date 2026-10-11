@@ -36,7 +36,7 @@ class ParsedDocument(LocalModel):
     engine: str
 
 
-async def read_upload(upload: UploadFile) -> bytes:
+async def read_upload(upload: UploadFile, *, allow_legacy_demo: bool = False) -> bytes:
     content = bytearray()
     try:
         while chunk := await upload.read(min(64 * 1024, MAX_UPLOAD_BYTES + 1 - len(content))):
@@ -46,6 +46,11 @@ async def read_upload(upload: UploadFile) -> bytes:
     finally:
         await upload.close()
     data = bytes(content)
+    if allow_legacy_demo and upload.content_type in {"text/plain", "application/octet-stream"}:
+        from app.legacy_demo import is_legacy_demo
+
+        if is_legacy_demo(data):
+            return data
     detected = detect_format(data)
     allowed = {"pdf": {"application/pdf"}, "png": {"image/png"}, "jpeg": {"image/jpeg"}}
     if detected is None or upload.content_type not in allowed[detected]:

@@ -30,9 +30,13 @@ def free_port() -> int:
         return sock.getsockname()[1]
 
 
-def run_demo(invoice: Path, env: dict[str, str]) -> dict:
+def run_demo(invoice: Path | None, env: dict[str, str]) -> dict:
     result = subprocess.run(
-        [sys.executable, str(REPO / "services/orchestrator/run_demo.py"), str(invoice)],
+        [
+            sys.executable,
+            str(REPO / "services/orchestrator/run_demo.py"),
+            *([str(invoice)] if invoice else []),
+        ],
         env=env,
         cwd=REPO,
         capture_output=True,
@@ -94,6 +98,7 @@ def main() -> int:
             "OCR_STATE_PATH": str(root / "observations.sqlite"),
             "OCR_PADDLE_ENABLED": "0",
             "OCR_QWEN_ENABLED": "0",
+            "OCR_DEVELOPMENT_MODE": "1",
             "CHAIN_MODE": "mock",
         }
         names = ("ocr-ai", "policy-ai", "agent-wallet", "orchestrator")
@@ -369,6 +374,58 @@ def main() -> int:
                     }
                 )
                 policy_controls.append(assess_policy_controls(injected_ocr, injected["policy"]))
+
+                # Exercise the PM's unchanged default file with an independent registry.
+                # The legacy text fixture must reach Policy review, never be fabricated as a PDF.
+                legacy_port = free_port()
+                legacy_env = {**env, "ORCHESTRATOR_URL": f"http://127.0.0.1:{legacy_port}"}
+                legacy_process = subprocess.Popen(
+                    [
+                        sys.executable,
+                        "-m",
+                        "uvicorn",
+                        "app.main:app",
+                        "--app-dir",
+                        str(REPO / "services/orchestrator"),
+                        "--host",
+                        "127.0.0.1",
+                        "--port",
+                        str(legacy_port),
+                    ],
+                    cwd=REPO,
+                    env=legacy_env,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                processes.append(legacy_process)
+                deadline = time.monotonic() + 20
+                while True:
+                    try:
+                        client.get(legacy_env["ORCHESTRATOR_URL"] + "/health").raise_for_status()
+                        break
+                    except httpx.HTTPError:
+                        if legacy_process.poll() is not None or time.monotonic() >= deadline:
+                            raise RuntimeError("Legacy demo orchestrator could not start") from None
+                        time.sleep(0.1)
+                legacy = run_demo(None, legacy_env)
+                legacy_ocr = legacy["ocr"]
+                legacy_ok = (
+                    legacy_ocr.get("extractor") == "development_legacy_text"
+                    and legacy_ocr.get("amount") == "749000.00"
+                    and legacy_ocr.get("review_required") is True
+                    and legacy["policy"].get("decision") == "review"
+                )
+                checks.append(
+                    {"name": "unchanged_run_demo_default_text_reaches_policy_review", "passed": legacy_ok}
+                )
+                policy_controls.append(assess_policy_controls(legacy_ocr, legacy["policy"]))
+                report["legacy_default_demo"] = {
+                    "file": "data/invoices/demo_invoice.txt",
+                    "passed": legacy_ok,
+                    "policy_decision": legacy["policy"].get("decision"),
+                    "flow_outcome": legacy.get("outcome"),
+                    "development_mode": True,
+                }
 
                 report["demo_runs"] = {
                     "clean_invoice": {

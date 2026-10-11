@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pytest
 from datagen.generate import render_pdf
 from datagen.showcase_invoices import SHOWCASE_PROFILES, build_pdf
 
@@ -16,6 +17,7 @@ FIXTURE = (
 PO_FIXTURE = build_pdf(SHOWCASE_PROFILES[0], kind="purchase_order")
 
 
+@pytest.mark.skipif(not FIXTURE.exists(), reason="Optional publisher corpus is in ocr/corpus-evidence")
 def test_simple_english_invoice_labels_and_six_column_table_are_extracted(client):
     content = FIXTURE.read_bytes()
     response = client.post(

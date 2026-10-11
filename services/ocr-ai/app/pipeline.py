@@ -14,7 +14,7 @@ from app.fingerprint import bank_token, entity_token, legacy_fingerprint, semant
 from app.fraud import FraudFinding, finding, graph_findings, score
 from app.graph import export_graph
 from app.history import HistoryCapacityError, HistoryConflictError, InvoiceObservation, ObservationStore
-from app.ingest import digest, run_worker
+from app.ingest import detect_format, digest, run_worker
 from app.llm_client import configured, read_hosted_candidates
 from app.models import (
     ConsumerHandoff,
@@ -44,6 +44,10 @@ class OcrExtractResponse(ExtractedInvoice):
 
 
 def extract(content: bytes, document_type: str, settings: Settings) -> Extraction:
+    if settings.development_mode and document_type == "invoice" and detect_format(content) is None:
+        from app.legacy_demo import extract_legacy_demo
+
+        return extract_legacy_demo(content)
     parsed = run_worker("parse", content)
     readable_pages = {span.page for span in parsed.spans if span.text.strip() and not span.hidden}
     unreadable_pages = set(range(1, len(parsed.images) + 1)) - readable_pages
