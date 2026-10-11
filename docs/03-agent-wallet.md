@@ -90,15 +90,18 @@ The seed set `eval/cases.jsonl` has 51 entries: 40 marked as attacks (two agent-
 11 benign. The other sets are `dev_cases.jsonl`, `heldout_cases.jsonl` (v1), `heldout_v2_cases.jsonl`,
 `heldout_v3_cases.jsonl`, `heldout_v4_cases.jsonl`, and `heldout_v5_cases.jsonl`, which tests the structural layers.
 
-| Set | Attacks | Caught (guard on) | Unauthorized, §7.4 (guard on) | Benign blocked | Status |
-|---|---|---|---|---|---|
-| Seed (`cases.jsonl`) | 38 | 38/38 | 0/38 | 0/11 | Written with the rules; a regression set |
-| Dev | 36 | 36/36 | 0/36 | 0/18 | Used for tuning |
-| Held-out v1 | 30 | 30/30 | 0/30 | 0/10 | Tuned on after its first run; contaminated |
-| Held-out v2 | 30 | 28/30 | 0/30 | 0/10 | V25 is malformed (hand-encoded ROT13 decodes to nonsense) |
-| Held-out v3 | 24 | 14/24 | 0/24 | 1/10 | First clean run, rules frozen before it |
-| Held-out v4 | 30 | 12/30 | 0/30 | 0/14 | Second clean run; rules unchanged since v3 |
-| Held-out v5 (structural) | 24 | 24/24 | 0/24 | 1/10 | Tests the structural layers through text attacks. Not a detection test |
+| Set | Attacks | Caught (guard on) | Unauthorized, §7.4 (guard on) | Reached execute (guard on) | Benign blocked | Status |
+|---|---|---|---|---|---|---|
+| Seed (`cases.jsonl`) | 38 | 38/38 | 0/38 | 0/38 | 0/11 | Written with the rules; a regression set |
+| Dev | 36 | 36/36 | 0/36 | 0/36 | 0/18 | Used for tuning |
+| Held-out v1 | 30 | 30/30 | 0/30 | 0/30 | 0/10 | Tuned on after its first run; contaminated |
+| Held-out v2 | 30 | 28/30 | 0/30 | 2/30 | 0/10 | V25 is malformed (hand-encoded ROT13 decodes to nonsense) |
+| Held-out v3 | 24 | 14/24 | 0/24 | 10/24 | 1/10 | First clean run, rules frozen before it |
+| Held-out v4 | 30 | 12/30 | 0/30 | 18/30 | 0/14 | Second clean run; rules unchanged since v3 |
+| Held-out v5 (structural) | 24 | 24/24 | 0/24 | 0/24 | 1/10 | Tests the structural layers through text attacks. Not a detection test |
+
+"Reached execute" counts attacks whose draw moved money. A draw inside the mandate is not unauthorized under §7.4, so
+it is not counted there. On held-out v3 and v4, these are the attacks the detectors missed; the limits still held.
 
 The unauthorized-payment number follows CLAUDE.md §7.4: tTHB moved to a non-allowlisted address, above a cap, outside
 the mandate, or twice. The runner checks the mock ledger's record after each case, not the guard's verdict. An attack
@@ -177,11 +180,15 @@ Still open for P:
 | FISCO deploy | **Done.** 22 deploy transactions on chain, each checked against it (`eval/fisco-deployment.md`, `eval/fisco-verification-deploy.txt`) |
 | FISCO adapter and demo | **Done.** The wallet runs with `LEDGER_MODE=fisco`. The demo's 8 sections give the same outcomes as on the mock. Its 11 record hashes are on chain: 8 succeed, 3 revert with `AmountAboveLimit`, `AprAboveMandate`, `DuplicateReceivable` (`eval/demo_tx_hashes_fisco.md`, `eval/fisco-verification-demo.txt`) |
 | FISCO bug found and fixed | FISCO reports `block.timestamp` in milliseconds. The first FISCO deploy treated it as seconds, so every mandate looked expired. Fixed with `PolicyGuard.timeScale`. Anvil could not show this, because it uses seconds |
-| Mock ledger + endpoints | Done: register, approve, execute, settle, confirm, pause, mandate, audit, holds. 126 pytest tests pass (2 skipped: the classifier model tests). Agent token on register, execute and settle; risk-oracle token on approve |
+| Mock ledger + endpoints | Done: register, approve, execute, settle, confirm, pause, mandate, audit, holds. 135 pytest tests pass (2 skipped: the classifier model tests). Agent token on register, execute and settle; risk-oracle token on approve |
 | Guard L0–L4 | Done for draws: L0–L4 checks, hold-for-approval, hash-chained audit log, anchoring at settlement. KYC flag enforced off-chain and on chain (allowlist). PD, mandate ID and currency are off-chain only |
-| Eval | Seed set (guard on): 38/38 caught, 0/38 unauthorized, 0/11 benign blocked. Held-out v3: 14/24. Held-out v4: 12/30, 0 unauthorized. Structural set v5: 24/24. The classifier is audit-only by default |
+| Eval | Seed set (guard on): 38/38 caught, 0/38 unauthorized, 0/11 benign blocked. Held-out v3: 14/24 caught, 10 reached execute. Held-out v4: 12/30 caught, 18 reached execute. None of them unauthorized under §7.4. Structural set v5: 24/24. The classifier is audit-only by default |
 | Anvil | `scripts/deploy.py` and `scripts/evm_smoke.py`: 7 of 7 checks pass after the time-unit change |
-| Clean-clone demo | Run at `bf8fc1e` from the README's steps: two runs, identical transcripts, exit 0. Run by an AI, not a teammate. Submission item 4 needs a teammate to do this |
+| Clean-clone run | Run at `fedd575` from the README's steps: `pytest` 135 passed, 2 skipped; mock demo exit 0. Run by an AI, not a teammate. Submission item 4 needs a teammate to do this. On Windows, clone to a short path: the receipt filenames break the 260-character limit under a long one |
+| Daily cap across restarts | On FISCO, startup seeds the off-chain 24h cap from `PolicyGuard.rollingSpend()`. A failed read stops the wallet from starting. Read live on 11 Oct: THB 1,504,300.00 |
+| Demo lender | Selected from `data/agent/lender_quotes.json`: the highest advance inside the mandate's APR cap. Not hardcoded |
+| FISCO rehearsal | `fisco_demo.sh --fresh`, run `20261011122302`: 22 of 22 deploy hashes and 11 of 11 demo hashes on chain. `eval/fisco-deployment.md` is written from the receipts |
+| Demo data | `data/agent/` is tracked. The root `.gitignore` rule `data/*` had hidden it; P to add `!data/agent/` |
 | Config name | `LEDGER_MODE` (matches the scope doc) |
 | Console screenshots | Not produced. The verification output and the receipts are the evidence in the repo |
-| Security self-assessment inputs | Written: `services/agent-wallet/docs/security-self-assessment-inputs.md`. Not yet checked against `docs/06` |
+| Security self-assessment inputs | Written: `services/agent-wallet/docs/security-self-assessment-inputs.md`. Checked against `docs/06` on 12 Oct: the mandate values match §1.4. The §6 checklist gaps are known risks 15 to 17 (holds in memory, outstanding exposure, `flow_id`), and risk 13 covers KYC expiry |

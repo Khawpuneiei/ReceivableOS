@@ -38,6 +38,7 @@ Other controls:
 - Approval needs the risk-oracle token and the decision it names. Review and reject decisions are refused.
 - Agent endpoints need the agent token. Without it, the wallet refuses (HTTP 403).
 - The DEMO bypass (`skip_offchain_checks`) is refused unless `DEMO_MODE=1`, and every use is recorded.
+- On FISCO, the off-chain 24h cap starts from the chain's total at startup (`PolicyGuard.rollingSpend()`). A failed read stops the wallet from starting.
 - Time on chain: the guard works in seconds on every chain (`PolicyGuard.timeScale`, 1000 on FISCO).
 - Startup check: on FISCO the service refuses to start if the chain's mandate hash is not the demo mandate's.
 - Hash-chained audit log: a change to any entry makes `verified` false. The head is anchored on chain at settlement.
@@ -45,8 +46,9 @@ Other controls:
 
 ## 3. Measured results
 
-Commit `bf8fc1e` (HEAD, pushed), plus uncommitted work: the FISCO adapter, deploy and verification scripts, the KYC flag,
-the agent token, the `LEDGER_MODE` rename, and the time-unit fix. Detection numbers did not move under any of these.
+Measured at `a901820`: the wallet branch with `main` merged in. The FISCO adapter, the KYC flag, the agent token, the
+`LEDGER_MODE` rename, the time-unit fix and the daily-cap change all came after `bf8fc1e`. The seven eval reports
+regenerate byte-identical at `a901820`, so no detection number moved.
 Run with `services/agent-wallet/eval/run_eval.py`.
 
 **Unauthorized payment (CLAUDE.md §7.4):** tTHB moved to a non-allowlisted address, above a cap, outside the mandate, or
@@ -96,14 +98,16 @@ on-chain.
 Demo: `scripts/demo.py` runs end to end against a plain `uvicorn app.main:app` start, with no seeding step, on the mock
 and on FISCO.
 
-Clean-clone demo, at `bf8fc1e`: a fresh clone, a fresh virtual environment, the README's steps, and `scripts/demo.py`
-run twice with a fresh server. Both transcripts are identical, exit 0. The README's run block was missing `DEMO_MODE=1`,
+Clean-clone run, at `fedd575`: a fresh clone, a fresh virtual environment, and the README's steps. `pytest` gives 135
+passed, 2 skipped, and the mock demo exits 0 with the same results as the local run. The first clone found
+`data/agent/` untracked (fixed in `4c6bd82`). On Windows the clone must sit at a short path, because the receipt
+filenames break the 260-character limit under a long one. The README's run block was missing `DEMO_MODE=1`,
 so the on-chain section showed `SchemaInvalid`; that is fixed in the working tree. This was run by an AI, not by a
 teammate. The submission rules need someone else to do it.
 
 ## 4. Test evidence
 
-- `pytest services/agent-wallet`: 126 passed, 2 skipped. The two model tests need `INJECTION_MODEL_DIR`.
+- `pytest services/agent-wallet`: 135 passed, 2 skipped, at `a901820`. The two model tests need `INJECTION_MODEL_DIR`.
 - `forge test --offline` in `contracts/`: 25 passed (23 revert and settlement tests, and 2 time-unit tests).
 - `ruff check`: clean.
 
@@ -133,7 +137,7 @@ teammate. The submission rules need someone else to do it.
 8. **V8 mismatch.** For an 80% advance against an approved limit that is also below the amount, the on-chain layer reports
    `AmountAboveLimit` and the off-chain layer reports `AdvanceAboveMandate`. The outcome is the same: the draw is refused.
 9. **Limited evaluation on the chain.** The full red-team set runs against the mock only. FISCO has the deploy checks and
-   one demo run. Anvil has the 7-check smoke test.
+   demo runs, including a clean rehearsal on 11 Oct. Anvil has the 7-check smoke test.
 10. **PD is enforced off-chain only.** Neither the mock nor the contracts check the risk score against the mandate's
     `max_predicted_default`. With the guard bypassed, W07 and v5 S15 and S16 execute. Guard on, they are blocked at L3.
     Options: pass PD into `execute` and check it in `PolicyGuard` (a contract change), or keep the off-chain check and
@@ -147,10 +151,18 @@ teammate. The submission rules need someone else to do it.
     The vault rule is correct, but it is a false block for small draws. Options: take the platform fee from the
     settlement, or set a minimum draw in the mandate.
 13. **KYC is a mock flag.** A payee's `kyc_verified` is set in `config/payees.json`. It is not a check against a KYC
-    provider. The guard refuses an unverified seller, and the chain allowlists only verified payees.
+    provider. The guard refuses an unverified seller, and the chain allowlists only verified payees. The flag has no
+    expiry date; docs/06 §6 asks for `kyc_valid` and `kyc_expiry` per party.
 14. **Lesson from the FISCO run: the chains differ.** FISCO's block timestamp is in milliseconds, and the Anvil runs could
     not show the resulting expiry error. The time unit is now a deploy parameter. Any further EVM-compatibility
     assumption needs a test on the target chain.
+15. **Holds and pending approvals are in memory.** A restart loses them. A confirm for a draw sent before the restart
+    returns `NotPending`, though the chain still holds the pending call. A durable store is the fix.
+16. **No cap on outstanding exposure.** The daily cap limits what can be drawn in 24 hours. Nothing on chain limits the
+    total balance outstanding across invoices. docs/06 §6 asks for this to appear in the pitch's known limits.
+17. **The audit log has no `flow_id`.** docs/06 §6 asks for one on every entry, with an anchor at the end of each flow.
+    Entries carry `invoice_id` and `tx_id`, and each settlement is anchored on chain. The `flow_id` needs the
+    orchestrator to send it.
 
 ## 6. What still needs an answer from the PM
 
@@ -163,3 +175,5 @@ teammate. The submission rules need someone else to do it.
 - Risk 12: whether the platform fee comes out of the settlement, or a minimum draw goes in the mandate.
 - The freeze date: the scope doc says 12 Oct 12:00 Bangkok, labelled "Sunday", which does not match 12 Oct 2026.
 - Whether the FISCO deployment keys live in key files or an HSM (CLAUDE.md §5.1 says files).
+- Risks 15 to 17 and risk 13's KYC expiry: whether the pitch's known-limits line covers outstanding exposure, and whether
+  `flow_id` and KYC expiry go in before the freeze. Both need the orchestrator to send new fields.
