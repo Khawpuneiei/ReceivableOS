@@ -1,0 +1,25 @@
+{
+  "mandate_id": "mdt_001",
+  "version": 1,
+  "max_ltv": "0.70",
+  "max_apr": "0.12",
+  "max_predicted_default": "0.05",
+  "max_amount_per_tx": "1500000.00",
+  "daily_cap": "3000000.00",
+  "allowed_currency": "THB",
+  "settlement_asset": "tTHB",
+  "require_kyb": true,
+  "require_buyer_attestation": true,
+  "duplicate_policy": "DENY",
+  "human_review_above": "837500.00",
+  "payee_allowlist": [
+    "SELLER:siam-fresh-pack",
+    "LENDER:lender_a",
+    "LENDER:lender_b",
+    "PLATFORM:fee"
+  ],
+  "allowed_targets": ["FinancingVault", "ReceivableRegistry"],
+  "valid_from": "2026-10-10T00:00:00+07:00",
+  "expires_at": "2026-11-30T23:59:59+07:00",
+  "approved_by": "P"
+}

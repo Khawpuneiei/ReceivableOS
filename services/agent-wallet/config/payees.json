@@ -1,0 +1,6 @@
+{
+  "SELLER:siam-fresh-pack": {"name": "Siam Fresh Pack Co., Ltd.", "address": "0x00000000000000000000000000000000000000a1"},
+  "LENDER:lender_a": {"name": "Andaman Factoring Co., Ltd.", "address": "0x00000000000000000000000000000000000000a2"},
+  "LENDER:lender_b": {"name": "Isan Growth Credit Fund", "address": "0x00000000000000000000000000000000000000a3"},
+  "PLATFORM:fee": {"name": "ReceivableOS platform fee", "address": "0x00000000000000000000000000000000000000a4"}
+}
