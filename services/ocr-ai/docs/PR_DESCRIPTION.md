@@ -2,7 +2,7 @@ Fix the PM review blockers while keeping the invoice extraction contract unchang
 
 Hosted image upload now requires a separate opt-in. Per-key single-flight fixes global cache contention for hosted/Qwen readers; the controlled two-call mock benchmark measured 0.5177 →0.2580 seconds with identical call counts. Regression tests cover distinct-key progress, identical-key deduplication, production fail-closed setup and raw hashes.
 
-Scope split: core service/tests + four demo PDFs, original PM text and licensed Thai regression font. Generated docs JSON is not committed. Optional corpus/provenance and historical experiment documentation are in the companion `ocr/corpus-evidence` PR. Core tests generate their corpus temporarily.
+Scope split: core service/tests + four demo PDFs, original PM text and licensed Thai regression font. Generated docs JSON is not committed. Optional corpus/provenance and historical experiment documentation are in [draft companion PR #39](https://github.com/Khawpuneiei/ReceivableOS/pull/39), targeting this branch until the core is merged. Core tests generate their corpus temporarily.
 
 Validation: Ruff check/format and diff checks; ordered PDF demo 4/4; strict actual Policy integration 7/7 and zero guard violations, including unchanged `run_demo.py` default text →review. OCR 184 passed/1 optional-fixture skip both locally and fresh clone; install, generation, HTTP extraction/retrieval, Ruff and pip check pass. Synthetic metrics: clean fields 28/28, injection catch 100%/attack success 0%, planted fraud TP8/FP0/FN0/TN4. Details are in docs/05-ocr-ai.md. Peer suites on latest main: Policy 251 passed/3 skipped; Wallet 122 passed/2 skipped. Companion regressions: 13 passed.
 

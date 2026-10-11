@@ -1,6 +1,6 @@
 # OCR + Fraud Detection handoff
 
-The OCR AI engineer owns invoice/PO extraction, OCR injection defence and explainable document fraud signals. Work is on `ocr/evidence-fraud-graph`, PR #16. The core service, tests and four demo PDFs are separate from the optional corpus/evidence on `ocr/corpus-evidence`. Scripts regenerate JSON reports locally; generated reports are not committed.
+The OCR AI engineer owns invoice/PO extraction, OCR injection defence and explainable document fraud signals. Work is on `ocr/evidence-fraud-graph`, [core PR #16](https://github.com/Khawpuneiei/ReceivableOS/pull/16). The core service, tests and four demo PDFs are separate from the optional corpus/evidence on `ocr/corpus-evidence`, [draft companion PR #39](https://github.com/Khawpuneiei/ReceivableOS/pull/39). Review the core first; the companion targets the core branch and can be retargeted to main after core merge. Scripts regenerate JSON reports locally; generated reports are not committed.
 
 ```mermaid
 flowchart LR

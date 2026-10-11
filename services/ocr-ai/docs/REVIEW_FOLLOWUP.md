@@ -16,7 +16,7 @@ Branch: `ocr/evidence-fraud-graph`. Shared schemas and other-service implementat
 | Cache lock blocks unrelated documents | Per-key single-flight for both hosted and Qwen readers. Same key calls model once; distinct keys progress during blocked network I/O. Transient lock bookkeeping cleaned on success/failure |
 | Reset run steps | README provides operator-only reset with `OCR_DEVELOPMENT_MODE=1` and `OCR_ALLOW_RESET=1`, exact state-path warning and no reset HTTP route |
 
-The original full work is preserved locally at `ocr/archive-before-review-20261011` (f13ec0b). Companion `ocr/corpus-evidence` carries source data, attribution and experiment documentation. No generated evaluation JSON is committed to either PR; scripts regenerate it. The core is still a substantial implementation, but the largest report/render noise has been removed rather than hiding it in history rewriting.
+The original full work is preserved locally at `ocr/archive-before-review-20261011` (f13ec0b). [Draft companion PR #39](https://github.com/Khawpuneiei/ReceivableOS/pull/39) on `ocr/corpus-evidence` carries source data, attribution and experiment documentation. No generated evaluation JSON is committed to either PR; scripts regenerate it. The core is still a substantial implementation, but the largest report/render noise has been removed rather than hiding it in history rewriting.
 
 ## Cache measurement
 
