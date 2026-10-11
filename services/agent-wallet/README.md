@@ -96,9 +96,10 @@ This needs Docker Desktop. The chain runs in an Ubuntu 22.04 container. Its data
 9. **Record.** The demo writes `eval/demo_tx_hashes_fisco.md` and each run gets its own run id. Receipts go to
    `eval/fisco-receipts-demo/`. The check's output is in `eval/fisco-verification-demo.txt`.
 
-The on-chain daily cap is a rolling 24h total that every run adds to. The demo mandate allows THB 3,000,000, and
-three runs use it up, so the wallet's large-draw step then fails with `DailyCapExceeded`. Use `--fresh` before a
-rehearsal or a recording. A fresh deployment also gives a new record of the deploy transactions in
+The daily cap is a rolling 24h total that every run adds to. The demo mandate allows THB 3,000,000. One full run draws
+THB 1,504,300 (524,300 and 980,000), so a second run within 24 hours fails its large-draw step with `DailyCapExceeded`.
+That refusal happens in the wallet, before any transaction, and the wallet reads the chain's total when it starts, so
+restarting does not reset it. Use `--fresh` before a rehearsal or a recording. A fresh deployment also gives a new record of the deploy transactions in
 `eval/fisco-deployment.md` (regenerate it from `eval/fisco-receipts/`).
 
 ## Test
@@ -188,6 +189,9 @@ Money is THB with two decimals.
   the decision hash against the approved one.
 - **Default draw key.** A draw sent without `idempotency_key` is keyed on its whole body, so a retry replays only the
   identical request.
+- **Daily cap after a restart.** On FISCO, startup reads what `PolicyGuard` has counted in the last 24h and starts the
+  off-chain cap from that total. The count runs for 24h from the restart, so it is never looser than the chain's
+  sliding window, and the chain still enforces the exact one. If the read fails, the wallet does not start.
 
 ## Known gaps
 
@@ -199,6 +203,8 @@ Money is THB with two decimals.
   On the demo invoice, any draw under about THB 2,270 is refused.
 - The classifier is English-only and does not detect jailbreaks. On the held-out v3 set, the rules alone catch 14 of 24
   attacks. On held-out v4, they catch 12 of 30.
+- Holds and pending approvals are kept in memory. A restart loses them, and a confirm for a draw sent before the
+  restart returns `NotPending`. The chain still holds the pending call.
 - The FISCO adapter does not retry a transaction that fails at the RPC level; such a failure raises an exception.
 - The 15-minute approval-age rule from CLAUDE.md §5.4 is not implemented.
 - The optional agent loop (`POST /agent/run`, CLAUDE.md §7.3) is not built, so the eval skips its two cases.

@@ -1,8 +1,11 @@
 """The Agent demo data (data/agent): lender quotes and the attack catalogue match the code and eval sets."""
 
+import importlib.util
 import json
 from decimal import Decimal
 from pathlib import Path
+
+import pytest
 
 from app.models import load_mandate
 from shared.money import fee_rate_30d_to_apr
@@ -24,12 +27,26 @@ def test_each_quoted_apr_is_its_fee_turned_into_apr():
         ]
 
 
-def test_the_selection_rule_picks_lender_a_inside_the_mandate():
+def load_demo():
+    """scripts/demo.py, loaded by path. Its select_quote is the rule the demo draws with."""
+    spec = importlib.util.spec_from_file_location("demo", SERVICE / "scripts" / "demo.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_demo_selects_lender_a_inside_the_mandate():
     data = load_quotes()
     mandate = load_mandate(SERVICE / "config" / "mandate.demo.json")
-    eligible = [q for q in data["quotes"] if Decimal(q["apr"]) <= mandate.max_apr]
-    chosen = max(eligible, key=lambda q: (Decimal(q["advance_rate"]), -Decimal(q["apr"])))
+    chosen = load_demo().select_quote(data["quotes"], mandate.max_apr)
     assert chosen["lender_id"] == data["chosen"] == "lender_a"
+
+
+def test_a_quote_above_the_mandate_is_never_selected():
+    quotes = [{**q, "apr": "0.1300"} if q["lender_id"] == "lender_a" else q for q in load_quotes()["quotes"]]
+    assert load_demo().select_quote(quotes, Decimal("0.12"))["lender_id"] == "lender_b"
+    with pytest.raises(ValueError):
+        load_demo().select_quote([{**q, "apr": "0.2000"} for q in quotes], Decimal("0.12"))
 
 
 def test_the_chosen_advance_is_the_decision_limit():

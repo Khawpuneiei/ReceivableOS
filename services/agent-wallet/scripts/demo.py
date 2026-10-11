@@ -22,9 +22,11 @@ eval/demo_tx_hashes_fisco.md. The receipts are saved where the service's FISCO_R
 
 import argparse
 import hashlib
+import json
 import os
 import sys
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 
 import httpx
@@ -32,8 +34,10 @@ import httpx
 SERVICE = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(SERVICE), str(SERVICE.parents[1])]
 
-from app.models import canonical_hash  # noqa: E402
+from app.models import canonical_hash, load_mandate  # noqa: E402
 from shared.schemas import PolicyDecision  # noqa: E402
+
+DATA = SERVICE.parents[1] / "data" / "agent"  # the lender quotes the orchestrator selects from
 
 SELLER = "SELLER:siam-fresh-pack"
 ATTACKER = "0x" + "bad0" * 10
@@ -68,6 +72,19 @@ def decision(limit: str, reasons: list | None = None, advance: float = 0.70) -> 
 
 def decision_hash(d: dict) -> str:
     return canonical_hash(PolicyDecision.model_validate(d).model_dump(mode="json", exclude={"decision_hash"}))
+
+
+def load_quotes() -> dict:
+    return json.loads((DATA / "lender_quotes.json").read_text(encoding="utf-8"))
+
+
+def select_quote(quotes: list[dict], max_apr: Decimal) -> dict:
+    """The rule in lender_quotes.json: the highest advance whose APR is within the mandate's max_apr. A tie
+    goes to the lower APR. Raises when no quote is inside the mandate, so the demo never draws outside it."""
+    eligible = [q for q in quotes if Decimal(q["apr"]) <= max_apr]
+    if not eligible:
+        raise ValueError("no lender quote is inside the mandate")
+    return max(eligible, key=lambda q: (Decimal(q["advance_rate"]), -Decimal(q["apr"])))
 
 
 class Demo:
@@ -148,6 +165,7 @@ class Demo:
         apr: float = 0.1095,
         key: str | None = None,
         bypass: bool = False,
+        lender_id: str = "lender_a",
     ) -> dict:
         invoice = tagged(name)
         d = d or decision(amount)
@@ -163,7 +181,7 @@ class Demo:
             "decision_hash": h,
             "invoice_fingerprint": fingerprint(invoice),
             "apr": apr,
-            "lender_id": "lender_a",
+            "lender_id": lender_id,
             "mandate_id": "mdt_001",
         }
         if bypass:
@@ -196,11 +214,21 @@ def run(url: str, owner: str, approver: str, risk_oracle: str, agent: str) -> in
     mandate = demo.http.get("/wallet/mandate").json()
     print(f"  {mandate['mandate_id']}  hash {mandate['mandate_hash']}  ({LEDGER} ledger)")
 
-    demo.say("2. Happy path: THB 749,000 invoice, draw 524,300 from Lender A at 10.95% APR")
-    demo.show("register inv_happy", demo.register("inv_happy", "749000.00"))
-    demo.show("approve (TX-2) inv_happy", demo.approve("inv_happy", "524300.00"))
-    demo.show("execute draw (TX-4) inv_happy", demo.draw("inv_happy", "524300.00"))
-    demo.show("settle, buyer paid 749,000 (TX-5)", demo.settle("inv_happy", "749000.00"))
+    quotes = load_quotes()
+    face = quotes["invoice_face"]
+    quote = select_quote(quotes["quotes"], load_mandate(SERVICE / "config" / "mandate.demo.json").max_apr)
+    advance = (Decimal(face) * Decimal(quote["advance_rate"])).quantize(Decimal("0.01"))
+    if quote["lender_id"] != quotes["chosen"] or str(advance) != quotes["chosen_advance"]:
+        raise SystemExit("lender_quotes.json does not match its own selection rule")
+    pct = f"{Decimal(quote['apr']) * 100:.2f}%"
+    demo.say(f"2. Happy path: THB {face} invoice, draw {advance} from {quote['name']} at {pct} APR")
+    demo.show("register inv_happy", demo.register("inv_happy", face))
+    demo.show("approve (TX-2) inv_happy", demo.approve("inv_happy", str(advance)))
+    demo.show(
+        "execute draw (TX-4) inv_happy",
+        demo.draw("inv_happy", str(advance), apr=float(quote["apr"]), lender_id=quote["lender_id"]),
+    )
+    demo.show(f"settle, buyer paid {face} (TX-5)", demo.settle("inv_happy", face))
 
     demo.say("3. Large invoice: advance 980,000 waits for the approver")
     demo.register("inv_large", "1400000.00")

@@ -93,6 +93,9 @@ def bootstrap_demo(service: WalletService) -> None:
                 f"the chain's mandate {onchain} is not the demo mandate {mandate.mandate_hash}"
             )
         service.mandate = mandate
+        # A restart starts with an empty store. Count what the chain has already spent, or the off-chain cap
+        # would restart from zero. A failed read raises, so the wallet does not start without the cap.
+        service.seed_spend(service.ledger.rolling_spend())
         return
     service.activate_mandate(
         load_mandate(CONFIG / "mandate.demo.json").model_dump(mode="json", by_alias=False),

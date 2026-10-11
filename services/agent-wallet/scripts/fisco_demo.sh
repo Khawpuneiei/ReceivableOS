@@ -8,8 +8,9 @@
 #   bash services/agent-wallet/scripts/fisco_demo.sh           # the demo, on the deployed contracts
 #   bash services/agent-wallet/scripts/fisco_demo.sh --fresh   # redeploy first (a new daily cap)
 #
-# The on-chain daily cap is a rolling 24h total that every run adds to. Three demo runs use up the demo
-# mandate's THB 3,000,000, so run --fresh before a rehearsal or a recording.
+# The daily cap is a rolling 24h total that every run adds to. One full run draws THB 1,504,300 of the demo
+# mandate's THB 3,000,000, so a second run within 24 hours fails its large-draw step. Run --fresh before a
+# rehearsal or a recording.
 #
 # The wallet tokens are generated on the first run and kept in fisco-chain/tokens.env (git-ignored).
 set -euo pipefail

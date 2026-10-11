@@ -132,6 +132,14 @@ class WalletService:
         cutoff = self.clock() - timedelta(hours=24)
         return sum((amount for at, amount in self.store.spends if at >= cutoff), Decimal(0))
 
+    def seed_spend(self, amount: Decimal) -> None:
+        """Counts what the chain already spent in the last 24h, read at startup. The store is in memory, so
+        without this the off-chain cap starts at zero after a restart. The entry is dated now, so the whole
+        amount counts for 24h from startup. That is never looser than the chain's sliding window, which the
+        chain still enforces exactly."""
+        if amount > 0:
+            self.store.spends.append((self.clock(), amount))
+
     def _context(self) -> GuardContext:
         return GuardContext(
             now=self.clock(),

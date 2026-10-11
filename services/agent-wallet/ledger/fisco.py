@@ -23,7 +23,7 @@ from Crypto.Hash import keccak
 
 from app.models import ApproveIntent, DrawIntent, Mandate, RegisterIntent, SettleIntent
 from ledger.base import ChainResult
-from shared.money import to_units
+from shared.money import from_units, to_units
 
 TOKEN_DECIMALS = 2
 BPS = 10_000
@@ -333,6 +333,11 @@ class FiscoLedger:
     def mandate_hash_onchain(self) -> str:
         """The mandate hash PolicyGuard holds. Used to check the service's mandate against the chain."""
         return self._read("PolicyGuard", "mandateHash")
+
+    def rolling_spend(self) -> Decimal:
+        """What PolicyGuard counts in its rolling 24h window, in THB. Read at startup so the off-chain cap
+        does not start from zero after a restart."""
+        return from_units(_as_int(self._read("PolicyGuard", "rollingSpend")), TOKEN_DECIMALS)
 
 
 def _is_bytes32(value: str) -> bool:
