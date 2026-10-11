@@ -14,7 +14,7 @@ Upgrade source-grounded invoice/PO extraction and explainable fraud graphs insid
 - This map follows the completed local implementation, not a restart of it. Use the [frontier](frontier.md) to find open child tickets; ticket metadata is the local tracker.
 - Current outcomes for all six authorized workstreams are recorded in [the reliability review](../RELIABILITY_REVIEW.md); generated-source limits and the pending consumer owner decision remain explicit.
 - The user authorized execution of all six workstreams on 2026-10-10, with English primary, Chinese experimental and Thai secondary. Claim a ticket by setting its assignee before investigating it. Close it with a linked resolution artifact; do not treat a proposed experiment as a completed result.
-- Keep branch `ocr/evidence-fraud-graph`. Edit only `services/ocr-ai/**`, OCR-owned `data/invoices/**`, and optionally `docs/05-ocr-ai.md`. The latest user request on 2026-10-10 authorizes architecture implementation and updating this remote branch; it supersedes the earlier restriction on remote Git actions. Never push main or merge another owner's work.
+- Keep branch `ocr/evidence-fraud-graph`. Edit only `services/ocr-ai/**`, OCR-owned `data/invoices/**`, and optionally `docs/05-ocr-ai.md`. The user authorized syncing selected current-main changes into this branch on 2026-10-11; main is now merged at 7c7056c. Never push main or edit another owner's files.
 - Execution override: claim and implement [Upgrade spatial extraction and versioned fraud handoff](tickets/architecture-upgrade.md), then record actual verification. Apply codebase-design at the layout and graph seams. Existing consumer agreement remains pending.
 - The latest user request authorizes [Retest financial comparisons and enforce consumer review invariants](tickets/fintech-retest.md), including fixes, tests and continuing updates to the same branch. Apply diagnosing-bugs to demonstrated failures; financial discrepancies remain source evidence, not transaction authority.
 - The latest request authorizes [Create source-derived invoice samples and consolidate OCR/fraud verification](tickets/source-derived-invoice-and-fraud-validation.md), including a precise cleanup pass. Preserve the reliability corpus and attributed third-party fixtures while they remain active regression evidence; list exact legacy files before deleting them.
@@ -47,7 +47,7 @@ Upgrade source-grounded invoice/PO extraction and explainable fraud graphs insid
 - Availability of independently sourced, licensed and privacy-safe Thai invoice/PO examples. Generated layouts alone cannot establish real-world reliability.
 - Approved access to DocILE or another English business-document corpus, plus human-annotated native Chinese/Thai invoice holdouts and adjudicated invoice-fraud cases.
 - An approved bank/KYB verification provider, legal basis/consent and test credentials for ownership verification; observed OCR account text alone is never proof of ownership.
-- PM contract review and Policy/orchestrator adoption of the OCR evidence handoff; the current Policy stub still violates two hard guards.
+- PM contract review and Policy/orchestrator adoption of typed OCR pair/supporting-case/fraud-graph evidence. Current injection/fraud guards pass the integrated check; the shared contract remains invoice-only.
 - Production tenancy, retention and HMAC rotation requirements, if this component later moves beyond the current local MVP. They need deployment context before actionable tickets.
 
 ## Out of scope

@@ -1,84 +1,60 @@
-# Policy and orchestrator integration handoff
+# Policy and orchestration integration handoff
 
-Status: OCR-side evidence is ready for owner review; Policy and shared-contract changes are not included in the OCR branch. Checked against `ocr/evidence-fraud-graph` on 11 October 2026. The repository assigns credit decisions to Policy AI and the shared API/PR review to the PM. This packet makes the remaining integration work concrete without changing those owners' files.
+Status checked 11 October 2026 after merging main commit 7c7056c into ocr/evidence-fraud-graph. The current Policy implementation replaces the earlier fixed approval stub. The complete OCR release loop reports release_ready=true and zero Policy guard violations. The Policy suite passes 251 tests with 3 skipped; the OCR suite passes 184 tests locally and in a clean clone.
 
-## Confirmed gap
+## Verified integration behavior
 
-The shared contract in `shared/schemas.py` accepts an `ExtractedInvoice` with `confidence`, `injection_flags`, `fraud_score`, `fraud_flags`, `doc_hash`, and `invoice_fingerprint`. The root scope requires these pre-model controls:
+The release loop starts OCR, Policy, Wallet, and Orchestrator on temporary loopback ports with synthetic documents and mock chain mode. It uses ephemeral HMAC keys and temporary state; it removes generated documents after execution. The resulting sanitized report is DEMO_LOOP_RESULTS.json.
 
-1. Any non-empty `injection_flags` must produce `review`.
-2. `fraud_score >= 0.30` must produce `reject`.
-3. `confidence < 0.80` must produce `review`.
-
-The checked-in `services/policy-ai/app/main.py` is still a fixed `approve` stub. The OCR integration loop sent a visible-injection invoice and a high-score amount mismatch (`fraud_score=0.70`) to that endpoint; it approved both, recording two control violations. The duplicate demo is stopped by Registry before Policy, so it is not evidence that Policy's duplicate branch works. See [the actual integration output](DEMO_LOOP_RESULTS.json) and [fresh release report](RELEASE_CHECK.json).
-
-There is also a string-code compatibility decision to resolve before Policy consumes flags. The Policy build brief names `DUPLICATE_HASH`, `DUPLICATE_INVOICE`, and `PO_MISMATCH`; OCR currently emits lower-case rule codes such as `duplicate_invoice_hash`, `duplicate_fingerprint`, and `po_amount_mismatch`. Both sides type this as a string list, so schema validation alone will not reveal a semantic mismatch.
-
-## Recommended guard order and code mapping
-
-Run these deterministic checks before any credit model. A high fraud score must never be downgraded by a later review condition. When more than one rule fires, retain every reason in the response.
-
-| Condition | Expected Policy result | OCR evidence / proposed code mapping |
-|---|---|---|
-| `fraud_score >= 0.30` | `reject` | Preserve the numeric score and all original OCR codes. `duplicate_invoice_hash` → `DUPLICATE_HASH`; `duplicate_fingerprint` → `DUPLICATE_INVOICE`; `po_amount_mismatch` → `PO_MISMATCH` only when an agreed pair/evidence bundle is available. |
-| Otherwise, any injection flag | `review` | Preserve `VISIBLE_INSTRUCTION` or other exact OCR injection code. |
-| Otherwise, `confidence < 0.80` | `review` | Preserve the measured confidence and OCR review reasons. |
-| Otherwise, unsupported/unknown evidence or a non-blocking fraud signal | `review` | Never infer a missing PO allocation, issuer authenticity, bank ownership, delivery, acceptance, or settlement. |
-| No hard guard and enough policy inputs | Evaluate the existing credit policy | `approve` is a credit-policy outcome, not an OCR outcome. |
-
-The mapping above is a proposal for the Policy adapter; it does not rename OCR's checklist-required rule codes. The PM should approve any change to the shared contract in a separate `contract:` PR before consumers rely on new fields.
-
-## Demo acceptance matrix for the owners
-
-Use the same ordered generated files and call `/policy/decide` with the compatible `ExtractedInvoice` projection. Keep a separate Registry assertion for the duplicate because the orchestrated flow blocks that repeat before it reaches Policy.
-
-| Input | OCR evidence result | Direct Policy expectation | What current integration proves |
+| Input | OCR result | Policy result observed | Evidence boundary |
 |---|---|---|---|
-| `01_happy.pdf` | no injection; low fraud score; grounded fields | `approve` only if the active credit rules also approve | Stub returns `approve`; this does not prove its credit rules. |
-| `02_injected.pdf` | `VISIBLE_INSTRUCTION`; score below 0.30 | `review` | Actual Policy stub returns `approve` (violation). |
-| `03_inflated.pdf` | `math_inconsistent`; score 0.40 | `reject` | Ordered OCR evidence gate rejects; add this exact file to the direct Policy regression after owner wiring. |
-| `04_duplicate.pdf` | same raw hash and fingerprint as 01; score 0.96 after repeat | `reject` if called directly; Registry should block the integrated repeat first | Registry blocks the repeat. Policy duplicate handling is not tested by that path. |
+| Clean synthetic invoice | Grounded fields and evidence references; no hard guard | approve; this demo does not independently validate credit-policy suitability | Synthetic happy path only |
+| Visible injection | VISIBLE_INSTRUCTION; OCR requires review | review | Current integration guard verified |
+| PO/amount mismatch with fraud score 0.70 | po_amount_mismatch and math_inconsistent; review required | reject | High-fraud-score guard verified; this does not prove typed PO evidence reaches Policy |
+| Repeated invoice in the ordered demo | duplicate_invoice_hash and duplicate_fingerprint; score 0.96 | Registry blocks the repeated flow before Policy | Registry path verified; the ordered OCR-only demo is not a Policy call |
 
-Also keep the current independent PO mismatch integration case (`po_amount_mismatch`, `math_inconsistent`, score 0.70): direct Policy must reject, and the orchestration contract must preserve its comparison evidence rather than forwarding only a clean-looking invoice projection.
+The OCR-only ordered demo separately checks clean, injection, inflated-total (score 0.40), and duplicate evidence expectations. Policy's merged scenario fixtures and tests cover its own decision cases. Keep the distinction between an OCR evidence-gate check, an API-level Policy test, and an end-to-end Orchestrator run when presenting results.
 
-Minimum Policy-owner tests: guard outcomes above; rule execution before any model call; multiple reasons retained; exact code mapping; malformed/null fields do not approve; and every direct test passes through `PolicyRequest`/`PolicyDecision`. Minimum orchestrator tests: injection and pair evidence reach Policy; Registry duplicate remains blocked; route errors remain distinct from an approval. `scripts/release_check.py --strict` is the current combined gate and correctly remains red until the Policy stub is replaced.
+## Remaining integration contract
 
-## Versioned evidence-bundle proposal
+The current shared Policy request carries one ExtractedInvoice plus supplier and buyer profiles. It does not carry the structured result from POST /ocr/verify, the supporting-case result, or the full finding-scoped fraud graph. The current demo therefore sends the compatible invoice projection and records the missing typed evidence handoff. A passing hard-guard loop is useful, but it does not prove Policy evaluated PO line comparisons, receipt quantities, acceptance evidence, or graph paths.
 
-The existing single-invoice `PolicyRequest` cannot carry the `/ocr/verify` comparison or the full `/ocr/cases/verify` result. If the PM wants Policy to make decisions using that evidence, add a separately reviewed optional field such as `ocr_evidence` in a new contract version. Keep the present invoice request working during migration.
+OCR rule codes are lower-case strings such as duplicate_invoice_hash, duplicate_fingerprint, and po_amount_mismatch. Policy fixtures use Policy-owned reason codes such as KO.DUPLICATE, KO.PO_MISMATCH, and HARD.FRAUD_SCORE. Do not rename OCR codes or assume string equality means semantic compatibility. The Policy adapter should retain the original OCR signals and add explicit, tested mappings.
 
-```json
-{
-  "schema_version": "ocr-policy-evidence-v1",
-  "invoice_doc_hash": "sha256:<raw invoice bytes>",
-  "purchase_order_doc_hash": "sha256:<raw PO bytes or null>",
-  "authenticity_status": "unverified",
-  "signed": false,
-  "comparison_version": "invoice-po-rules-v3",
-  "pair_status": "review",
-  "review_required": true,
-  "review_reasons": ["VISIBLE_INSTRUCTION"],
-  "checks": [
-    {"field": "amount", "status": "match", "rule_code": "po_amount_match", "evidence_refs": ["inv:e1", "po:e1"]}
-  ],
-  "fraud": {
-    "rules_version": "graph-rules-v2",
-    "score_semantics": "uncalibrated_rule_aggregation",
-    "score": 0.0,
-    "flags": [],
-    "findings": []
-  }
-}
-```
+A versioned optional evidence object is a proposal for PM review, not a current contract or signed attestation:
 
-The example is a shape proposal, not a current response or signed attestation. Real evidence references must bind to their own document hash/page/bbox; do not include raw document text, raw bank values, HMAC keys, graph node IDs, or unsigned claims as verified facts. Policy must treat `authenticity_status=unverified` and `signed=false` as limitations, not as successful authentication. Bank-token correlation must never populate Wallet payees.
+    {
+      "schema_version": "ocr-policy-evidence-v1",
+      "invoice_doc_hash": "sha256:<raw invoice bytes>",
+      "purchase_order_doc_hash": "sha256:<raw PO bytes or null>",
+      "authenticity_status": "unverified",
+      "signed": false,
+      "comparison_version": "invoice-po-rules-v3",
+      "pair_status": "review",
+      "review_required": true,
+      "review_reasons": ["VISIBLE_INSTRUCTION"],
+      "checks": [
+        {"field": "amount", "status": "match", "rule_code": "po_amount_match", "evidence_refs": ["inv:e1", "po:e1"]}
+      ],
+      "fraud": {
+        "rules_version": "graph-rules-v2",
+        "score_semantics": "uncalibrated_rule_aggregation",
+        "score": 0.0,
+        "flags": [],
+        "findings": []
+      }
+    }
 
-## Required owner sequence
+Evidence references must bind to the corresponding document hash, page, and bounding box. Keep raw document text, bank values, HMAC keys, graph node IDs, and unsigned claims out of the Policy payload. Unverified authenticity and an unsigned handoff must remain limitations, not successful verification.
 
-1. PM reviews the field names, null/unknown semantics, review precedence, retention, authentication, and migration plan; if accepted, open the required separate `contract:` PR.
-2. Policy owner implements the deterministic guards and lower-case-to-Policy code adapter, then passes the direct endpoint tests.
-3. Orchestrator owner forwards the reviewed evidence bundle and preserves the current Registry duplicate block.
-4. OCR owner reruns `/ocr/extract`, `/ocr/verify`, `/ocr/cases/verify`, and the full integrated demo against the accepted consumer contract.
-5. Wallet/security owners independently bind the final Policy decision to the invoice hashes, fingerprint, mandate and payee. OCR's unsigned handoff does not authorize execution.
+## Next owner sequence
 
-No cross-service implementation or teammate message is implied by this packet. The OCR release gate remains `release_ready=false` until its owner controls pass.
+1. PM reviews the evidence fields, unknown/null handling, reason mapping, retention, authentication, and migration plan. If approved, make the shared schema change in a separate contract PR.
+2. Policy owner keeps hard guards ahead of model scoring and tests each accepted evidence signal through PolicyRequest and PolicyDecision, including reason retention and malformed/null inputs.
+3. Orchestrator owner forwards the approved versioned evidence object, keeps route errors distinct from decisions, and preserves the Registry duplicate block.
+4. OCR owner reruns extract, invoice/PO verification, supporting-case verification, and the integrated demo against the accepted contract.
+5. Wallet/security owner independently binds an approved Policy decision to invoice hashes, fingerprint, mandate, and payee. OCR's unsigned handoff does not authorize execution.
+
+## Evaluation limits
+
+The checks above use fictional generated documents and planted fraud sequences. They are regression evidence, not production precision/recall, global OCR accuracy, real fraud calibration, or proof of issuer, bank-account, signature, ownership, delivery, acceptance, or settlement authenticity. Live hosted inference and a permissioned independent holdout remain unverified. See DATASET_ACCESS_AND_HOLDOUT.md for source, access, and holdout requirements.

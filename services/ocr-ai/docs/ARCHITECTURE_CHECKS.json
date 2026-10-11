@@ -139,7 +139,7 @@
     "Synthetic labels and layouts; independent vendor annotation still needed",
     "Chinese always experimental review; Thai scan misses remain",
     "Qwen remains candidate-only and benign model alerts persist",
-    "Mock integration uses stub Policy/Wallet; no actual chain or guard acceptance",
+    "Mock integration currently exercises the merged Policy hard guards; Wallet remains a stub, and no actual chain transaction or wallet guard acceptance is verified",
     "Consumer handoff unsigned and adoption remains owner-reviewed"
   ]
 }

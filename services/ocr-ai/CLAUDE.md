@@ -144,4 +144,4 @@ services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/eval.py
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/evaluate_external_invoices.py
 ```
 
-The external evaluation requires staged English Paddle models. The integration smoke in `services/ocr-ai/README.md` uses temporary state and existing downstream stubs; it checks transport compatibility only, not Policy/Wallet enforcement or chain execution.
+The external evaluation requires staged English Paddle models. The integration smoke in `services/ocr-ai/README.md` uses temporary state and the current local Policy implementation; the latest strict loop verifies injection review and high-fraud rejection. Wallet remains a stub, so this does not verify wallet enforcement or chain execution.

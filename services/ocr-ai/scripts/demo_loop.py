@@ -474,8 +474,12 @@ def main() -> int:
                         "real-world fraud precision/recall estimate."
                     ),
                     (
-                        "Policy and Wallet are fixed demo stubs; this loop records guard violations "
-                        "but leaves those owner services unchanged."
+                        "The current Policy service enforces the injection-review and fraud-score "
+                        "guards exercised here; Policy source is owned outside OCR."
+                    ),
+                    (
+                        "Wallet remains a demo stub; this loop does not verify wallet guard execution "
+                        "or submit a real chain transaction."
                     ),
                     (
                         "The orchestrator registry is process-local memory; this repeat test is not "

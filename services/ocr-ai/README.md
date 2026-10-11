@@ -4,7 +4,7 @@ This README is the handoff entry point for the OCR AI engineer's scope on branch
 
 ## Handoff status — 11 October 2026
 
-The OCR-owned implementation and automation are in place for review. The latest checked-in demo sequence is deliberately ordered and separates the four decisions: `01_happy.pdf` is an approve candidate, `02_injected.pdf` requires review, `03_inflated.pdf` is rejected for inconsistent math, and `04_duplicate.pdf` is rejected as an exact and semantic duplicate of 01. Cases 02 and 03 have distinct invoice numbers so the injection case does not accidentally trigger the duplicate rules. The local evidence-gate replay passes all four expectations; the live downstream Policy stub still violates two hard guards by approving the injected and inflated invoices. That downstream gap remains visible in `docs/DEMO_LOOP_RESULTS.json` and the release report.
+The OCR implementation and automation are ready for review. After merging main at 7c7056c, the integrated release loop passes: 184 OCR tests pass locally and in a clean clone, 251 Policy tests pass with 3 skipped, and the release report records `release_ready=true` with zero Policy control violations. The live integration loop verifies that an injected invoice reaches Policy review and a high-fraud-score mismatch is rejected. The ordered OCR-only demo also passes its four evidence-gate expectations: clean, injected, inflated, and duplicate. These checks cover the current demo contract; they do not establish production performance or transaction authorization.
 
 ```mermaid
 flowchart LR
@@ -33,10 +33,10 @@ For a complete checklist-by-checklist audit, API payloads, fraud rules, 12-docum
 
 - [Architecture](docs/ARCHITECTURE.md), [fraud validation](docs/FRAUD_VALIDATION.md), [handoff packet](docs/HANDOFF.md), and [contract proposal](docs/CONTRACT_PROPOSAL.md).
 - [Supported document catalog and integration stages](docs/DOCUMENT_CATALOG.md), [CLAUDE.md requirements-to-code review](docs/CLAUDE_REVIEW.md), and [fixture cleanup/provenance record](docs/INVOICE_FIXTURE_CLEANUP.md).
-- [Policy/orchestrator integration handoff](docs/POLICY_INTEGRATION_HANDOFF.md) spells out the two observed Policy guard violations, expected rule/code mapping, example matrix and separate-contract sequence. [Dataset access and holdout plan](docs/DATASET_ACCESS_AND_HOLDOUT.md) records source licences/access and what evidence is still missing.
+- [Policy/orchestrator integration handoff](docs/POLICY_INTEGRATION_HANDOFF.md) records the passing current guard checks and the remaining typed evidence-contract gap. [Dataset access and holdout plan](docs/DATASET_ACCESS_AND_HOLDOUT.md) records source licences/access and what evidence is still missing.
 - [Release gate](docs/RELEASE_CHECK.json), [ordered four-invoice demo](docs/DEMO_ORDER_CHECK.json), [checklist metrics](docs/CHECKLIST_EVALUATION.json), [actual model checks](docs/CHECKLIST_MODEL_CHECK.json), [supporting-document loop](docs/CASE_LOOP_RESULTS.json), and [actual Policy integration loop](docs/DEMO_LOOP_RESULTS.json).
 
-To reproduce the no-cloud-key release checks from this directory, use `.venv/bin/python scripts/release_check.py --fresh`. This installs the core/dev dependencies in a temporary clean clone, generates fixtures, runs tests and Ruff, starts the service on port 8001, and verifies extraction plus protected result retrieval. The command reports OCR release checks separately from downstream Policy's two known control violations. `.venv/bin/python scripts/release_check.py --strict` is the final cross-service gate and currently exits nonzero until Policy enforces injection → review and inflated/high-risk → reject. No cloud API key is required for the core run. Live Anthropic calls, independent global holdout accuracy, and PR approval/merge remain unverified.
+To reproduce the no-cloud-key release checks from this directory, run `.venv/bin/python scripts/release_check.py --fresh`. It tests OCR locally, replays the synthetic fraud and Policy scenarios, then creates a clean clone with a fresh environment, regenerates fixtures, runs OCR tests and Ruff, and checks extraction plus protected result retrieval on port 8001. The latest report records `ocr_checks_passed=true`, `release_ready=true`, and zero Policy guard violations. The `--strict` option makes any observed Policy guard violation fail the command. Live hosted inference, independent global holdout accuracy, issuer/bank/signature verification, and real settlement remain unverified.
 
 Current architecture uses source geometry for separate panels and explicit line tables, plus experimental Simplified Chinese anchors. Responses add a finding-scoped typed `fraud_graph` and unsigned `handoff` for future wallet/security review. See [architecture](docs/ARCHITECTURE.md), [handoff packet](docs/HANDOFF.md) and [historical financial retest (comparison-v2)](docs/FINTECH_RETEST.md). Older reports are historical evidence.
 
@@ -181,22 +181,22 @@ Reproduce the current architecture checks from this directory with staged models
 .venv/bin/python scripts/smoke_integration.py
 ```
 
-The integration loop creates synthetic invoices and a matching PO in a temporary directory, runs extraction and evidence checks, repeats the invoice, exercises invoice-to-PO mismatch and injection cases, sends those results to the live local Policy stub, and runs the planted duplicate/shared-account/cluster fraud sequences. It starts local services on free loopback ports, uses temporary state and ephemeral HMAC keys, and removes generated documents when finished. It writes the sanitized result to `docs/DEMO_LOOP_RESULTS.json` without raw bank data or graph node IDs.
+The integration loop creates synthetic invoices and a matching PO in a temporary directory, runs extraction and evidence checks, repeats the invoice, exercises invoice-to-PO mismatch and injection cases, sends the compatible invoice projection to the current local Policy implementation, and runs the planted duplicate/shared-account/cluster fraud sequences. It starts local services on free loopback ports, uses temporary state and ephemeral HMAC keys, and removes generated documents when finished. It writes the sanitized result to `docs/DEMO_LOOP_RESULTS.json` without raw bank data or graph node IDs.
 
 The exercised request shapes are:
 
 - `POST /flow/run`: `multipart/form-data` with `file` (invoice PDF) and optional `mandate_id`. The orchestrator calls `POST /ocr/extract` with multipart `file`, then sends `POST /policy/decide` JSON shaped as `{"invoice": <ExtractedInvoice>, "supplier_profile": <object>, "buyer_profile": <object>}`.
-- `POST /ocr/verify`: `multipart/form-data` with `invoice_file` and `po_file` (both PDFs). It returns comparison checks and an OCR-local fraud handoff. The current shared Policy request has no typed PO-comparison or graph-handoff fields, so the loop exercises the Policy stub with the compatible invoice projection and reports the missing integration contract.
+- `POST /ocr/verify`: `multipart/form-data` with `invoice_file` and `po_file` (both PDFs). It returns comparison checks and an OCR-local fraud handoff. The current shared Policy request has no typed PO-comparison or full graph-evidence fields, so the loop sends the compatible invoice projection and records that remaining contract gap.
 - Result: JSON at `docs/DEMO_LOOP_RESULTS.json`; raw OCR responses and HMAC/graph identifiers are not copied into it.
 
 ```bash
 # Quick HTTP loop without the additional synthetic fraud sequence evaluation:
 .venv/bin/python scripts/smoke_integration.py --skip-fraud-eval
-# Make a known Policy hard-guard violation fail the command (expected with the current stub):
+# Fail if the current Policy hard-guard checks report a violation:
 .venv/bin/python scripts/smoke_integration.py --strict
 ```
 
-The current Policy endpoint always returns its demo approval and does not enforce injection, high-fraud-score, or low-confidence guards. The result therefore distinguishes OCR/fraud checks from downstream Policy controls and reports `completed_with_policy_gaps` rather than treating successful HTTP transport as a security pass. Wallet is also a stub; `pending_approval` is not an executed payment or chain transaction. This integration loop changes only OCR-owned files and does not alter the shared contract or downstream service owners' code.
+The merged Policy endpoint now returns `review` for the injected case and `reject` for the high-fraud-score mismatch; the latest integration report records zero control violations. The shared request still lacks typed PO-comparison and full fraud-graph evidence, so those OCR findings are not yet a versioned Policy input. Wallet remains a stub: `pending_approval` is not an executed payment or chain transaction, and no real chain call is covered by this loop.
 
 ## Checklist release and multi-document demo
 

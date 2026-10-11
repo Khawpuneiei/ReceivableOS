@@ -10,7 +10,7 @@ The latest source-derived invoice, legacy cleanup, and fraud validation task is 
 
 [Agree consumer review semantics and international fingerprint migration](tickets/consumer-contract.md) is awaiting owner review. Local examples and the concrete packet are prepared; no shared change or owner agreement is implied.
 
-[Policy integration handoff](../POLICY_INTEGRATION_HANDOFF.md) records the fixed-approve stub, two observed hard-guard violations, the OCR/Policy fraud-code naming mismatch, a guard matrix and the proposed versioned evidence bundle. A separate PM `contract:` review and Policy implementation are required; this OCR branch does not change those owners' files.
+[Policy integration handoff](../POLICY_INTEGRATION_HANDOFF.md) records passing injection/fraud guards after merging current main, the OCR/Policy reason-code distinction, and the proposed versioned evidence bundle. PM `contract:` review and typed PO/graph evidence adoption remain open; this OCR branch does not edit those owners' files.
 
 The external synthetic challenge set is development data. [Improve English invoice anchors and unit-aware line extraction from external challenge findings](tickets/english_invoice_layout_coverage.md) is resolved locally with corrected 29-input evaluation and the v3 unit-aware comparison handoff.
 

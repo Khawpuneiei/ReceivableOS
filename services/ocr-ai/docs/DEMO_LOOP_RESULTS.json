@@ -99,7 +99,7 @@
         }
       },
       "policy_decision": "approve",
-      "policy_version": "stub",
+      "policy_version": "credit-policy-v0.1",
       "wallet_status": "pending_approval",
       "flow_outcome": "pending_approval"
     },
@@ -166,9 +166,9 @@
         "VISIBLE_INSTRUCTION"
       ],
       "review_required": true,
-      "policy_decision": "approve",
-      "wallet_status": "pending_approval",
-      "flow_outcome": "pending_approval"
+      "policy_decision": "review",
+      "wallet_status": "blocked",
+      "flow_outcome": "blocked"
     }
   },
   "checks": [
@@ -241,33 +241,34 @@
       "trigger": null,
       "passed": null,
       "status": "not_asserted",
-      "policy_version": "stub",
-      "model_version": "stub"
+      "policy_version": "credit-policy-v0.1",
+      "model_version": "credit-lr-2026-10-10.2"
     },
     {
       "expected_decision": "reject",
-      "actual_decision": "approve",
+      "actual_decision": "reject",
       "trigger": "fraud_score_at_or_above_0_30",
-      "passed": false,
-      "status": "control_violation",
-      "policy_version": "stub",
-      "model_version": "stub"
+      "passed": true,
+      "status": "pass",
+      "policy_version": "credit-policy-v0.1",
+      "model_version": "credit-lr-2026-10-10.2"
     },
     {
       "expected_decision": "review",
-      "actual_decision": "approve",
+      "actual_decision": "review",
       "trigger": "injection_flags_present",
-      "passed": false,
-      "status": "control_violation",
-      "policy_version": "stub",
-      "model_version": "stub"
+      "passed": true,
+      "status": "pass",
+      "policy_version": "credit-policy-v0.1",
+      "model_version": "credit-lr-2026-10-10.2"
     }
   ],
-  "policy_control_violations": 2,
-  "status": "completed_with_policy_gaps",
+  "policy_control_violations": 0,
+  "status": "passed",
   "limitations": [
     "All generated documents and risk sequences are synthetic; this is not a real-world fraud precision/recall estimate.",
-    "Policy and Wallet are fixed demo stubs; this loop records guard violations but leaves those owner services unchanged.",
+    "The current Policy service enforces the injection-review and fraud-score guards exercised here; Policy source is owned outside OCR.",
+    "Wallet remains a demo stub; this loop does not verify wallet guard execution or submit a real chain transaction.",
     "The orchestrator registry is process-local memory; this repeat test is not durable registry validation.",
     "OCR pair verification supports Invoice and Purchase Order only; other evidence types are cataloged as future scope.",
     "Fraud score is uncalibrated rule aggregation and exercises only the documented Policy threshold here."

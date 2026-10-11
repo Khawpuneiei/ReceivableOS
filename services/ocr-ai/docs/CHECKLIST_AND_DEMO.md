@@ -50,7 +50,7 @@ flowchart TD
 | forged/duplicate score>=0.30, cleanต่ำกว่า | planted math/duplicate scenarios ผ่าน; invoice inflated เทียบ PO ได้0.70; ไม่ใช่ตัวตรวจลายเซ็นหรือ forgery ทั่วไป |
 | fraud precision/recall>=90% | TP8/FP0/FN0/TN4 =100%/100% บน12 labelled sequences; ยังไม่ใช่ fraud corpus จริง |
 | ExtractedInvoice+extras, GET by ID | ผ่าน contract tests; GET ใช้ operator token, RAM cache15นาที/500entries/8MiB, expired/restart/evicted404 |
-| Policy01 approve,02 review,03/04 reject | ยังไม่ครบ: actual Policy stub approve injected/inflated; integration บันทึก2 control violations; duplicateถูก registry blockก่อนPolicy |
+| Policy01 approve,02 review,03/04 reject | บางส่วนผ่าน: Policy suite251ผ่าน/3skip; integrationยืนยัน injected→review และ fraud score0.70→reject, violations0. แต่ exact OCR 4-file sequenceไม่ได้ส่งครบทุกไฟล์เข้า Policy; duplicateในflowถูก Registry block และ shared contractยังไม่มี PO/graph evidence |
 | eval.py metrics table + docs05 | พิมพ์ตารางแล้ว และบันทึกใน `docs/05-ocr-ai.md` กับ JSON report |
 | datagen/generate.py deterministic seed | ตรวจไฟล์ทั้งหมด byte-identical เมื่อ seedเท่ากัน; polished PDFs ใช้ invariant metadata |
 | demo01..04 | `data/invoices/demo/` มี happy/injected/inflated/exactduplicate+PO; generatorหลักสร้างให้ |
@@ -130,7 +130,7 @@ Generatorค่าdefaultเขียนregression fixturesลงtemporary path 
 
 ## Handoff ที่ยังต้องทำกับเจ้าของแต่ละฝั่ง
 
-Policyต้องenforce injection→review, confidence<0.80→review, fraud>=0.30→reject และรับpair/case evidenceตามcontractที่reviewแล้ว Orchestratorปัจจุบันส่งprojectionของinvoice จึงยังไม่ส่งcasebundleทั้งชุด Registryตรวจrepeat registrationได้ แต่ไม่พิสูจน์prior financingทุกแห่ง Wallet/Cybersecurityต้องตรวจauthentication, tenant context, signed handoff, mandate/payee และexecution guardsตามหน้าที่ของตน OCRไม่แก้owner codeเพื่อทำให้ผลtestดูผ่าน
+Policy guardsสำหรับ injection→review และ fraud>=0.30→reject ผ่าน integration แล้ว; Policy suite 251 tests ผ่าน/3 skipped. ยังต้องทดสอบconfidence guardกับการส่ง evidence ตาม contract ที่ review แล้ว เพราะ Orchestrator ปัจจุบันส่ง invoice projection ไม่ใช่ pair/case/graph bundle. Registryตรวจ repeat registrationได้ แต่ไม่พิสูจน์ prior financingทุกแห่ง. Wallet/Cybersecurity ต้องตรวจ authentication, tenant context, signed handoff, mandate/payee และ execution guardsตามหน้าที่ของตน OCRไม่แก้ owner codeเพื่อทำให้ผล test ดูผ่าน
 
 งานresearchถัดไปคือvendor-labelled holdoutแยกsupplier/layout, line-table variations, native Chinese invoices, Thai scans, visual tampering และlabelled benign/fraud corpusจริง รวมถึงverified buyer/bank/registry/signature sources [DocILE](https://github.com/rossumai/docile) ใช้ศึกษาextraction/line itemsได้ แต่ไม่ใช่fraud labelsหรือหลักฐานfinancing eligibility
 
@@ -145,8 +145,8 @@ Policyต้องenforce injection→review, confidence<0.80→review, fraud>=0
 | `03_inflated.pdf` | reject | `math_inconsistent`, fraud score 0.40; เลข 0144 แยกจากอีกสองใบ |
 | `04_duplicate.pdf` | reject | byte-identical กับ 01 และแสดง `duplicate_invoice_hash` กับ `duplicate_fingerprint`, fraud score 0.96 |
 
-ผลทั้ง 4 รายการผ่านใน [ordered demo report](DEMO_ORDER_CHECK.json) ด้วย `.venv/bin/python scripts/demo_order.py`; `release_check.py --fresh` เรียก loop นี้ให้อัตโนมัติด้วย การทดสอบนี้ยืนยัน OCR evidence gate โดยไม่เรียก Policy endpoint ส่วน [actual Policy integration result](DEMO_LOOP_RESULTS.json) ยังบันทึก 2 control violations เพราะ Policy stub ยอม approve ใบ injected และ inflated อยู่
+ผลทั้ง 4 รายการผ่านใน [ordered demo report](DEMO_ORDER_CHECK.json) ด้วย `.venv/bin/python scripts/demo_order.py`; `release_check.py --fresh` เรียก loop นี้ให้อัตโนมัติด้วย การทดสอบนี้ยืนยัน OCR evidence gate โดยไม่เรียก Policy endpoint ส่วน [actual Policy integration result](DEMO_LOOP_RESULTS.json) ยืนยัน injected→review และ fraud score0.70→reject โดยมี 0 control violations; ยังไม่ได้ส่ง exact OCR 4-file sequence เข้า Policy ครบทั้งชุด และ duplicate ถูก Registry block ก่อนถึง Policy
 
-การปิดท้าย release run ผ่านทั้ง working environment และ local clone ที่ติดตั้ง core/dev dependencies ใหม่โดยไม่มี cloud API key: 184 tests ผ่านทั้งสองที่, Ruff check/format ผ่าน, fixtures สร้างได้, และ clean clone เริ่ม server บน port 8001 แล้วผ่าน `POST /ocr/extract` กับ protected `GET /ocr/invoices/{id}`. ดังนั้น `ocr_checks_passed` เป็น true แต่ `release_ready` ยัง false จาก Policy violations สองรายการข้างต้น (ไม่ใช่ OCR regression). ใช้ [release report](RELEASE_CHECK.json) ตรวจรายละเอียดของแต่ละขั้น
+การปิดท้าย release run ผ่านทั้ง working environment และ local clone ที่ติดตั้ง core/dev dependencies ใหม่โดยไม่มี cloud API key: OCR 184 tests ผ่านทั้งสองที่, Policy 251 ผ่าน/3 skipped, Ruff check/format และ pip check ผ่าน, fixtures สร้างได้, และ clean clone เริ่ม server บน port 8001 แล้วผ่าน `POST /ocr/extract` กับ protected `GET /ocr/invoices/{id}`. Release report ปัจจุบันบันทึก `ocr_checks_passed=true`, `release_ready=true`, และ 0 Policy control violations. ใช้ [release report](RELEASE_CHECK.json) ตรวจรายละเอียดของแต่ละขั้น
 
-Draft PRสำหรับPM review: [ReceivableOS PR16](https://github.com/Khawpuneiei/ReceivableOS/pull/16) ยังไม่ merge
+PRสำหรับPM review: [ReceivableOS PR16](https://github.com/Khawpuneiei/ReceivableOS/pull/16) ยังไม่ merge

@@ -9,7 +9,7 @@
       ],
       "exit_code": 0,
       "passed": true,
-      "output_tail": "........................................................................ [ 39%]\n........................................................................ [ 78%]\n........................................                                 [100%]\n=============================== warnings summary ===============================\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n184 passed, 5 warnings in 109.70s (0:01:49)\n",
+      "output_tail": "........................................................................ [ 39%]\n........................................................................ [ 78%]\n........................................                                 [100%]\n=============================== warnings summary ===============================\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n184 passed, 5 warnings in 109.98s (0:01:49)\n",
       "error_tail": ""
     },
     {
@@ -36,7 +36,7 @@
       ],
       "exit_code": 0,
       "passed": true,
-      "output_tail": "103 files already formatted\n",
+      "output_tail": "106 files already formatted\n",
       "error_tail": ""
     },
     {
@@ -79,7 +79,7 @@
       ],
       "exit_code": 0,
       "passed": true,
-      "output_tail": "{\"status\": \"completed_with_policy_gaps\", \"output\": \"/Users/wisitsuwannao/Documents/Workspace/ReceivableOS/services/ocr-ai/docs/DEMO_LOOP_RESULTS.json\", \"checks\": [{\"name\": \"clean_invoice_fields_match_mock_truth\", \"passed\": true, \"details\": {\"invoice_no\": true, \"amount\": true, \"currency\": true, \"due_date\": true, \"supplier\": true, \"buyer\": true}}, {\"name\": \"critical_fields_have_evidence_refs\", \"passed\": true, \"details\": {\"document_number\": true, \"amount\": true, \"currency\": true, \"due_date\": true}}, {\"name\": \"same_invoice_repeat_blocked_by_registry\", \"passed\": true, \"details\": {\"fraud_codes\": [\"duplicate_invoice_hash\", \"duplicate_fingerprint\"]}}, {\"name\": \"clean_invoice_po_pair_matches\", \"passed\": true}, {\"name\": \"amount_mismatch_creates_fraud_handoff\", \"passed\": true, \"details\": {\"pair_status\": \"mismatch\", \"mismatch_fields\": [\"amount\"], \"fraud_codes\": [\"math_inconsistent\", \"po_amount_mismatch\"], \"fraud_score\": 0.7, \"review_required\": true}}, {\"name\": \"visible_injection_detected_and_review_required_by_ocr\", \"passed\": true, \"details\": {\"injection_flags\": [\"VISIBLE_INSTRUCTION\"]}}], \"policy_control_violations\": 2}\n",
+      "output_tail": "{\"status\": \"passed\", \"output\": \"/Users/wisitsuwannao/Documents/Workspace/ReceivableOS/services/ocr-ai/docs/DEMO_LOOP_RESULTS.json\", \"checks\": [{\"name\": \"clean_invoice_fields_match_mock_truth\", \"passed\": true, \"details\": {\"invoice_no\": true, \"amount\": true, \"currency\": true, \"due_date\": true, \"supplier\": true, \"buyer\": true}}, {\"name\": \"critical_fields_have_evidence_refs\", \"passed\": true, \"details\": {\"document_number\": true, \"amount\": true, \"currency\": true, \"due_date\": true}}, {\"name\": \"same_invoice_repeat_blocked_by_registry\", \"passed\": true, \"details\": {\"fraud_codes\": [\"duplicate_invoice_hash\", \"duplicate_fingerprint\"]}}, {\"name\": \"clean_invoice_po_pair_matches\", \"passed\": true}, {\"name\": \"amount_mismatch_creates_fraud_handoff\", \"passed\": true, \"details\": {\"pair_status\": \"mismatch\", \"mismatch_fields\": [\"amount\"], \"fraud_codes\": [\"math_inconsistent\", \"po_amount_mismatch\"], \"fraud_score\": 0.7, \"review_required\": true}}, {\"name\": \"visible_injection_detected_and_review_required_by_ocr\", \"passed\": true, \"details\": {\"injection_flags\": [\"VISIBLE_INSTRUCTION\"]}}], \"policy_control_violations\": 0}\n",
       "error_tail": ""
     }
   ],
@@ -153,7 +153,7 @@
         ],
         "exit_code": 0,
         "passed": true,
-        "output_tail": "........................................................................ [ 39%]\n........................................................................ [ 78%]\n........................................                                 [100%]\n=============================== warnings summary ===============================\n../../../venv/lib/python3.11/site-packages/fastapi/testclient.py:1\n  /private<temporary>/venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n184 passed, 6 warnings in 116.38s (0:01:56)\n",
+        "output_tail": "........................................................................ [ 39%]\n........................................................................ [ 78%]\n........................................                                 [100%]\n=============================== warnings summary ===============================\n../../../venv/lib/python3.11/site-packages/fastapi/testclient.py:1\n  /private<temporary>/venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute\n\n<frozen importlib._bootstrap>:241\n  <frozen importlib._bootstrap>:241: DeprecationWarning: builtin type swigvarlink has no __module__ attribute\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n184 passed, 6 warnings in 108.92s (0:01:48)\n",
         "error_tail": ""
       },
       {
@@ -180,7 +180,7 @@
         ],
         "exit_code": 0,
         "passed": true,
-        "output_tail": "103 files already formatted\n",
+        "output_tail": "106 files already formatted\n",
         "error_tail": ""
       },
       {
@@ -197,6 +197,6 @@
     "cloud_key": false,
     "paddle_installed": false
   },
-  "policy_control_violations": 2,
-  "release_ready": false
+  "policy_control_violations": 0,
+  "release_ready": true
 }
