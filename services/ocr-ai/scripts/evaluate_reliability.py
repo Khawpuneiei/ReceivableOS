@@ -7,11 +7,9 @@ import hashlib
 import json
 import os
 import platform
-import re
 import sys
 import time
 from collections import Counter, defaultdict
-from decimal import Decimal
 from pathlib import Path
 
 SERVICE = Path(__file__).resolve().parents[1]
@@ -26,7 +24,8 @@ from app.ingest import run_worker  # noqa: E402
 from app.qwen import SYSTEM_PROMPT, read_candidates  # noqa: E402
 from app.validate import validate_document  # noqa: E402
 
-FIELDS = ("document_number", "amount", "currency", "issue_date", "due_date", "supplier_name", "buyer_name")
+from scripts.evaluation_metrics import FIELDS, matches  # noqa: E402
+
 MODELS = {"en": "en_PP-OCRv5_mobile_rec", "th": "th_PP-OCRv5_mobile_rec", "zh": "PP-OCRv5_mobile_rec"}
 
 
@@ -37,22 +36,6 @@ def values(document):
         if not field.endswith("_name")
     }
     result.update(supplier_name=document.supplier.name.value, buyer_name=document.buyer.name.value)
-    return result
-
-
-def matches(observed, truth):
-    result = {}
-    for field in FIELDS:
-        actual, expected = observed.get(field), truth[field]
-        if field == "amount" and actual is not None and expected is not None:
-            try:
-                result[field] = bool(re.fullmatch(r"\d+(?:\.\d+)?", actual)) and Decimal(actual) == Decimal(
-                    expected
-                )
-            except (ValueError, ArithmeticError):
-                result[field] = False
-        else:
-            result[field] = actual == expected
     return result
 
 

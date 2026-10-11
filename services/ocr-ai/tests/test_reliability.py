@@ -179,7 +179,7 @@ def test_every_conflicting_bank_account_is_redacted(client):
 
 
 def test_canonical_three_decimal_amount_is_not_reparsed_as_an_ambiguous_source():
-    from scripts.evaluate_reliability import FIELDS, matches
+    from scripts.evaluation_metrics import FIELDS, matches
 
     truth = dict.fromkeys(FIELDS)
     truth["amount"] = "79.191"
