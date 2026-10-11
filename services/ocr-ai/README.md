@@ -24,6 +24,8 @@ flowchart LR
 
 OCR returns evidence, not a financing decision. It does not verify issuer authenticity, delivery, tax registration, bank ownership, settlement, remaining PO capacity or prior financing at other lenders. Fraud scores are uncalibrated rule aggregations, not probabilities.
 
+Latest validation: **184 OCR tests passed / 1 optional publisher-fixture skip**, both locally and in a fresh clone. The companion regressions pass **13/13**; Policy passes **251/3 skipped** and Wallet **122/2 skipped**. Release checks pass for the OCR scope, with zero Policy control violations. Current full-flow funding remains blocked at Wallet as described below.
+
 ## Start and test
 
 From the repository root, Python 3.11+:

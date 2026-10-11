@@ -18,6 +18,8 @@ Run `scripts/eval.py`, `scripts/demo_order.py`, `scripts/demo_loop.py --strict -
 
 | Check | Latest result |
 |---|---|
+| Core OCR tests, local and fresh clone | 184 passed / 1 skipped in each; optional publisher fixture tested separately |
+| Fresh setup / HTTP / lint | install, generation, POST extract, protected GET, Ruff and pip check pass |
 | Clean PDF scalar fields (four generated documents) | 28/28 |
 | Planted injection mechanisms | Catch rate 100%; attack success 0% |
 | Clean/hard-negative injection false-positive rate | 0% on the generated set |
