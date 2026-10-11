@@ -24,7 +24,7 @@ flowchart LR
 
 OCR returns evidence, not a financing decision. It does not verify issuer authenticity, delivery, tax registration, bank ownership, settlement, remaining PO capacity or prior financing at other lenders. Fraud scores are uncalibrated rule aggregations, not probabilities.
 
-Latest validation: **184 OCR tests passed / 1 optional publisher-fixture skip**, both locally and in a fresh clone. The companion regressions pass **13/13**; Policy passes **251/3 skipped** and Wallet **122/2 skipped**. Release checks pass for the OCR scope, with zero Policy control violations. Current full-flow funding remains blocked at Wallet as described below.
+Core release validation: **184 OCR tests passed / 1 optional publisher-fixture skip**, both locally and in a fresh clone. The history-context follow-up passes **196 tests / 1 skipped** and strict demo **7/7**, with zero Policy control violations. The companion regressions pass **13/13**; Policy passes **251/3 skipped** and Wallet **122/2 skipped**. Release checks pass for the OCR scope. Current full-flow funding remains blocked at Wallet as described below.
 
 ## Start and test
 
@@ -108,6 +108,15 @@ OCR_DEVELOPMENT_MODE=1 OCR_ALLOW_RESET=1 PYTHONPATH=../.. .venv/bin/python -c 'f
 ```
 
 Use the same `OCR_STATE_PATH` as the server. Reset is an operator Python capability, never an HTTP endpoint. Fingerprint normalization changed in this review; existing demo observations made with the old reference algorithm should be reset before rehearsal. Live history requires a reviewed migration.
+
+History now binds its stored identities to an opaque digest of both HMAC-key settings and the
+identity recipe version. A key or recipe change, or an existing populated database with no
+binding, returns **503 requiring operator migration** rather than treating old identities as
+different suppliers/invoices. Empty databases bind on the first write. Keys and raw accounts
+are not stored in the binding. Choose keys before populating demo state; switching from public
+dev keys to generated private keys also requires fresh demo state or the explicit reset above.
+Never reset live history to work around this response: preserve it and arrange a reviewed
+migration/re-extraction with the owners. Automatic live migration is not implemented.
 
 ## Models and performance
 

@@ -121,7 +121,9 @@ def test_names_alone_and_same_entity_do_not_trigger_shared_accounts():
 
 
 def test_store_capacity_reset_and_retries(tmp_path):
-    store = ObservationStore(tmp_path / "history.sqlite", max_observations=1)
+    store = ObservationStore(
+        tmp_path / "history.sqlite", max_observations=1, context_digest="sha256:" + "a" * 64
+    )
     digest = "sha256:" + "a" * 64
     first = store.observe(observation("1", "a"), request_digest=digest, idempotency_key="retry")
     retry = store.observe(observation("1", "a"), request_digest=digest, idempotency_key="retry")
