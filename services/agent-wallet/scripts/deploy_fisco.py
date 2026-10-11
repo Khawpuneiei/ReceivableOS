@@ -75,6 +75,10 @@ def main() -> int:
     parser.add_argument("--accounts-dir", default="/work/accounts")
     args = parser.parse_args()
 
+    # Each deployment is a new set of contracts, so its receipts replace the last set's.
+    for old in RECEIPTS.glob("*.json") if RECEIPTS.exists() else []:
+        old.unlink()
+
     accounts = Path(args.accounts_dir)
     clients = open_clients(
         {role: str(accounts / f"{role}.pem") for role in ROLES}, args.sdk_dir, args.config_dir

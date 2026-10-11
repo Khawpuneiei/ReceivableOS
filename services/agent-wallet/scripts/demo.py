@@ -11,8 +11,12 @@ Then, from the repo root:
 
     python services/agent-wallet/scripts/demo.py
 
-The labels follow the ledger the service reports. On the mock, every hash is a MOCK hash (prefix `mock:`),
-not a chain hash, and the run writes eval/demo_tx_hashes.md. On FISCO BCOS, the run writes
+Every run uses its own invoice IDs, fingerprints and idempotency keys (the run id is printed and written
+to the record), so the demo can run again on the same chain without a redeploy. Set DEMO_RUN_ID to
+repeat a run exactly.
+
+The labels follow the ledger the service reports. On the mock, every hash is a MOCK hash (prefix
+`mock:`), not a chain hash, and the run writes eval/demo_tx_hashes.md. On FISCO BCOS, the run writes
 eval/demo_tx_hashes_fisco.md. The receipts are saved where the service's FISCO_RECEIPTS_DIR points.
 """
 
@@ -20,7 +24,7 @@ import argparse
 import hashlib
 import os
 import sys
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -33,12 +37,18 @@ from shared.schemas import PolicyDecision  # noqa: E402
 
 SELLER = "SELLER:siam-fresh-pack"
 ATTACKER = "0x" + "bad0" * 10
+RUN_ID = os.getenv("DEMO_RUN_ID") or datetime.now(UTC).strftime("%Y%m%d%H%M%S")
 RECORD: list[dict] = []  # every step, for the demo_tx_hashes file
 LEDGER = "mock"  # set from the service's /health in run()
 
 
-def fingerprint(name: str) -> str:
-    return "0x" + hashlib.sha256(f"demo-fp:{name}".encode()).hexdigest()
+def tagged(name: str) -> str:
+    """The invoice ID for this run. Two runs never share a fingerprint or an idempotency key."""
+    return f"{name}-{RUN_ID}"
+
+
+def fingerprint(invoice_id: str) -> str:
+    return "0x" + hashlib.sha256(f"demo-fp:{invoice_id}".encode()).hexdigest()
 
 
 def decision(limit: str, reasons: list | None = None, advance: float = 0.70) -> dict:
@@ -94,11 +104,12 @@ class Demo:
         )
         return body
 
-    def register(self, invoice: str, face: str, doc: str = "sha256:demo", key: str | None = None) -> dict:
+    def register(self, name: str, face: str, doc: str = "sha256:demo", key: str | None = None) -> dict:
+        invoice = tagged(name)
         return self.http.post(
             "/wallet/register",
             json={
-                "idempotency_key": key or f"{invoice}:register",
+                "idempotency_key": f"{RUN_ID}:{key}" if key else f"{invoice}:register",
                 "invoice_id": invoice,
                 "invoice_fingerprint": fingerprint(invoice),
                 "doc_hash": doc,
@@ -110,7 +121,8 @@ class Demo:
             headers=self.agent,
         ).json()
 
-    def approve(self, invoice: str, limit: str, d: dict | None = None) -> dict:
+    def approve(self, name: str, limit: str, d: dict | None = None) -> dict:
+        invoice = tagged(name)
         d = d or decision(limit)
         return self.http.post(
             "/wallet/approve",
@@ -130,13 +142,14 @@ class Demo:
 
     def draw(
         self,
-        invoice: str,
+        name: str,
         amount: str,
         d: dict | None = None,
         apr: float = 0.1095,
         key: str | None = None,
         bypass: bool = False,
     ) -> dict:
+        invoice = tagged(name)
         d = d or decision(amount)
         h = decision_hash(d)
         body = {
@@ -145,7 +158,7 @@ class Demo:
             "amount": amount,
             "currency": "THB",
             "invoice_id": invoice,
-            "idempotency_key": key or f"{invoice}:draw",
+            "idempotency_key": f"{RUN_ID}:{key}" if key else f"{invoice}:draw",
             "decision_id": "dec_demo",
             "decision_hash": h,
             "invoice_fingerprint": fingerprint(invoice),
@@ -157,6 +170,19 @@ class Demo:
             body["skip_offchain_checks"] = True
         return self.http.post("/wallet/execute", json=body, headers=self.agent).json()
 
+    def settle(self, name: str, amount_paid: str) -> dict:
+        invoice = tagged(name)
+        return self.http.post(
+            "/wallet/settle",
+            headers=self.agent,
+            json={
+                "idempotency_key": f"{invoice}:settle",
+                "invoice_id": invoice,
+                "invoice_fingerprint": fingerprint(invoice),
+                "amount_paid": amount_paid,
+            },
+        ).json()
+
 
 def run(url: str, owner: str, approver: str, risk_oracle: str, agent: str) -> int:
     global LEDGER
@@ -164,6 +190,7 @@ def run(url: str, owner: str, approver: str, risk_oracle: str, agent: str) -> in
     health = demo.http.get("/health").json()
     LEDGER = health["ledger"]
     print(f"service: {health}")
+    print(f"run id: {RUN_ID}")
 
     demo.say("1. Active mandate")
     mandate = demo.http.get("/wallet/mandate").json()
@@ -173,19 +200,7 @@ def run(url: str, owner: str, approver: str, risk_oracle: str, agent: str) -> in
     demo.show("register inv_happy", demo.register("inv_happy", "749000.00"))
     demo.show("approve (TX-2) inv_happy", demo.approve("inv_happy", "524300.00"))
     demo.show("execute draw (TX-4) inv_happy", demo.draw("inv_happy", "524300.00"))
-    demo.show(
-        "settle, buyer paid 749,000 (TX-5)",
-        demo.http.post(
-            "/wallet/settle",
-            headers=demo.agent,
-            json={
-                "idempotency_key": "inv_happy:settle",
-                "invoice_id": "inv_happy",
-                "invoice_fingerprint": fingerprint("inv_happy"),
-                "amount_paid": "749000.00",
-            },
-        ).json(),
-    )
+    demo.show("settle, buyer paid 749,000 (TX-5)", demo.settle("inv_happy", "749000.00"))
 
     demo.say("3. Large invoice: advance 980,000 waits for the approver")
     demo.register("inv_large", "1400000.00")
@@ -246,7 +261,7 @@ def run(url: str, owner: str, approver: str, risk_oracle: str, agent: str) -> in
     demo.show("unpause (owner)", demo.http.post("/wallet/unpause", headers=demo.owner).json())
 
     demo.say("8. Audit trail for inv_happy")
-    audit = demo.http.get("/wallet/audit/inv_happy").json()
+    audit = demo.http.get(f"/wallet/audit/{tagged('inv_happy')}").json()
     events = [e["event"] for e in audit["entries"]]
     print(f"  entries {len(events)}  verified {audit['verified']}  last event {events[-1]}")
 
@@ -267,7 +282,7 @@ def write_report() -> Path:
     lines = [
         title,
         "",
-        f"Run on {date.today().isoformat()}. {note}",
+        f"Run on {datetime.now(UTC).date().isoformat()}, run id {RUN_ID}. {note}",
         "",
         "| step | status | block reason | tx_id | chain_ref |",
         "|---|---|---|---|---|",

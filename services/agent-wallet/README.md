@@ -89,13 +89,17 @@ This needs Docker Desktop. The chain runs in an Ubuntu 22.04 container. Its data
    ```
 
    At startup the service checks that the chain's mandate hash is the demo mandate's, and refuses to start if not.
-8. **Demo, from the host.** Run `scripts/demo.py` with the same tokens. It writes `eval/demo_tx_hashes_fisco.md`.
-9. **Verify.** Inside the container, run
-   `scripts/verify_fisco_hashes.py --record eval/demo_tx_hashes_fisco.md` (and `--record eval/fisco-deployment.md`).
-   Each hash is asked for from the chain, and the block, status and revert reason are printed.
+8. **Demo, in one command.** From the repo root, run `bash services/agent-wallet/scripts/fisco_demo.sh`. It starts the
+   container, the four nodes and the wallet if they are not running, restarts the wallet so it uses the current code and
+   tokens, runs `scripts/demo.py`, and checks every hash the demo wrote against the chain. Add `--fresh` to redeploy
+   first. Set `PYTHON` if the host Python does not have `httpx`.
+9. **Record.** The demo writes `eval/demo_tx_hashes_fisco.md` and each run gets its own run id. Receipts go to
+   `eval/fisco-receipts-demo/`. The check's output is in `eval/fisco-verification-demo.txt`.
 
-Rebuilding the chain from scratch loses the deployment: a new `deploy_fisco.py` run gives new addresses, and the demo
-needs a fresh chain state to avoid `DuplicateReceivable` from the previous run.
+The on-chain daily cap is a rolling 24h total that every run adds to. The demo mandate allows THB 3,000,000, and
+three runs use it up, so the wallet's large-draw step then fails with `DailyCapExceeded`. Use `--fresh` before a
+rehearsal or a recording. A fresh deployment also gives a new record of the deploy transactions in
+`eval/fisco-deployment.md` (regenerate it from `eval/fisco-receipts/`).
 
 ## Test
 
