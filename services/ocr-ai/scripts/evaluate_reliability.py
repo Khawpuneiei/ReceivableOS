@@ -17,14 +17,13 @@ sys.path[:0] = [str(SERVICE), str(SERVICE.parents[1])]
 
 import httpx  # noqa: E402
 from experiments.grounding import grounded_candidate  # noqa: E402
+from scripts.evaluation_metrics import FIELDS, matches  # noqa: E402
 
 from app.config import Settings  # noqa: E402
 from app.extract import extract_document  # noqa: E402
 from app.ingest import run_worker  # noqa: E402
 from app.qwen import SYSTEM_PROMPT, read_candidates  # noqa: E402
 from app.validate import validate_document  # noqa: E402
-
-from scripts.evaluation_metrics import FIELDS, matches  # noqa: E402
 
 MODELS = {"en": "en_PP-OCRv5_mobile_rec", "th": "th_PP-OCRv5_mobile_rec", "zh": "PP-OCRv5_mobile_rec"}
 
