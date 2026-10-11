@@ -1,0 +1,10 @@
+{
+  "mandate_id": "policy-default-thb",
+  "max_ltv": "0.70",
+  "max_apr": "0.12",
+  "max_predicted_default": "0.05",
+  "human_review_above": "837500.00",
+  "max_amount_per_tx": "1500000.00",
+  "daily_cap": "3000000.00",
+  "allowed_currency": "THB"
+}
