@@ -30,6 +30,10 @@ See README for exact reproduction commands. The strict local integration loop pa
 
 A full clean-clone release check is required after the scope split. Its generated `docs/RELEASE_CHECK.json` records fresh install, regenerated data, pytest, Ruff, pip check and actual HTTP extraction/retrieval on port 8001. Results and metrics are summarized in `docs/05-ocr-ai.md` after completion; these synthetic checks do not establish production fraud precision or independent-vendor extraction accuracy.
 
+## Latest main integration
+
+Main `7d46da5` (Wallet PR #17) was merged without conflict. Policy tests: **251 passed / 3 skipped**. Wallet tests: **122 passed / 2 skipped**. Companion-only grounding/publisher coverage: **13 passed**, with Ruff clean. The actual clean run reaches Policy approve but Wallet returns **blocked / SchemaInvalid**; the PM orchestrator still sends the old execute payload without complete fingerprint/intent fields or Registry/credit-approval lifecycle. This is a PM integration dependency, not a reason to bypass the Wallet guard. The OCR release scope does not claim successful funding.
+
 ## Limits retained
 
 English remains primary, Thai secondary and Chinese experimental/review-only. This change improves correctness and concurrent candidate throughput; it does not improve raw scan recognition accuracy or resolve global-layout gaps. The published synthetic invoice pack is development data and its prior 77.59% header accuracy is below target. Independent licensed holdouts, confirmed fraud labels, live hosted inference, issuer/bank authentication and real settlement remain unverified. PO/case/graph consumer adoption still requires a PM-reviewed contract; HMAC normalization changes require a reviewed history migration for live state.

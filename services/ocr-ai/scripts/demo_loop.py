@@ -439,6 +439,12 @@ def main() -> int:
                         "policy_decision": happy["policy"].get("decision"),
                         "policy_version": happy["policy"].get("policy_version"),
                         "wallet_status": (happy.get("wallet") or {}).get("status"),
+                        "wallet_block_reason": (happy.get("wallet") or {}).get("block_reason"),
+                        "wallet_failed_checks": [
+                            check.get("code")
+                            for check in (happy.get("wallet") or {}).get("checks", [])
+                            if check.get("passed") is False
+                        ],
                         "flow_outcome": happy.get("outcome"),
                     },
                     "repeat_invoice": {
@@ -535,8 +541,8 @@ def main() -> int:
                         "guards exercised here; Policy source is owned outside OCR."
                     ),
                     (
-                        "Wallet remains a demo stub; this loop does not verify wallet guard execution "
-                        "or submit a real chain transaction."
+                        "The current Wallet uses its mock ledger/guards; this OCR loop does not prove "
+                        "successful drawdown, complete Wallet lifecycle, or real chain settlement."
                     ),
                     (
                         "The orchestrator registry is process-local memory; this repeat test is not "

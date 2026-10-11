@@ -54,6 +54,8 @@ services/ocr-ai/.venv/bin/ruff check services/ocr-ai
 services/ocr-ai/.venv/bin/ruff format --check services/ocr-ai
 services/ocr-ai/.venv/bin/python -m pip check
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/demo_order.py
+# Install peer dependencies before the cross-service loop:
+services/ocr-ai/.venv/bin/python -m pip install -r services/ocr-ai/requirements-integration.txt
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/demo_loop.py --strict --skip-fraud-eval
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/eval.py
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/benchmark_cache.py
@@ -123,6 +125,6 @@ Cache misses are deduplicated per document key for hosted and Qwen readers. Diff
 
 ## Integration limits and handoff
 
-Policy accepts the shared invoice projection and applies its own guards: fraud ≥0.30 → reject; injection or confidence <0.80 → review. The actual local Policy implementation is exercised in `demo_loop.py`; PO/case/graph adoption still needs a separately reviewed PM contract. Shared schemas, Policy, Wallet and orchestrator code are unchanged. The loop is a mock-chain integration check, not proof of real wallet enforcement or settlement.
+Policy accepts the shared invoice projection and applies its own guards: fraud ≥0.30 → reject; injection or confidence <0.80 → review. The actual local Policy implementation is exercised in `demo_loop.py`; PO/case/graph adoption still needs a separately reviewed PM contract. Shared schemas, Policy, Wallet and orchestrator code are unchanged. Main at `7d46da5` now includes the Wallet implementation. The loop exercises its mock-ledger response; The current clean run is `Policy approve → Wallet blocked / SchemaInvalid`: the PM-owned orchestrator sends the old execute payload without required fingerprint/intent bindings, and does not run Registry registration / credit approval. PM must wire those lifecycle steps and fields before claiming successful drawdown. OCR does not bypass those guards or prove real settlement.
 
 Read [review fixes and validation](docs/REVIEW_FOLLOWUP.md), [architecture](docs/ARCHITECTURE.md), [consumer handoff](docs/HANDOFF.md), [document coverage](docs/DOCUMENT_CATALOG.md), [fraud rules](docs/FRAUD_VALIDATION.md), and [Policy handoff](docs/POLICY_INTEGRATION_HANDOFF.md). Broader experimental findings and attributed external data are in the companion corpus/evidence PR. The external synthetic development set remains below the global accuracy target; an independent vendor holdout, confirmed fraud labels and live hosted-model validation remain outstanding.

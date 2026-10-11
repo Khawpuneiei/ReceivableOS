@@ -189,6 +189,7 @@ def main():
             "Live hosted provider/model inference",
             "Global vendor holdout >=90%",
             "Authoritative issuer/bank/signature/settlement verification",
+            "PM-owned complete Wallet lifecycle and successful drawdown",
         ],
     }
     if args.fresh:

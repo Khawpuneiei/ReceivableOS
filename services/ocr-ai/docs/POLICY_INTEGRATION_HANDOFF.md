@@ -1,6 +1,6 @@
 # Policy and orchestration integration handoff
 
-Status checked 11 October 2026 after merging main commit 7c7056c into ocr/evidence-fraud-graph. The current Policy implementation replaces the earlier fixed approval stub. The complete OCR release loop reports release_ready=true and zero Policy guard violations. The Policy suite passes 251 tests with 3 skipped; the OCR suite passes 184 tests locally and in a clean clone.
+Status checked 11 October 2026; current base includes main commit 7d46da5 and its Wallet implementation. The current Policy implementation replaces the earlier fixed approval stub. The complete OCR release loop reports release_ready=true and zero Policy guard violations. The Policy suite passes 251 tests with 3 skipped; the OCR suite passes 184 tests locally and in a clean clone.
 
 ## Verified integration behavior
 
@@ -55,6 +55,10 @@ Evidence references must bind to the corresponding document hash, page, and boun
 4. OCR owner reruns extract, invoice/PO verification, supporting-case verification, and the integrated demo against the accepted contract.
 5. Wallet/security owner independently binds an approved Policy decision to invoice hashes, fingerprint, mandate, and payee. OCR's unsigned handoff does not authorize execution.
 
+## Latest Wallet integration dependency
+
+After main `7d46da5`, the actual clean PDF flow reaches Policy approve but Wallet returns `blocked / SchemaInvalid`. The orchestrator still sends its legacy execute payload without complete fingerprint/intent bindings; it also needs Registry registration and credit approval before drawdown. PM owns this integration. OCR keeps the rejection visible and does not bypass Wallet guards. Wallet tests independently pass 122/2 skipped.
+
 ## Evaluation limits
 
-The checks above use fictional generated documents and planted fraud sequences. They are regression evidence, not production precision/recall, global OCR accuracy, real fraud calibration, or proof of issuer, bank-account, signature, ownership, delivery, acceptance, or settlement authenticity. Live hosted inference and a permissioned independent holdout remain unverified. See DATASET_ACCESS_AND_HOLDOUT.md for source, access, and holdout requirements.
+The checks above use fictional generated documents and planted fraud sequences. They are regression evidence, not production precision/recall, global OCR accuracy, real fraud calibration, or proof of issuer, bank-account, signature, ownership, delivery, acceptance, or settlement authenticity. Live hosted inference and a permissioned independent holdout remain unverified. See the companion branch's DATASET_ACCESS_AND_HOLDOUT.md for source, access, and holdout requirements.
