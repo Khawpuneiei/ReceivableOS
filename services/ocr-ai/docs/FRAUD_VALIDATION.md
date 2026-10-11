@@ -4,7 +4,7 @@ Date: 2026-10-10
 Branch: `ocr/evidence-fraud-graph`
 Data: generated fictional documents and the checked-in, attributed development corpora
 
-## Results
+## Historical results (before current main Wallet merge)
 
 - `services/ocr-ai/.venv/bin/python -m pytest services/ocr-ai -q`: **149 passed**, with five PyMuPDF/SWIG deprecation warnings. This includes multipart API integration, graph, privacy, financial comparison, history, and OCR regressions.
 - `services/ocr-ai/scripts/eval.py`: the generated English and Thai text-document set matched **91/91 annotated header fields** for each language; each language also matched **7/7** fields on its PO. The 10 planted fraud sequences (five per language) all emitted the expected signals.
@@ -46,4 +46,4 @@ services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/eval.py
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/consumer_review.py
 ```
 
-Evaluation and regression fixtures are generated into temporary locations. The active language/layout corpora and their attribution remain checked in separately.
+Evaluation and regression fixtures are generated into temporary locations. Optional language/layout corpora and attribution are in the companion PR. Current validation is summarized in REVIEW_FOLLOWUP.md and the service README.
