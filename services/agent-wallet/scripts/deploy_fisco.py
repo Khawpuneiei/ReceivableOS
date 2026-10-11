@@ -33,6 +33,7 @@ from shared.money import to_units  # noqa: E402
 CONFIG = SERVICE / "config"
 DEPLOYMENTS = SERVICE / "contracts" / "deployments.json"
 RECEIPTS = SERVICE / "eval" / "fisco-receipts"  # every deploy transaction's receipt, as JSON (evidence)
+DEPLOYMENT_RECORD = SERVICE / "eval" / "fisco-deployment.md"  # the same transactions, as a table
 ROLES = ["deployer", "agent", "approver", "risk_oracle", "buyer"]
 LIQUIDITY = 500000000  # 5,000,000.00 tTHB, the same as bootstrap_demo in the mock
 MAX_UINT = 2**256 - 1
@@ -51,6 +52,34 @@ def check(receipt: dict, label: str) -> dict:
     path = RECEIPTS / f"{receipt['transactionHash']}.json"
     path.write_text(json.dumps(receipt, indent=2), encoding="utf-8")
     return receipt
+
+
+def write_deployment_record(record: dict, receipts: Path = RECEIPTS, out: Path = DEPLOYMENT_RECORD) -> None:
+    """eval/fisco-deployment.md: every transaction of this deployment, in block order, read from the saved
+    receipts. A deploy has an empty `to`; every other transaction is a call."""
+    saved = [json.loads(path.read_text(encoding="utf-8")) for path in receipts.glob("*.json")]
+    saved.sort(key=lambda r: as_int(r["blockNumber"]))
+    lines = [
+        "# FISCO deployment transactions",
+        "",
+        f"Chain {record['chain_id']}, group {record['group']}, FISCO BCOS 3.16.4 (Air, 4 nodes). "
+        f"Deployed {record['deployed_at']}.",
+        "Every hash below is a FISCO BCOS transaction hash. The receipts are in eval/fisco-receipts/.",
+        "",
+        "Contracts (addresses only):",
+        "",
+    ]
+    lines += [f"- {name}: `{address}`" for name, address in record["contracts"].items()]
+    lines += ["", "| block | tx hash | kind | created contract | result |", "|---|---|---|---|---|"]
+    for r in saved:
+        is_deploy = not r.get("to")
+        kind = "deploy" if is_deploy else "call"
+        created = r["contractAddress"] if is_deploy else "-"
+        result = "ok" if as_int(r["status"]) == 0 else "reverted"
+        lines.append(
+            f"| {as_int(r['blockNumber'])} | `{r['transactionHash']}` | {kind} | {created} | {result} |"
+        )
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def deploy(client, name: str, args: list) -> str:
@@ -156,7 +185,8 @@ def main() -> int:
     everything = json.loads(DEPLOYMENTS.read_text(encoding="utf-8")) if DEPLOYMENTS.exists() else {}
     everything["fisco"] = record
     DEPLOYMENTS.write_text(json.dumps(everything, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote the fisco block of {DEPLOYMENTS}")
+    write_deployment_record(record)
+    print(f"wrote the fisco block of {DEPLOYMENTS} and {DEPLOYMENT_RECORD.name}")
     return 0
 
 

@@ -99,8 +99,8 @@ This needs Docker Desktop. The chain runs in an Ubuntu 22.04 container. Its data
 The daily cap is a rolling 24h total that every run adds to. The demo mandate allows THB 3,000,000. One full run draws
 THB 1,504,300 (524,300 and 980,000), so a second run within 24 hours fails its large-draw step with `DailyCapExceeded`.
 That refusal happens in the wallet, before any transaction, and the wallet reads the chain's total when it starts, so
-restarting does not reset it. Use `--fresh` before a rehearsal or a recording. A fresh deployment also gives a new record of the deploy transactions in
-`eval/fisco-deployment.md` (regenerate it from `eval/fisco-receipts/`).
+restarting does not reset it. Use `--fresh` before a rehearsal or a recording. A fresh deployment also rewrites
+`eval/fisco-deployment.md` from `eval/fisco-receipts/`, so that record matches the contracts the demo runs on.
 
 ## Test
 
