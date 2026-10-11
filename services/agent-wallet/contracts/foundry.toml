@@ -1,0 +1,10 @@
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+libs = []
+solc = "0.8.11"
+optimizer = true
+optimizer_runs = 200
+# The compiler binary is found through FOUNDRY_SOLC (a path to solc-0.8.11), set per machine.
+# Forge does not download it when the variable is set, so builds work offline.
