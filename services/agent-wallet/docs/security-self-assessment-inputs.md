@@ -26,7 +26,7 @@ Off-chain guard, in layer order (`app/guard/pipeline.py`, `app/guard/injection.p
   the decision's. At the draw, the decision must be fresh (`valid_until`, a wallet-side stopgap) and must match the hash
   approved on chain.
 - **L2:** injection rules across decoded views, the canary, and an optional classifier (`log`, `hold`, or `block`).
-- **L3:** the seller is KYC-verified (a mock flag in the payee registry), the mandate has started and not expired, the
+- **L3:** the seller is KYC-verified (a mock flag in the payee registry that lapses on `kyc_expiry`), the mandate has started and not expired, the
   request names the active mandate, payee bound to the seller, target allowlist, pause, per-tx and rolling 24h caps,
   APR ceiling, PD ceiling, advance against face value, approved limit, and already drawn.
 - **L4:** amounts at or above THB 837,500.00 (inclusive) need an approver. Holds expire after 24 hours.
@@ -107,7 +107,7 @@ teammate. The submission rules need someone else to do it.
 
 ## 4. Test evidence
 
-- `pytest services/agent-wallet`: 135 passed, 2 skipped, at `a901820`. The two model tests need `INJECTION_MODEL_DIR`.
+- `pytest services/agent-wallet`: 137 passed, 2 skipped, on the branch head after the KYC-expiry commit (135 at `a901820`). The two model tests need `INJECTION_MODEL_DIR`.
 - `forge test --offline` in `contracts/`: 42 passed (40 revert, settlement and flow tests, and 2 time-unit tests). Every revert string has a test.
 - `ruff check`: clean.
 
@@ -151,8 +151,9 @@ teammate. The submission rules need someone else to do it.
     The vault rule is correct, but it is a false block for small draws. Options: take the platform fee from the
     settlement, or set a minimum draw in the mandate.
 13. **KYC is a mock flag.** A payee's `kyc_verified` is set in `config/payees.json`. It is not a check against a KYC
-    provider. The guard refuses an unverified seller, and the chain allowlists only verified payees. The flag has no
-    expiry date; docs/06 §6 asks for `kyc_valid` and `kyc_expiry` per party.
+    provider. The guard refuses an unverified seller, and the chain allowlists only verified payees. The flag can carry an
+    expiry date (`kyc_expiry`; 31 Dec 2026 for the demo payees). After it, registration and draws refuse the seller,
+    but the on-chain allowlist keeps the address, so the expiry is enforced off chain only.
 14. **Lesson from the FISCO run: the chains differ.** FISCO's block timestamp is in milliseconds, and the Anvil runs could
     not show the resulting expiry error. The time unit is now a deploy parameter. Any further EVM-compatibility
     assumption needs a test on the target chain.
@@ -175,5 +176,5 @@ teammate. The submission rules need someone else to do it.
 - Risk 12: whether the platform fee comes out of the settlement, or a minimum draw goes in the mandate.
 - The freeze date: the scope doc says 12 Oct 12:00 Bangkok, labelled "Sunday", which does not match 12 Oct 2026.
 - Whether the FISCO deployment keys live in key files or an HSM (CLAUDE.md §5.1 says files).
-- Risks 15 to 17 and risk 13's KYC expiry: whether the pitch's known-limits line covers outstanding exposure, and whether
-  `flow_id` and KYC expiry go in before the freeze. Both need the orchestrator to send new fields.
+- Risks 15 to 17: whether the pitch's known-limits line covers outstanding exposure, and whether `flow_id` goes in before
+  the freeze. `flow_id` needs the orchestrator to send it.

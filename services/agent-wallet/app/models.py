@@ -183,6 +183,10 @@ class Payee(BaseModel):
     # The mock KYC credential flag (scope doc section 2). Only verified payees are allowlisted on chain,
     # and the guard refuses an unverified seller. Defaults to False, so an unflagged party is not trusted.
     kyc_verified: bool = False
+    # Optional end of the KYC credential, in Bangkok time. After it, the seller counts as unverified: the
+    # wallet refuses the register and the draw. The chain keeps the allowlist it was given at deploy.
+    # None means no expiry.
+    kyc_expiry: date | None = None
 
 
 def load_mandate(path: Path) -> Mandate:

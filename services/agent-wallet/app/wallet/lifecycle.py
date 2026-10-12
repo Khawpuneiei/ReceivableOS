@@ -252,9 +252,13 @@ class WalletService:
         return self._run("register", req.invoice_id, key, lambda: self._register(req))
 
     def _seller_kyc(self, seller_address: str | None) -> bool:
-        """The KYC flag of the payee at this address. An address not in the registry is not verified."""
+        """The KYC flag of the payee at this address, while its credential has not expired.
+        An address not in the registry, or an expired credential, is not verified."""
+        today = self._today()
         return any(
-            p.kyc_verified and p.address.lower() == (seller_address or "").lower()
+            p.kyc_verified
+            and p.address.lower() == (seller_address or "").lower()
+            and (p.kyc_expiry is None or today <= p.kyc_expiry)
             for p in self.payees.values()
         )
 

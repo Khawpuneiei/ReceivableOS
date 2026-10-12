@@ -12,7 +12,7 @@ Build brief for the service: [`CLAUDE.md`](CLAUDE.md). Request and response mode
   against them with `LEDGER_MODE=fisco`, and the demo's on-chain transactions are checked on chain. The records are in
   [`eval/fisco-deployment.md`](eval/fisco-deployment.md) and [`eval/demo_tx_hashes_fisco.md`](eval/demo_tx_hashes_fisco.md).
 - **Local Anvil:** `scripts/deploy.py` and `scripts/evm_smoke.py` pass 7 of 7 checks.
-- **Tests:** `pytest` 135 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. Checked from a fresh clone.
+- **Tests:** `pytest` 137 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
 - **Orchestrator:** the integration isn't finished. See `docs/orchestrator-integration.md`.
 
 Per-item status is in the table in [`docs/03-agent-wallet.md`](../../docs/03-agent-wallet.md) section 8.
@@ -175,7 +175,8 @@ Money is THB with two decimals.
   mandate. Either one stops a payment. PD, mandate ID, currency and KYC are off-chain checks; the contracts enforce the
   money limits and the payee allowlist.
 - **KYC.** Each payee in `config/payees.json` has a `kyc_verified` flag. An unverified seller is refused at registration
-  (`KycNotVerified`), and only verified payees are allowlisted on chain.
+  (`KycNotVerified`), and only verified payees are allowlisted on chain. A `kyc_expiry` date, when set, makes the flag
+  lapse after that day, and the seller is then refused the same way.
 - **Time.** On FISCO, `block.timestamp` is in milliseconds. `PolicyGuard` takes a `timeScale` (1000 on FISCO) and works
   in seconds, so the mandate's expiry and the 24h window mean the same moment on both chains.
 - **Holds.** In `hold` mode, a classifier-only flag stores the draft and returns `pending_approval`. The ledger is not
