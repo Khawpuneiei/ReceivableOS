@@ -1,0 +1,34 @@
+{
+  "sentence": "Finance my approved invoices automatically, but never advance more than 70%, never pay more than 12% APR, stop if buyer risk is above 5%, and ask me above THB 837,500.",
+  "from_the_sentence": {
+    "max_ltv": "0.70",
+    "max_apr": "0.12",
+    "max_predicted_default": "0.05",
+    "human_review_above": "837500.00"
+  },
+  "platform_defaults": {
+    "max_amount_per_tx": "1500000.00",
+    "daily_cap": "3000000.00",
+    "expires_at": "2026-11-08T17:00:00+00:00"
+  },
+  "fixed_by_the_platform": {
+    "allowed_currency": "THB",
+    "settlement_asset": "tTHB",
+    "require_kyb": true,
+    "require_buyer_attestation": true,
+    "duplicate_policy": "DENY",
+    "payee_allowlist": [
+      "SELLER:siam-fresh-pack",
+      "LENDER:lender_a",
+      "LENDER:lender_b",
+      "PLATFORM:fee"
+    ],
+    "allowed_targets": [
+      "FinancingVault",
+      "ReceivableRegistry"
+    ]
+  },
+  "parser": "deterministic",
+  "source_text_sha256": "0x0fe3f7bcc57d6fd607f9f055e9879686d5aa19547afef507cc32d6d23d423527",
+  "_note": "From services/policy-ai/fixtures/mandates/demo_thb_expected.json (compile with no LLM). expires_at is compile time + 30 days."
+}
