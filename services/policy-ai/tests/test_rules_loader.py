@@ -49,7 +49,7 @@ def test_key_numbers_are_exact_decimals():
     assert r.rule("REVIEW.PD_ABOVE_CAP").param.review_above == Decimal("0.05")
     assert r.rule("KO.TENOR_TOO_SHORT").param.min_tenor_days == 7
     assert r.defaults.human_review_above["THB"] == Decimal("837500.00")
-    assert r.mandate_limits.registered_payees == ["0xSUPPLIER"]
+    assert "0xSUPPLIER" in r.mandate_limits.payee_registry["SELLER:siam-fresh-pack"]
 
 
 def test_outcomes():

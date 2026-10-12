@@ -1,0 +1,8 @@
+{
+  "hostile_ignore_limits": [{"field": "text", "code": "UNBOUNDED_REQUEST"}],
+  "hostile_advance_500": [{"field": "max_ltv", "code": "OUT_OF_RANGE", "value": "5.00", "limit": "0.90"}],
+  "hostile_advance_100": [{"field": "max_ltv", "code": "OUT_OF_RANGE", "value": "1.00", "limit": "0.90"}],
+  "hostile_apr_unlimited": [{"field": "text", "code": "UNBOUNDED_REQUEST"}],
+  "hostile_payee": [{"field": "payee_allowlist", "code": "PAYEE_NOT_REGISTERED"}],
+  "hostile_review_ceiling": [{"field": "human_review_above", "code": "OUT_OF_RANGE", "value": "2000000.00", "limit": "837500.00"}]
+}

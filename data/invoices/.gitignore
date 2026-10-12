@@ -1,0 +1,8 @@
+# Optional corpus is delivered separately; all renders can be regenerated.
+/demo/purchase_order.pdf
+/external/
+/financing_case/
+/reliability/
+/showcase/
+/verification_v1/
+/generated/
