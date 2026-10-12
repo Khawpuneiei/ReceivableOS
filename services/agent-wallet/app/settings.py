@@ -8,17 +8,21 @@ from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", populate_by_name=True)
 
     wallet_url: str = "http://localhost:8003"
     settlement_token: str = "tTHB"
 
-    # Chain: mock needs no node; fisco needs a running FISCO BCOS node
-    ledger_mode: Literal["mock", "fisco"] = "mock"
+    # Chain: mock needs no node; fisco needs a running FISCO BCOS node. CHAIN_MODE is the team's name (root
+    # CLAUDE.md, .env.example). LEDGER_MODE is still read, so an existing setup keeps its meaning.
+    ledger_mode: Literal["mock", "fisco"] = Field(
+        default="mock", validation_alias=AliasChoices("CHAIN_MODE", "LEDGER_MODE")
+    )
     chain_rpc_url: str = "http://127.0.0.1:20200"
     chain_group_id: str = "group0"
     chain_deployments_file: str = "./services/agent-wallet/contracts/deployments.json"

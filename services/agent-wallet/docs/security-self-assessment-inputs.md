@@ -47,7 +47,7 @@ Other controls:
 ## 3. Measured results
 
 Measured at `a901820`: the wallet branch with `main` merged in. The FISCO adapter, the KYC flag, the agent token, the
-`LEDGER_MODE` rename, the time-unit fix and the daily-cap change all came after `bf8fc1e`. The seven eval reports
+switch rename (now `CHAIN_MODE`), the time-unit fix and the daily-cap change all came after `bf8fc1e`. The seven eval reports
 regenerate byte-identical at `a901820`, so no detection number moved.
 Run with `services/agent-wallet/eval/run_eval.py`.
 
@@ -107,7 +107,7 @@ teammate. The submission rules need someone else to do it.
 
 ## 4. Test evidence
 
-- `pytest services/agent-wallet`: 137 passed, 2 skipped, on the branch head after the KYC-expiry commit (135 at `a901820`). The two model tests need `INJECTION_MODEL_DIR`.
+- `pytest services/agent-wallet`: 141 passed, 2 skipped, at the branch head with the CHAIN_MODE change (135 at `a901820`). The two model tests need `INJECTION_MODEL_DIR`.
 - `forge test --offline` in `contracts/`: 42 passed (40 revert, settlement and flow tests, and 2 time-unit tests). Every revert string has a test.
 - `ruff check`: clean.
 

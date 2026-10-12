@@ -9,10 +9,10 @@ Build brief for the service: [`CLAUDE.md`](CLAUDE.md). Request and response mode
 - **Mock ledger:** the money loop runs end to end over HTTP: register, approve, execute, settle. Guard L0–L4,
   the hash-chained audit log, and hold-for-approval work. `scripts/demo.py` runs against it.
 - **FISCO BCOS 3.16.4:** a 4-node Air chain runs in Docker. The five contracts are deployed and wired, the wallet runs
-  against them with `LEDGER_MODE=fisco`, and the demo's on-chain transactions are checked on chain. The records are in
+  against them with `CHAIN_MODE=fisco`, and the demo's on-chain transactions are checked on chain. The records are in
   [`eval/fisco-deployment.md`](eval/fisco-deployment.md) and [`eval/demo_tx_hashes_fisco.md`](eval/demo_tx_hashes_fisco.md).
 - **Local Anvil:** `scripts/deploy.py` and `scripts/evm_smoke.py` pass 7 of 7 checks.
-- **Tests:** `pytest` 137 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
+- **Tests:** `pytest` 141 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
 - **Orchestrator:** the integration isn't finished. See `docs/orchestrator-integration.md`.
 
 Per-item status is in the table in [`docs/03-agent-wallet.md`](../../docs/03-agent-wallet.md) section 8.
@@ -80,7 +80,7 @@ This needs Docker Desktop. The chain runs in an Ubuntu 22.04 container. Its data
 7. **Wallet, inside the container:**
 
    ```bash
-   cd /repo && LEDGER_MODE=fisco FISCO_SDK_DIR=/opt/python-sdk FISCO_CONFIG_DIR=/work/sdk \
+   cd /repo && CHAIN_MODE=fisco FISCO_SDK_DIR=/opt/python-sdk FISCO_CONFIG_DIR=/work/sdk \
      FISCO_RECEIPTS_DIR=/repo/services/agent-wallet/eval/fisco-receipts-demo \
      CHAIN_ACCOUNT_KEY_PATH=/work/accounts/agent.pem CHAIN_OWNER_KEY_PATH=/work/accounts/deployer.pem \
      CHAIN_APPROVER_KEY_PATH=/work/accounts/approver.pem CHAIN_RISK_ORACLE_KEY_PATH=/work/accounts/risk_oracle.pem \
@@ -143,7 +143,7 @@ Not built: `GET /wallet/registry/{invoice_fingerprint}` and the optional `POST /
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `LEDGER_MODE` | `mock` | `mock`, or `fisco` for the FISCO BCOS adapter on the deployed contracts. |
+| `CHAIN_MODE` (`LEDGER_MODE` also accepted) | `mock` | `mock`, or `fisco` for the FISCO BCOS adapter on the deployed contracts. |
 | `FISCO_SDK_DIR` | unset | Checkout of `FISCO-BCOS/python-sdk` (v3). Needed for `fisco`. |
 | `FISCO_CONFIG_DIR` | unset | Folder with `client_config.py` and `bcos3_sdk_config.ini`. Needed for `fisco`. |
 | `FISCO_RECEIPTS_DIR` | unset | Each FISCO transaction's receipt is saved here as JSON. |

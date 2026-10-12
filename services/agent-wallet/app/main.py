@@ -1,4 +1,4 @@
-"""agent-wallet: guarded execution of financing decisions on a mock ledger or FISCO BCOS (LEDGER_MODE).
+"""agent-wallet: guarded execution of financing decisions on a mock ledger or FISCO BCOS (CHAIN_MODE).
 
 Owner: Agent AI engineer. Endpoints follow CLAUDE.md 6.1; models come from shared/schemas.py.
 """
@@ -36,7 +36,7 @@ def _now() -> datetime:
 
 
 def build_ledger(settings, payees: dict, clock: Callable[[], datetime]):
-    """The ledger behind LEDGER_MODE: the mock, or the FISCO BCOS adapter on the deployed contracts."""
+    """The ledger behind CHAIN_MODE: the mock, or the FISCO BCOS adapter on the deployed contracts."""
     if settings.ledger_mode == "mock":
         return MockLedger(clock=clock)
     from ledger.fisco import FiscoLedger
@@ -51,7 +51,7 @@ def build_ledger(settings, payees: dict, clock: Callable[[], datetime]):
     missing = [role for role, path in keys.items() if not path]
     if missing or not settings.fisco_sdk_dir or not settings.fisco_config_dir:
         raise RuntimeError(
-            f"LEDGER_MODE=fisco needs key paths for {missing} and FISCO_SDK_DIR, FISCO_CONFIG_DIR"
+            f"CHAIN_MODE=fisco needs key paths for {missing} and FISCO_SDK_DIR, FISCO_CONFIG_DIR"
         )
     return FiscoLedger(
         deployment,

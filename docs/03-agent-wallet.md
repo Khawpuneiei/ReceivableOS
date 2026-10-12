@@ -139,7 +139,7 @@ Tx result: `tx_id, status (executed | blocked | pending_approval | failed), chai
 block_reason, audit_ref`. On the mock, hashes are prefixed `mock:` so nobody mistakes them for chain hashes. FISCO
 hashes are plain transaction hashes.
 
-The switch is `LEDGER_MODE` (`mock` or `fisco`), as in the scope doc.
+The switch is `CHAIN_MODE` (`mock` or `fisco`). `LEDGER_MODE` is still read. The scope doc still says `LEDGER_MODE`; P to reconcile.
 
 ## 7. Decisions so far and what's still open
 
@@ -155,7 +155,7 @@ Code freeze: the scope doc says **12 Oct 12:00** Bangkok. Its weekday label, "Su
 is a Monday. The labels in the scope timeline follow the 2025 calendar. P to confirm the date.
 
 Decided by the Agent AI engineer, to be confirmed by P:
-- `LEDGER_MODE`, not `CHAIN_MODE`, to match the scope doc. Done.
+- `CHAIN_MODE` is the name, as the PM's review of PR #44 asks, and the root CLAUDE.md and `.env.example` use it. `LEDGER_MODE` is still read.
 - KYC: a mock flag per payee. Unverified sellers are refused at registration and not allowlisted on chain. Done.
 - An agent token on register, execute and settle. Done.
 - PD stays off-chain. The contract change would need the risk score in `execute`; it is not in the MVP.
@@ -178,9 +178,9 @@ Still open for P:
 | Contracts + Foundry tests | Five contracts, solc 0.8.11. 42 Foundry tests pass (40 revert, settlement and flow tests, and 2 time-unit tests). Every revert string has a test. The guard's time unit is set per chain (`timeScale`) |
 | FISCO chain | **Running.** A 4-node Air chain, FISCO BCOS 3.16.4, in a Docker container, chain0 and group0 |
 | FISCO deploy | **Done.** 22 deploy transactions on chain, each checked against it (`eval/fisco-deployment.md`, `eval/fisco-verification-deploy.txt`) |
-| FISCO adapter and demo | **Done.** The wallet runs with `LEDGER_MODE=fisco`. The demo's 8 sections give the same outcomes as on the mock. Its 11 record hashes are on chain: 8 succeed, 3 revert with `AmountAboveLimit`, `AprAboveMandate`, `DuplicateReceivable` (`eval/demo_tx_hashes_fisco.md`, `eval/fisco-verification-demo.txt`) |
+| FISCO adapter and demo | **Done.** The wallet runs with `CHAIN_MODE=fisco`. The demo's 8 sections give the same outcomes as on the mock. Its 11 record hashes are on chain: 8 succeed, 3 revert with `AmountAboveLimit`, `AprAboveMandate`, `DuplicateReceivable` (`eval/demo_tx_hashes_fisco.md`, `eval/fisco-verification-demo.txt`) |
 | FISCO bug found and fixed | FISCO reports `block.timestamp` in milliseconds. The first FISCO deploy treated it as seconds, so every mandate looked expired. Fixed with `PolicyGuard.timeScale`. Anvil could not show this, because it uses seconds |
-| Mock ledger + endpoints | Done: register, approve, execute, settle, confirm, pause, mandate, audit, holds. 137 pytest tests pass (2 skipped: the classifier model tests). Agent token on register, execute and settle; risk-oracle token on approve |
+| Mock ledger + endpoints | Done: register, approve, execute, settle, confirm, pause, mandate, audit, holds. 141 pytest tests pass (2 skipped: the classifier model tests). Agent token on register, execute and settle; risk-oracle token on approve |
 | Guard L0–L4 | Done for draws: L0–L4 checks, hold-for-approval, hash-chained audit log, anchoring at settlement. KYC flag enforced off-chain and on chain (allowlist). The off-chain check also refuses a seller whose `kyc_expiry` has passed. PD, mandate ID and currency are off-chain only |
 | Eval | Seed set (guard on): 38/38 caught, 0/38 unauthorized, 0/11 benign blocked. Held-out v3: 14/24 caught, 10 reached execute. Held-out v4: 12/30 caught, 18 reached execute. None of them unauthorized under §7.4. Structural set v5: 24/24. The classifier is audit-only by default |
 | Anvil | `scripts/deploy.py` and `scripts/evm_smoke.py`: 7 of 7 checks pass after the time-unit change |
@@ -189,6 +189,6 @@ Still open for P:
 | Demo lender | Selected from `data/agent/lender_quotes.json`: the highest advance inside the mandate's APR cap. Not hardcoded |
 | FISCO rehearsal | `fisco_demo.sh --fresh`, run `20261011122302`: 22 of 22 deploy hashes and 11 of 11 demo hashes on chain. `eval/fisco-deployment.md` is written from the receipts |
 | Demo data | `data/agent/` is tracked. The root `.gitignore` rule `data/*` had hidden it; P to add `!data/agent/` |
-| Config name | `LEDGER_MODE` (matches the scope doc) |
+| Config name | `CHAIN_MODE` (root CLAUDE.md, PM review). `LEDGER_MODE` is still read. The scope doc still says `LEDGER_MODE` |
 | Console screenshots | Not produced. The verification output and the receipts are the evidence in the repo |
 | Security self-assessment inputs | Written: `services/agent-wallet/docs/security-self-assessment-inputs.md`. Checked against `docs/06` on 12 Oct: the mandate values match §1.4. The §6 checklist gaps are known risks 15 to 17 (holds in memory, outstanding exposure, `flow_id`). KYC credentials can now expire (risk 13) |

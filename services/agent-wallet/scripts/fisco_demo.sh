@@ -86,7 +86,7 @@ restart_wallet() {
   docker exec "$CONTAINER" bash -c 'ps -eo pid,args | grep "[u]vicorn app.main" | awk "{print \$1}" | xargs -r kill' || true
   sleep 3
   docker exec -d -w /repo \
-    -e LEDGER_MODE=fisco -e FISCO_SDK_DIR=/opt/python-sdk -e FISCO_CONFIG_DIR=/work/sdk \
+    -e CHAIN_MODE=fisco -e FISCO_SDK_DIR=/opt/python-sdk -e FISCO_CONFIG_DIR=/work/sdk \
     -e FISCO_RECEIPTS_DIR=/repo/services/agent-wallet/eval/fisco-receipts-demo \
     -e CHAIN_ACCOUNT_KEY_PATH=/work/accounts/agent.pem -e CHAIN_OWNER_KEY_PATH=/work/accounts/deployer.pem \
     -e CHAIN_APPROVER_KEY_PATH=/work/accounts/approver.pem \

@@ -1,7 +1,7 @@
 """Ledger interface (CLAUDE.md 5.7). Owner: Agent AI engineer.
 
 Every chain call goes through a LedgerAdapter. `mock` and `fisco` implement the same rules and return the same
-revert strings, so the guard, lifecycle and tests do not change when LEDGER_MODE changes.
+revert strings, so the guard, lifecycle and tests do not change when CHAIN_MODE changes.
 """
 
 from dataclasses import dataclass, field
