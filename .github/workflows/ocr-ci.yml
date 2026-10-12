@@ -2,8 +2,18 @@ name: OCR checks
 
 on:
   pull_request:
+    paths:
+      - "services/ocr-ai/**"
+      - "data/invoices/**"
+      - "shared/**"
+      - ".github/workflows/ocr-ci.yml"
   push:
     branches: [main]
+    paths:
+      - "services/ocr-ai/**"
+      - "data/invoices/**"
+      - "shared/**"
+      - ".github/workflows/ocr-ci.yml"
   workflow_dispatch:
 
 permissions:
