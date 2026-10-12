@@ -54,6 +54,6 @@ def decide(req: PolicyRequestExt) -> PolicyDecisionExt:
 @app.post("/policy/mandate/compile")
 def compile_mandate(req: mandate.CompileRequest) -> dict:
     try:
-        return mandate.compile_mandate(req.text, mandate_id=req.mandate_id)
+        return mandate.compile_text(req.text, mandate_id=req.mandate_id)
     except mandate.MandateRejected as exc:
         raise HTTPException(status_code=422, detail=[v.as_dict() for v in exc.violations]) from None
