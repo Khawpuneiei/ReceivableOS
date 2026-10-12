@@ -61,11 +61,19 @@ services/ocr-ai/.venv/bin/python -m pip install -r services/ocr-ai/requirements-
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/demo_loop.py --strict --skip-fraud-eval
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/eval.py
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/benchmark_cache.py
+# Rebuild five consumer examples without the optional corpus or hosted inference:
+services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/consumer_review.py
 # Complete release check, with fresh clone/environment:
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/release_check.py --fresh --strict
 ```
 
 Reports are generated under `services/ocr-ai/docs/*.json` and ignored by Git. Regression corpora are generated in temporary directories and removed automatically. One publisher-fixture regression is explicitly skipped when the optional corpus is absent; it runs on the companion checkout. The licensed Thai font is retained because core Thai regressions use it.
+
+The evidence-reporting follow-up passes **199 tests / 1 skipped**. Consumer examples regenerate
+their corpus in temporary storage and disable hosted calls, including when the caller's shell
+has a key/opt-in set. The optional external publisher evaluator counts unreadable documents
+in header/line denominators and returns a nonzero exit code for a partial run. This corrects
+reporting; it does not establish improved recognition or an independent vendor holdout.
 
 ## API and data
 
