@@ -108,7 +108,7 @@ teammate. The submission rules need someone else to do it.
 ## 4. Test evidence
 
 - `pytest services/agent-wallet`: 135 passed, 2 skipped, at `a901820`. The two model tests need `INJECTION_MODEL_DIR`.
-- `forge test --offline` in `contracts/`: 25 passed (23 revert and settlement tests, and 2 time-unit tests).
+- `forge test --offline` in `contracts/`: 42 passed (40 revert, settlement and flow tests, and 2 time-unit tests). Every revert string has a test.
 - `ruff check`: clean.
 
 ## 5. Known risks (please read before writing the assessment)

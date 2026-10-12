@@ -7,7 +7,8 @@ Status:
   deploy transaction is on chain. The record is in [`eval/fisco-deployment.md`](../eval/fisco-deployment.md), with the
   receipts in [`eval/fisco-receipts/`](../eval/fisco-receipts/). The addresses are in `deployments.json` under `fisco`.
 - **Local Anvil** (chain 31337): the same contracts, with `scripts/evm_smoke.py` passing 7 of 7 checks.
-- `forge test --offline` passes 25 tests (23 revert and settlement tests, and 2 time-unit tests).
+- `forge test --offline` passes 42 tests: 40 revert, settlement and flow tests, and 2 time-unit tests. Every revert
+  string in the contracts has at least one test.
 
 ## Build and test
 
@@ -104,6 +105,29 @@ is in seconds, so `expiresAt` and the rolling window mean the same moment on bot
 - **Time is in seconds on every chain** (`timeScale`, above).
 - **PD, mandate ID, currency and KYC are not checked on-chain.** The off-chain guard checks them. KYC is enforced on
   chain in one way: only KYC-verified payees are allowlisted with `setPayee`, so an unverified seller cannot be bound.
+
+## Deployed addresses (FISCO)
+
+Deployed 2026-10-11 on chain0 / group0, from `deployments.json` (addresses only; the keys stay in the git-ignored
+`fisco-chain/accounts/`). The mandate hash is the one `PolicyGuard` holds.
+
+| Contract | Address |
+|---|---|
+| MockStable (tTHB) | `0xdccaccc045b5050e52e50fa612807945ef269199` |
+| PolicyGuard | `0xf9c1fa9c25fb71f1c66d0bd5d9f0821bec66255d` |
+| ReceivableRegistry | `0x06dde0313ca13fddf6694526adb619b71e3c7ddb` |
+| FinancingVault | `0xfc44b99facd92dadd45af80c4c4195f57a2a22fc` |
+| AgentWallet | `0x3c661557db69eee1fbae6e7217d6d9dcadcae964` |
+
+| Role | Address |
+|---|---|
+| deployer (owner) | `0x0af701e5362e65BF70f4B31973E9eA30CBfa5494` |
+| agent | `0x88514a6e4a34E219e0bcFa8Eb395Ee4Ef023f014` |
+| approver | `0xce55F72c08339ef91F30B63dfF117F8b65314657` |
+| risk oracle | `0xDcC298134841eF7d1FcfF1d3B4a990709721e83c` |
+| buyer (settlement payer) | `0x23B7f266825abDB08A7Fd357ABD9DC48487e72a6` |
+
+Mandate hash: `0xe3e29223892826754f08e64179a6aeab9e2d87561bb79a2087dfe1cd516288e7`.
 
 ## Evidence
 

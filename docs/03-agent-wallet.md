@@ -175,7 +175,7 @@ Still open for P:
 
 | Item | Status |
 |---|---|
-| Contracts + Foundry tests | Five contracts, solc 0.8.11. 25 Foundry tests pass (the 23 revert and settlement tests, and 2 time-unit tests). The guard's time unit is set per chain (`timeScale`) |
+| Contracts + Foundry tests | Five contracts, solc 0.8.11. 42 Foundry tests pass (40 revert, settlement and flow tests, and 2 time-unit tests). Every revert string has a test. The guard's time unit is set per chain (`timeScale`) |
 | FISCO chain | **Running.** A 4-node Air chain, FISCO BCOS 3.16.4, in a Docker container, chain0 and group0 |
 | FISCO deploy | **Done.** 22 deploy transactions on chain, each checked against it (`eval/fisco-deployment.md`, `eval/fisco-verification-deploy.txt`) |
 | FISCO adapter and demo | **Done.** The wallet runs with `LEDGER_MODE=fisco`. The demo's 8 sections give the same outcomes as on the mock. Its 11 record hashes are on chain: 8 succeed, 3 revert with `AmountAboveLimit`, `AprAboveMandate`, `DuplicateReceivable` (`eval/demo_tx_hashes_fisco.md`, `eval/fisco-verification-demo.txt`) |
