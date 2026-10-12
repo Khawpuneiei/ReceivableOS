@@ -1,0 +1,14 @@
+{
+  "case": "A4",
+  "title": "Draw of THB 749,000.00 against an approved limit of THB 524,300.00",
+  "stopped_by": "Wallet + PolicyGuard",
+  "policy_decision": null,
+  "policy_reasons": [],
+  "step": "A4",
+  "call": "blocked attempt",
+  "tx_id": "tx_a4",
+  "status": "blocked",
+  "chain_ref": "mock:0x25e75bf7b984d589468d5abac5510696c1ea0ab209922358b38dc65b460935f0",
+  "chain": "mock",
+  "block_reason": "AmountAboveLimit"
+}

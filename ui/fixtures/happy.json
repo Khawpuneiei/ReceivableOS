@@ -1,0 +1,266 @@
+{
+  "source": "fixtures",
+  "mandate_text": "Finance my approved invoices automatically, but never advance more than 70%, never pay more than 12% APR, stop if buyer risk is above 5%, and ask me above THB 837,500.",
+  "mandate": {
+    "mandate": {
+      "mandate_id": "mdt_001",
+      "max_ltv": "0.70",
+      "max_apr": "0.12",
+      "max_predicted_default": "0.05",
+      "max_amount_per_tx": "1500000.00",
+      "daily_cap": "3000000.00",
+      "allowed_currency": "THB",
+      "settlement_asset": "tTHB",
+      "require_kyb": true,
+      "require_buyer_attestation": true,
+      "duplicate_policy": "DENY",
+      "human_review_above": "837500.00",
+      "payee_allowlist": [
+        "SELLER:siam-fresh-pack",
+        "LENDER:lender_a",
+        "LENDER:lender_b",
+        "PLATFORM:fee"
+      ],
+      "allowed_targets": [
+        "FinancingVault",
+        "ReceivableRegistry"
+      ],
+      "valid_from": "2026-10-09T17:00:00+00:00",
+      "expires_at": "2026-11-08T17:00:00+00:00"
+    },
+    "asset_type": "trade_receivable",
+    "fields_from_text": [
+      "max_ltv",
+      "max_apr",
+      "max_predicted_default",
+      "human_review_above"
+    ],
+    "fields_from_llm": [],
+    "fields_from_defaults": [
+      "max_amount_per_tx",
+      "daily_cap",
+      "expires_at"
+    ],
+    "warnings": [],
+    "parser": "deterministic",
+    "compiler_version": "mandate-compiler-v0.1",
+    "policy_version": "credit-policy-v0.1",
+    "source_text_sha256": "0x0fe3f7bcc57d6fd607f9f055e9879686d5aa19547afef507cc32d6d23d423527"
+  },
+  "ocr": {
+    "invoice_id": "inv_sfp_0142",
+    "supplier": {
+      "name": "Siam Fresh Pack Co., Ltd.",
+      "tax_id": "0105559000000"
+    },
+    "buyer": {
+      "name": "Mekong Basket Retail PCL",
+      "tax_id": "0107559000001"
+    },
+    "invoice_no": "SFP-INV-2026-0142",
+    "issue_date": "2026-10-01",
+    "due_date": "2026-11-15",
+    "amount": "749000.00",
+    "currency": "THB",
+    "line_items": [
+      {
+        "description": "Food trays",
+        "qty": "50000",
+        "unit_price": "14.00",
+        "total": "700000.00"
+      }
+    ],
+    "confidence": 0.95,
+    "injection_flags": [],
+    "fraud_score": 0.07,
+    "fraud_flags": [],
+    "doc_hash": "sha256:abababababababababababababababababababababababababababababababab",
+    "invoice_fingerprint": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+  },
+  "registry": {
+    "invoice_fingerprint": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+    "duplicate": false
+  },
+  "policy": {
+    "decision": "approve",
+    "advance_rate": "0.70",
+    "limit": "524300.00",
+    "fee_rate": "0.009",
+    "apr": "0.1095",
+    "risk_score": 0.002702,
+    "reasons": [
+      "MODEL.PD: Predicted buyer default 0.27% (credit-lr-2026-10-10.2) (pd 0.002702)",
+      "MODEL.BUYER_TIER: Buyer tier A: lowers predicted default (-0.8288 log-odds)",
+      "MODEL.BUYER_LATE_RATE: Buyer late-payment rate 3.00%: lowers predicted default (-0.3136 log-odds)",
+      "MODEL.TIER_X_TENOR: Buyer tier rank x tenor in months 0: lowers predicted default (-0.2073 log-odds)",
+      "TERMS.MANDATE_CAP: Advance capped by the mandate (advance_rate 0.80 -> 0.70)",
+      "PRICING.RISK_FEE: Risk-based fee per 30 days (fee_rate 0.009, APR 0.1095, annual risk price 0.1074)"
+    ],
+    "model_version": "credit-lr-2026-10-10.2",
+    "policy_version": "credit-policy-v0.1",
+    "pd": 0.002702,
+    "decision_id": "dec_ae60e59c213050f9e4ec4b16",
+    "decision_hash": "0xef1c224adff0decd0d36f585a8ece7ce07b4083ccc33640a7446bd44f86698ad",
+    "expected_loss": "637.50",
+    "tenor_days": 34,
+    "fee_amount": "5347.86",
+    "reason_details": [
+      {
+        "code": "MODEL.PD",
+        "message": "Predicted buyer default 0.27% (credit-lr-2026-10-10.2)",
+        "source": "model",
+        "effect": "pd 0.002702"
+      },
+      {
+        "code": "MODEL.BUYER_TIER",
+        "message": "Buyer tier A: lowers predicted default",
+        "source": "model",
+        "effect": "-0.8288 log-odds"
+      },
+      {
+        "code": "MODEL.BUYER_LATE_RATE",
+        "message": "Buyer late-payment rate 3.00%: lowers predicted default",
+        "source": "model",
+        "effect": "-0.3136 log-odds"
+      },
+      {
+        "code": "MODEL.TIER_X_TENOR",
+        "message": "Buyer tier rank x tenor in months 0: lowers predicted default",
+        "source": "model",
+        "effect": "-0.2073 log-odds"
+      },
+      {
+        "code": "TERMS.MANDATE_CAP",
+        "message": "Advance capped by the mandate",
+        "source": "rule",
+        "effect": "advance_rate 0.80 -> 0.70"
+      },
+      {
+        "code": "PRICING.RISK_FEE",
+        "message": "Risk-based fee per 30 days",
+        "source": "rule",
+        "effect": "fee_rate 0.009, APR 0.1095, annual risk price 0.1074"
+      }
+    ],
+    "top_features": [
+      {
+        "feature": "buyer_tier_ord",
+        "value": 0.0,
+        "contribution": -0.8288
+      },
+      {
+        "feature": "buyer_late_payment_rate",
+        "value": 0.03,
+        "contribution": -0.3136
+      },
+      {
+        "feature": "buyer_tier_x_tenor_30d",
+        "value": 0.0,
+        "contribution": -0.2073
+      }
+    ],
+    "rule_trace": [
+      "MANDATE.DEFAULT:skip(request-mandate)",
+      "HARD.FRAUD_SCORE:pass",
+      "HARD.INJECTION:pass",
+      "HARD.LOW_CONFIDENCE:pass",
+      "HARD.KYC_UNKNOWN:pass",
+      "KO.DUPLICATE:pass",
+      "KO.PO_MISMATCH:pass",
+      "KO.KYC_INVALID:pass",
+      "KO.OVERDUE:pass",
+      "KO.TENOR_TOO_SHORT:pass",
+      "KO.TENOR_TOO_LONG:pass",
+      "KO.TOO_OLD:pass",
+      "KO.BUYER_TIER:pass",
+      "KO.CURRENCY:pass",
+      "KO.DATES_INVALID:pass",
+      "KO.PD_TOO_HIGH:pass",
+      "REVIEW.PD_ABOVE_CAP:pass",
+      "REVIEW.UNCONFIRMED_BUYER:pass",
+      "REVIEW.FRAUD_FLAGS:pass",
+      "REVIEW.LINE_ITEMS_MISMATCH:pass",
+      "REVIEW.NEW_SUPPLIER:pass",
+      "REVIEW.LARGE_TICKET:skip(disabled)",
+      "REVIEW.THIN_PROFILE:pass",
+      "TERMS.HAIRCUT_UNCONFIRMED:pass",
+      "TERMS.HAIRCUT_TENOR:pass",
+      "TERMS.HAIRCUT_AGE:pass",
+      "TERMS.HAIRCUT_DILUTION:pass",
+      "TERMS.HAIRCUT_PD:pass",
+      "KO.NO_HEADROOM:pass",
+      "KO.PRICING:pass",
+      "REVIEW.CONCENTRATION:pass",
+      "REVIEW.MANDATE_APR:pass"
+    ],
+    "valid_until": "2026-10-11T21:08:36.887414Z",
+    "as_of_date": "2026-10-12",
+    "request_hash": "0xc2b50603933ed3e9377a31d50fbb5ce01f1bbcd31556a54dc817b3026bfc2322"
+  },
+  "offers": [
+    {
+      "lender": "Lender A",
+      "advance_rate": "0.70",
+      "apr": "0.1095",
+      "within_mandate": true,
+      "chosen": true,
+      "reason": "highest advance within the APR cap"
+    },
+    {
+      "lender": "Lender B",
+      "advance_rate": "0.65",
+      "apr": "0.0913",
+      "within_mandate": true,
+      "chosen": false,
+      "reason": "lower advance"
+    }
+  ],
+  "wallet": {
+    "tx_id": "tx_tx4",
+    "status": "executed",
+    "chain_ref": "mock:0x95ae0427dd653b2a52d45dd59e354512e182619899b4fcfb9f5fe5ea549763cd",
+    "approvals_required": 0,
+    "audit_ref": "audit_000004",
+    "chain": "mock",
+    "block_reason": null
+  },
+  "timeline": [
+    {
+      "step": "TX-1",
+      "call": "Registry.register",
+      "tx_id": "tx_tx1",
+      "status": "executed",
+      "chain_ref": "mock:0x420db16122586d7c71a98e995c32176a460fe545beb24cfd500f8054d6bc1113",
+      "chain": "mock",
+      "block_reason": null
+    },
+    {
+      "step": "TX-2",
+      "call": "Registry.approve",
+      "tx_id": "tx_tx2",
+      "status": "executed",
+      "chain_ref": "mock:0xcd6b2b2e9bce934c30868907746e842a95544eca1de087d90162021134ed81cc",
+      "chain": "mock",
+      "block_reason": null
+    },
+    {
+      "step": "TX-4",
+      "call": "AgentWallet.execute -> Vault.draw",
+      "tx_id": "tx_tx4",
+      "status": "executed",
+      "chain_ref": "mock:0x37b2c1cc38170088114c024befa728b4fec2b7f5753e6e96ebe9bfc4c6c9b872",
+      "chain": "mock",
+      "block_reason": null
+    }
+  ],
+  "repay": {
+    "step": "TX-5",
+    "call": "AgentWallet.execute -> Vault.repay",
+    "tx_id": "tx_tx5",
+    "status": "executed",
+    "chain_ref": "mock:0x12d9a703e7127af41db048ee744e53fa46c7eac64a44d0d0a6d001d0e1fd156a",
+    "chain": "mock",
+    "block_reason": null
+  },
+  "outcome": "executed"
+}

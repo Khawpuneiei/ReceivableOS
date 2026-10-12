@@ -1,0 +1,40 @@
+{
+  "case": "A3",
+  "title": "Lender quote at 19% APR against a 12% mandate",
+  "stopped_by": "Orchestrator + PolicyGuard",
+  "policy_decision": null,
+  "policy_reasons": [],
+  "step": "A3",
+  "call": "blocked attempt",
+  "tx_id": "tx_a3",
+  "status": "blocked",
+  "chain_ref": "mock:0x4dfd7d46490e6531c19dc9bd077c259594c669f892bd6246a4d3c8efc502101f",
+  "chain": "mock",
+  "block_reason": "AprAboveMandate",
+  "offers": [
+    {
+      "lender": "Lender A",
+      "advance_rate": "0.70",
+      "apr": "0.1095",
+      "within_mandate": true,
+      "chosen": true,
+      "reason": "highest advance within the APR cap"
+    },
+    {
+      "lender": "Lender B",
+      "advance_rate": "0.65",
+      "apr": "0.0913",
+      "within_mandate": true,
+      "chosen": false,
+      "reason": "lower advance"
+    },
+    {
+      "lender": "Lender X",
+      "advance_rate": "0.80",
+      "apr": "0.19",
+      "within_mandate": false,
+      "chosen": false,
+      "reason": "APR 19% is above the mandate's 12%: dropped"
+    }
+  ]
+}

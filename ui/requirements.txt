@@ -1,0 +1,3 @@
+# Demo screen (ui/). Talks only to the orchestrator; no service code is imported at run time.
+streamlit==1.65.0
+httpx==0.28.1
