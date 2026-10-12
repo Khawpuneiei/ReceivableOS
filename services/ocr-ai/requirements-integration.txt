@@ -1,0 +1,5 @@
+# Optional cross-service loop only; standalone OCR does not need these peer dependencies.
+-r requirements-dev.txt
+-r ../policy-ai/requirements.txt
+-r ../agent-wallet/requirements.txt
+-r ../orchestrator/requirements.txt
