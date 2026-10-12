@@ -265,3 +265,4 @@ and versions give the same hash.
 | Scenarios passing | **9 / 9** (1–8 and the hostile mandates of 9), plus 8b and 8 demo-data variants |
 | Mandate shape agreed with Agent Wallet | Wallet PR #17 field names; compiler output parses with a copy of its `Mandate` model; the real-model test runs once #17 merges |
 | Demo UI | `ui/`: fixtures mode done; live mode wired to the orchestrator with labelled fallbacks for its missing routes |
+| `/policy/explain` (stretch) | Done: a template explanation from the decision's numbers and YAML reason messages; an optional LLM rephrasing is used only if every number in it is a fact |
