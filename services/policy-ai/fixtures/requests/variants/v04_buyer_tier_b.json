@@ -1,0 +1,72 @@
+{
+  "invoice": {
+    "invoice_id": "inv_var_04",
+    "supplier": {
+      "name": "Siam Fresh Pack Co., Ltd.",
+      "tax_id": "0105559000000"
+    },
+    "buyer": {
+      "name": "Chao Phraya Fresh Mart Co., Ltd.",
+      "tax_id": "0105562000015"
+    },
+    "invoice_no": "SFP-INV-2026-0142",
+    "issue_date": "2026-10-01",
+    "due_date": "2026-11-15",
+    "amount": "749000.00",
+    "currency": "THB",
+    "line_items": [
+      {
+        "description": "Food trays",
+        "qty": "50000",
+        "unit_price": "14.00",
+        "total": "700000.00"
+      }
+    ],
+    "confidence": 0.95,
+    "injection_flags": [],
+    "fraud_score": 0.07,
+    "fraud_flags": [],
+    "doc_hash": "sha256:abababababababababababababababababababababababababababababababab",
+    "invoice_fingerprint": "0x0404040404040404040404040404040404040404040404040404040404040404"
+  },
+  "supplier_profile": {
+    "name": "Siam Fresh Pack Co., Ltd.",
+    "tax_id": "0105559000000",
+    "wallet_address": "0xSUPPLIER",
+    "years_trading": 3,
+    "revenue_thb": "62000000.00",
+    "invoices_financed_count": 12,
+    "invoices_total": 36,
+    "paid_on_time": 34,
+    "historical_default_rate": 0.0,
+    "dilution_rate": 0.02,
+    "kyc_valid": true,
+    "kyc_expiry": "2027-06-30",
+    "current_exposure": "0.00",
+    "facility_limit": "3000000.00"
+  },
+  "buyer_profile": {
+    "name": "Chao Phraya Fresh Mart Co., Ltd.",
+    "tax_id": "0105562000015",
+    "internal_rating": "BBB",
+    "revenue_thb": "6200000000.00",
+    "on_time_payment_rate": 0.92,
+    "avg_days_late": 4.0,
+    "buyer_confirmed": true,
+    "relationship_months": 24,
+    "sector": "retail",
+    "current_exposure": "0.00",
+    "buyer_limit": "6000000.00"
+  },
+  "mandate": {
+    "mandate_id": "mdt_001",
+    "max_ltv": "0.70",
+    "max_apr": "0.12",
+    "max_predicted_default": "0.05",
+    "human_review_above": "837500.00",
+    "max_amount_per_tx": "1500000.00",
+    "daily_cap": "3000000.00",
+    "allowed_currency": "THB"
+  },
+  "as_of_date": "2026-10-12"
+}
