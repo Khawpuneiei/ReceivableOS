@@ -2,6 +2,8 @@
 
 One screen, top to bottom: mandate, invoice, decision, offers, on-chain timeline, attacks, footer.
 UI_MODE=fixtures (the default) renders the saved responses in ui/fixtures/ with no backend.
+UI_MODE=live talks to the orchestrator only (ui/client.py); any part it can't serve yet falls back to the
+fixture with a visible label, and an unreachable orchestrator shows an amber banner instead of crashing.
 Every number on screen comes from a response or a fixture; nothing is typed into the UI.
 All text from the invoice is untrusted, so it is HTML-escaped before it is shown.
 """
@@ -13,10 +15,12 @@ import json
 import os
 from pathlib import Path
 
+import client as orch
 import format as fmt
 import streamlit as st
 
 HERE = Path(__file__).resolve().parent
+DEMO_INVOICE = HERE.parent / "data" / "invoices" / "demo_invoice.txt"
 FIXTURES = HERE / "fixtures"
 ATTACKS = ("a1", "a2", "a3", "a4", "a5", "a6")
 ATTACK_LABELS = {
@@ -75,12 +79,44 @@ def mode() -> str:
 
 
 def load_view() -> dict:
-    """The happy-path view model: mandate_text, mandate, ocr, registry, policy, offers, wallet, timeline."""
-    return load_fixture("happy")
+    """The view model: mandate_text, mandate, ocr, registry, policy, offers, wallet, timeline, repay."""
+    return st.session_state.get("view") or load_fixture("happy")
+
+
+def live() -> bool:
+    return mode() == "live"
+
+
+def fixture_label(view: dict, part: str) -> None:
+    if view.get("source") == "orchestrator" and part in view.get("from_fixture", []):
+        st.caption(f"FIXTURE: the orchestrator does not return {part} yet; showing saved data.")
+
+
+def run_controls() -> None:
+    """Live mode: run the flow through the orchestrator with the demo invoice or an upload."""
+    upload = st.file_uploader("Invoice file", key="upload")
+    if st.button("Run flow with this file" if upload else "Use demo invoice"):
+        content, name = (
+            (upload.getvalue(), upload.name) if upload else (DEMO_INVOICE.read_bytes(), DEMO_INVOICE.name)
+        )
+        try:
+            raw = orch.Orchestrator().run_flow(content, name)
+            st.session_state.view = orch.to_view(raw, load_fixture("happy"))
+            st.session_state.update(paid=False, approved=False, notice=None, extra_tx=[])
+        except (orch.Unavailable, orch.Unsupported, ValueError) as exc:
+            st.session_state.notice = f"Orchestrator unavailable ({exc}); showing fixtures."
+        st.rerun()
 
 
 def init_state() -> None:
-    defaults = {"attacks": [], "paid": False, "approved": False, "compiled": True}
+    defaults = {
+        "attacks": [],
+        "paid": False,
+        "approved": False,
+        "compiled": True,
+        "notice": None,
+        "extra_tx": [],
+    }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
 
@@ -92,8 +128,12 @@ def header(view: dict) -> None:
         + badge(f"ledger: {chain}", "pending_approval" if chain == "mock" else "executed"),
         unsafe_allow_html=True,
     )
+    if st.session_state.notice:
+        st.warning(st.session_state.notice)
     if view.get("source") == "fixtures":
         st.info("FIXTURE MODE: saved responses from ui/fixtures/, no backend called.")
+    else:
+        st.success(f"LIVE: orchestrator at {orch.base_url()} · flow state {view.get('state')}")
 
 
 def section_mandate(view: dict) -> None:
@@ -101,8 +141,15 @@ def section_mandate(view: dict) -> None:
     text = st.text_area("The SME's rule, in plain language", view["mandate_text"], height=80)
     if st.button("Compile"):
         st.session_state.compiled = True
-        if text.strip() != view["mandate_text"].strip():
+        if live():
+            try:
+                view["mandate"] = orch.Orchestrator().compile_mandate(text)
+                view["from_fixture"] = [part for part in view.get("from_fixture", []) if part != "mandate"]
+            except (orch.Unavailable, orch.Unsupported) as exc:
+                st.warning(f"Compile not available from the orchestrator ({exc}); showing the saved mandate.")
+        elif text.strip() != view["mandate_text"].strip():
             st.warning("Compiling new wording needs the orchestrator. Showing the saved demo mandate.")
+    fixture_label(view, "mandate")
     if not st.session_state.compiled:
         return
     envelope, mandate = view["mandate"], view["mandate"]["mandate"]
@@ -154,6 +201,10 @@ def section_invoice(view: dict) -> None:
 def section_decision(view: dict) -> None:
     st.subheader("3. Decision")
     d = view["policy"]
+    if not d:
+        st.markdown(badge("STOPPED", "blocked", big=True), unsafe_allow_html=True)
+        st.markdown(f"No credit decision: the flow stopped before policy ({esc(view.get('state'))}).")
+        return
     cap = float(view["mandate"]["mandate"].get("max_predicted_default", "0.05"))
     st.markdown(badge(d["decision"].upper(), d["decision"], big=True), unsafe_allow_html=True)
     a, b, c = st.columns(3)
@@ -181,6 +232,7 @@ def section_decision(view: dict) -> None:
 
 def section_offers(view: dict) -> None:
     st.subheader("4. Offers")
+    fixture_label(view, "offers")
     rows = []
     for o in view.get("offers", []):
         state = "executed" if o["chosen"] else "reject" if not o["within_mandate"] else "unknown"
@@ -197,8 +249,9 @@ def section_offers(view: dict) -> None:
 
 def tx_row(t: dict) -> str:
     reason = f" · <b>{esc(t['block_reason'])}</b>" if t.get("block_reason") else ""
+    label = f" <i>({esc(t['label'])})</i>" if t.get("label") else ""
     return row(
-        f"<b>{esc(t['step'])}</b> {esc(t['call'])} · {esc(t['status'])}{reason} · "
+        f"<b>{esc(t['step'])}</b> {esc(t['call'])}{label} · {esc(t['status'])}{reason} · "
         f"<code>{esc(fmt.short_hash(t.get('chain_ref')))}</code>",
         t["status"],
     )
@@ -211,18 +264,36 @@ def section_chain(view: dict) -> None:
     if wallet.get("status") == "pending_approval" and not st.session_state.approved:
         st.warning(f"Waiting for human approval ({wallet.get('approvals_required', 1)} required)")
         if st.button("Approve"):
-            st.session_state.approved = True
-            st.rerun()
+            action(lambda o: o.confirm(wallet["tx_id"]), "TX-4", "Approve", "approved")
     if st.session_state.paid and view.get("repay"):
         timeline.append(view["repay"])
+    timeline += st.session_state.extra_tx
     st.markdown("".join(tx_row(t) for t in timeline) or "No transactions.", unsafe_allow_html=True)
     if not st.session_state.paid and st.button("Buyer paid"):
-        st.session_state.paid = True
-        st.rerun()
+        action(lambda o: o.repay(view), "TX-5", "Buyer paid", "paid")
+
+
+def action(call, step: str, label: str, flag: str) -> None:
+    """Approve / Buyer paid: through the orchestrator when live; the fixture otherwise or when unsupported."""
+    st.session_state[flag] = True
+    if live() and st.session_state.get("view"):
+        try:
+            st.session_state.extra_tx.append(orch.action_row(call(orch.Orchestrator()), step, label))
+        except (orch.Unavailable, orch.Unsupported, KeyError) as exc:
+            st.session_state.notice = f"{label}: not available from the orchestrator ({exc}); fixture shown."
+            if flag == "paid":
+                st.session_state.extra_tx.append({**load_fixture("happy")["repay"], "label": "fixture"})
+    st.rerun()
 
 
 def run_attack(case: str) -> dict:
-    return load_fixture(case)
+    saved = load_fixture(case)
+    if not live():
+        return saved
+    try:
+        return orch.attack_row(orch.Orchestrator().attack(case), saved)
+    except (orch.Unavailable, orch.Unsupported) as exc:
+        return {**saved, "label": f"fixture: orchestrator has no attack route ({exc})"}
 
 
 def section_attacks() -> None:
@@ -234,24 +305,27 @@ def section_attacks() -> None:
     for a in reversed(st.session_state.attacks):
         policy = f" · policy {esc(a['policy_decision'])}" if a.get("policy_decision") else ""
         codes = ", ".join(esc(c) for c in a.get("policy_reasons", []))
+        stopped = a["status"] in ("blocked", "failed", "reject", "review")
+        label = f" <i>({esc(a['label'])})</i>" if a.get("label") else ""
         st.markdown(
             row(
-                f"<b>BLOCKED {esc(a['case'])}</b>: {esc(a['title'])}<br>"
+                f"<b>{'BLOCKED' if stopped else esc(a['status']).upper()} {esc(a['case'])}</b>: "
+                f"{esc(a['title'])}{label}<br>"
                 f"stopped by <b>{esc(a['stopped_by'])}</b>"
                 f"{policy} {codes} · revert <b>{esc(a.get('block_reason') or '-')}</b> · "
                 f"<code>{esc(fmt.short_hash(a.get('chain_ref')))}</code>",
-                "blocked",
+                "blocked" if stopped else a["status"],
             ),
             unsafe_allow_html=True,
         )
 
 
 def footer(view: dict) -> None:
-    d = view["policy"]
+    d = view["policy"] or {}
     audit = (view.get("wallet") or {}).get("audit_ref", "-")
     st.divider()
     st.caption(
-        f"policy_version {d['policy_version']} · model_version {d['model_version']} · "
+        f"policy_version {d.get('policy_version', '-')} · model_version {d.get('model_version', '-')} · "
         f"decision_hash {fmt.short_hash(d.get('decision_hash'))} · audit {audit}"
     )
 
@@ -262,6 +336,8 @@ def main() -> None:
     init_state()
     view = load_view()
     header(view)
+    if live():
+        run_controls()
     section_mandate(view)
     section_invoice(view)
     section_decision(view)
