@@ -180,6 +180,7 @@ class MandateDefaults(_Strict):
     max_predicted_default: Rate
     max_amount_per_tx: ByCurrency
     daily_cap: ByCurrency
+    human_review_above: ByCurrency
 
 
 class MandateLimits(_Strict):
@@ -194,7 +195,9 @@ class MandateLimits(_Strict):
     defaults: MandateDefaults
     default_validity_days: Annotated[int, Field(gt=0)]
     max_validity_days: Annotated[int, Field(gt=0)]
-    registered_payees: list[str] = Field(min_length=1)
+    payee_registry: dict[str, list[str]] = Field(min_length=1)  # wallet registry id -> accepted names
+    allowed_targets: list[str] = Field(min_length=1)
+    settlement_assets: dict[Currency, str]
 
     @model_validator(mode="after")
     def _defaults_within_maxima(self) -> MandateLimits:
@@ -202,7 +205,7 @@ class MandateLimits(_Strict):
         for name in ("max_ltv", "max_apr", "max_predicted_default"):
             if getattr(d, name) > getattr(self, name):
                 raise ValueError(f"default {name} is above the platform maximum")
-        for name in ("max_amount_per_tx", "daily_cap"):
+        for name in ("max_amount_per_tx", "daily_cap", "human_review_above"):
             ceiling = getattr(self, name)
             for ccy, value in getattr(d, name).items():
                 if ccy not in ceiling or value > ceiling[ccy]:

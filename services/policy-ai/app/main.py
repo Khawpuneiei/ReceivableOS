@@ -2,13 +2,14 @@
 
 POST /policy/decide runs the YAML rule set and the PD model (app/model.py); no LLM is called on this path.
 GET /policy/rules returns the active rule set for the dashboard.
+POST /policy/mandate/compile turns the SME's sentence into a validated mandate (app/mandate.py).
 """
 
 import logging
 
 from fastapi import FastAPI, HTTPException
 
-from app import decision, model
+from app import decision, mandate, model
 from app.rules import active_rules
 from app.schemas import PolicyDecisionExt, PolicyRequestExt
 
@@ -48,3 +49,11 @@ def decide(req: PolicyRequestExt) -> PolicyDecisionExt:
         result.decision_hash,
     )
     return result
+
+
+@app.post("/policy/mandate/compile")
+def compile_mandate(req: mandate.CompileRequest) -> dict:
+    try:
+        return mandate.compile_mandate(req.text, mandate_id=req.mandate_id)
+    except mandate.MandateRejected as exc:
+        raise HTTPException(status_code=422, detail=[v.as_dict() for v in exc.violations]) from None
