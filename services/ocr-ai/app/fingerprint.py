@@ -10,6 +10,18 @@ from app.config import REVIEW_CONFIDENCE
 from app.models import DocumentExtraction
 from app.normalize import normalize_country, normalize_reference
 
+HISTORY_CONTEXT_VERSION = "history-context-v1:invoice-semantic-v2:entity-v1:bank-v2:reference-numeric-runs-v1"
+
+
+def history_context(fingerprint_key: str, bank_key: str | None) -> str:
+    """Opaque key/recipe binding; bump the version when persisted identity rules change."""
+    values = [
+        HISTORY_CONTEXT_VERSION,
+        token(fingerprint_key, "history-context-fingerprint", [HISTORY_CONTEXT_VERSION]),
+        token(bank_key, "history-context-bank", [HISTORY_CONTEXT_VERSION]) if bank_key else None,
+    ]
+    return "sha256:" + hashlib.sha256(json.dumps(values, separators=(",", ":")).encode()).hexdigest()
+
 
 def token(key: str, namespace: str, values: list[str]) -> str:
     if not key:

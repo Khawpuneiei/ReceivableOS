@@ -21,7 +21,7 @@ from app.main import processing_slot
 
 def test_concurrent_idempotency_and_restart_are_atomic(tmp_path):
     path = tmp_path / "concurrent.sqlite"
-    store = ObservationStore(path)
+    store = ObservationStore(path, context_digest="sha256:" + "a" * 64)
     start = Barrier(8)
 
     def request(_):
@@ -34,7 +34,7 @@ def test_concurrent_idempotency_and_restart_are_atomic(tmp_path):
         results = list(executor.map(request, range(8)))
     assert len({result.observation_id for result in results}) == 1
     assert sum(not result.replayed for result in results) == 1
-    reopened = ObservationStore(path)
+    reopened = ObservationStore(path, context_digest="sha256:" + "a" * 64)
     assert len(reopened.observations()) == 1
     assert reopened.observe(
         observation("1", "a"), request_digest="sha256:" + "a" * 64, idempotency_key="same-key"

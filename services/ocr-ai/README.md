@@ -24,7 +24,7 @@ flowchart LR
 
 OCR returns evidence, not a financing decision. It does not verify issuer authenticity, delivery, tax registration, bank ownership, settlement, remaining PO capacity or prior financing at other lenders. Fraud scores are uncalibrated rule aggregations, not probabilities.
 
-Latest validation: **184 OCR tests passed / 1 optional publisher-fixture skip**, both locally and in a fresh clone. The companion regressions pass **13/13**; Policy passes **251/3 skipped** and Wallet **122/2 skipped**. Release checks pass for the OCR scope, with zero Policy control violations. Current full-flow funding remains blocked at Wallet as described below.
+Core release validation: **184 OCR tests passed / 1 optional publisher-fixture skip**, both locally and in a fresh clone. The history-context follow-up passes **196 tests / 1 skipped** and strict demo **7/7**, with zero Policy control violations. The companion regressions pass **13/13**; Policy passes **251/3 skipped** and Wallet **122/2 skipped**. Release checks pass for the OCR scope. Current full-flow funding remains blocked at Wallet as described below.
 
 ## Start and test
 
@@ -109,6 +109,15 @@ OCR_DEVELOPMENT_MODE=1 OCR_ALLOW_RESET=1 PYTHONPATH=../.. .venv/bin/python -c 'f
 
 Use the same `OCR_STATE_PATH` as the server. Reset is an operator Python capability, never an HTTP endpoint. Fingerprint normalization changed in this review; existing demo observations made with the old reference algorithm should be reset before rehearsal. Live history requires a reviewed migration.
 
+History now binds its stored identities to an opaque digest of both HMAC-key settings and the
+identity recipe version. A key or recipe change, or an existing populated database with no
+binding, returns **503 requiring operator migration** rather than treating old identities as
+different suppliers/invoices. Empty databases bind on the first write. Keys and raw accounts
+are not stored in the binding. Choose keys before populating demo state; switching from public
+dev keys to generated private keys also requires fresh demo state or the explicit reset above.
+Never reset live history to work around this response: preserve it and arrange a reviewed
+migration/re-extraction with the owners. Automatic live migration is not implemented.
+
 ## Models and performance
 
 PDF text/layout is preferred. Optional PaddleOCR handles unreadable pages with explicitly staged assets. English is primary; Thai scan accuracy has gaps and Simplified Chinese is experimental/review-only. There is no automatic language router. Qwen and hosted vision produce strict nullable candidates; they cannot replace or invent grounded fields. Disagreement, alert or reader failure requires review.
@@ -129,4 +138,4 @@ Cache misses are deduplicated per document key for hosted and Qwen readers. Diff
 
 Policy accepts the shared invoice projection and applies its own guards: fraud ≥0.30 → reject; injection or confidence <0.80 → review. The actual local Policy implementation is exercised in `demo_loop.py`; PO/case/graph adoption still needs a separately reviewed PM contract. Shared schemas, Policy, Wallet and orchestrator code are unchanged. Main at `7d46da5` now includes the Wallet implementation. The loop exercises its mock-ledger response; The current clean run is `Policy approve → Wallet blocked / SchemaInvalid`: the PM-owned orchestrator sends the old execute payload without required fingerprint/intent bindings, and does not run Registry registration / credit approval. PM must wire those lifecycle steps and fields before claiming successful drawdown. OCR does not bypass those guards or prove real settlement.
 
-Read [review fixes and validation](docs/REVIEW_FOLLOWUP.md), [architecture](docs/ARCHITECTURE.md), [consumer handoff](docs/HANDOFF.md), [document coverage](docs/DOCUMENT_CATALOG.md), [fraud rules](docs/FRAUD_VALIDATION.md), and [Policy handoff](docs/POLICY_INTEGRATION_HANDOFF.md). Broader experimental findings and attributed external data are in the companion corpus/evidence PR. The external synthetic development set remains below the global accuracy target; an independent vendor holdout, confirmed fraud labels and live hosted-model validation remain outstanding.
+Read the [2026-10-11 Progression Update](docs/PROGRESSION_UPDATE_2026-10-11.md) for follow-up PRs, confirmed CI results and remaining team dependencies. Also read [review fixes and validation](docs/REVIEW_FOLLOWUP.md), [architecture](docs/ARCHITECTURE.md), [consumer handoff](docs/HANDOFF.md), [document coverage](docs/DOCUMENT_CATALOG.md), [fraud rules](docs/FRAUD_VALIDATION.md), and [Policy handoff](docs/POLICY_INTEGRATION_HANDOFF.md). Broader experimental findings and attributed external data are in the companion corpus/evidence PR. The external synthetic development set remains below the global accuracy target; an independent vendor holdout, confirmed fraud labels and live hosted-model validation remain outstanding.

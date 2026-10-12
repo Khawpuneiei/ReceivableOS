@@ -28,6 +28,10 @@ class HistoryCapacityError(ValueError):
     """The bounded observation store needs operator attention."""
 
 
+class HistoryContextError(ValueError):
+    """Persisted identities cannot safely be compared under another key/recipe."""
+
+
 class InvoiceObservation(LocalModel):
     doc_hash: Digest
     semantic_fingerprint: Fingerprint | None = None
@@ -58,11 +62,14 @@ class HistoryResult(LocalModel):
 
 
 class ObservationStore:
-    def __init__(self, path: Path, *, max_observations: int = 1000) -> None:
+    def __init__(
+        self, path: Path, *, max_observations: int = 1000, context_digest: str | None = None
+    ) -> None:
         if max_observations < 1:
             raise ValueError("Observation limit must be positive")
         self.path = path
         self.max_observations = max_observations
+        self.context_digest = TypeAdapter(Digest).validate_python(context_digest) if context_digest else None
         path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         path.touch(mode=0o600, exist_ok=True)
         path.chmod(0o600)
@@ -84,7 +91,31 @@ class ObservationStore:
                     observation_id TEXT NOT NULL REFERENCES observations(observation_id),
                     result TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS history_metadata (
+                    name TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
                 """
+            )
+
+    def _ensure_context(self, connection) -> None:
+        if self.context_digest is None:
+            raise HistoryContextError("Observation writes require an identity context")
+        prior = connection.execute(
+            "SELECT value FROM history_metadata WHERE name = 'identity_context'"
+        ).fetchone()
+        if prior:
+            if prior["value"] != self.context_digest:
+                raise HistoryContextError("History identity context changed; operator migration is required")
+        elif connection.execute(
+            "SELECT EXISTS(SELECT 1 FROM observations) OR EXISTS(SELECT 1 FROM requests)"
+        ).fetchone()[0]:
+            raise HistoryContextError(
+                "History identity context is unversioned; operator migration is required"
+            )
+        else:
+            connection.execute(
+                "INSERT INTO history_metadata VALUES ('identity_context', ?)", (self.context_digest,)
             )
 
     @contextmanager
@@ -114,6 +145,7 @@ class ObservationStore:
         key_hash = hashlib.sha256(idempotency_key.encode()).hexdigest() if idempotency_key else None
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
+            self._ensure_context(connection)
             if key_hash:
                 prior = connection.execute(
                     "SELECT request_digest, result FROM requests WHERE key_hash = ?", (key_hash,)
@@ -171,6 +203,10 @@ class ObservationStore:
 
     def observations(self) -> list[tuple[str, InvoiceObservation]]:
         with self._connect() as connection:
+            # Check and read in one transaction, including when another process resets/rebinds.
+            if self.context_digest is not None:
+                connection.execute("BEGIN IMMEDIATE")
+                self._ensure_context(connection)
             rows = connection.execute(
                 "SELECT observation_id, payload FROM observations ORDER BY rowid"
             ).fetchall()
@@ -185,3 +221,4 @@ class ObservationStore:
             connection.execute("BEGIN IMMEDIATE")
             connection.execute("DELETE FROM requests")
             connection.execute("DELETE FROM observations")
+            connection.execute("DELETE FROM history_metadata WHERE name = 'identity_context'")
