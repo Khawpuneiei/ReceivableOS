@@ -15,6 +15,7 @@ SERVICE = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(SERVICE), str(SERVICE.parents[1])]
 
 from datagen.generate import generate  # noqa: E402
+from datagen.reliability import generate as generate_reliability  # noqa: E402
 from datagen.showcase_invoices import generate as generate_showcase  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -34,11 +35,14 @@ def main():
     fixture_data = Path(fixture_temp.name)
     generate(fixture_data, font_path=data / "fonts" / "NotoSansThai-Regular.ttf")
     generate_showcase(fixture_data / "showcase")
+    generate_reliability(fixture_data / "reliability")
     cache = SERVICE / ".cache/paddlex/official_models"
     os.environ["FINGERPRINT_HMAC_KEY"] = secrets.token_hex(32)
     os.environ["BANK_TOKEN_HMAC_KEY"] = secrets.token_hex(32)
     os.environ["OCR_PADDLE_ENABLED"] = "1" if args.models else "0"
     os.environ["OCR_QWEN_ENABLED"] = "1" if args.models else "0"
+    # This command exercises local readers only, even when the shell opts into hosted vision.
+    os.environ["OCR_HOSTED_VISION_ENABLED"] = "0"
     os.environ["OCR_PADDLE_DET_DIR"] = str(cache / "PP-OCRv5_mobile_det")
     cases = [
         (
@@ -56,14 +60,14 @@ def main():
         ("mismatch", fixture_data / "en_invoice_amount_mismatch.pdf", fixture_data / "en_po_clean.pdf", "en"),
         (
             "international_scope",
-            data / "reliability/invoice-en-stacked-0.pdf",
-            data / "reliability/purchase_order-en-stacked-0.pdf",
+            fixture_data / "reliability/invoice-en-stacked-0.pdf",
+            fixture_data / "reliability/purchase_order-en-stacked-0.pdf",
             "en",
         ),
         (
             "experimental_chinese",
-            data / "reliability/invoice-zh-stacked-0.pdf",
-            data / "reliability/purchase_order-zh-stacked-0.pdf",
+            fixture_data / "reliability/invoice-zh-stacked-0.pdf",
+            fixture_data / "reliability/purchase_order-zh-stacked-0.pdf",
             "zh",
         ),
     ]
@@ -71,8 +75,8 @@ def main():
         cases = [
             (
                 f"{language}_scan_both_engines",
-                data / f"reliability/invoice-{language}-stacked-1.png",
-                data / f"reliability/purchase_order-{language}-stacked-1.png",
+                fixture_data / f"reliability/invoice-{language}-stacked-1.png",
+                fixture_data / f"reliability/purchase_order-{language}-stacked-1.png",
                 language,
             )
             for language in ("en", "zh", "th")
@@ -124,6 +128,7 @@ def main():
     target = args.output or SERVICE / "docs" / (
         "GLOBAL_HTTP_SMOKE.json" if args.models else "CONSUMER_REVIEW_EXAMPLES.json"
     )
+    fixture_temp.cleanup()
     target.write_text(
         json.dumps(
             {
