@@ -449,6 +449,11 @@ def _tampered() -> bytes:
     from datagen.tamper_corpus import forge
 
     return forge("redact_retype", "SFP-INV-2026-0145")
+def _qr_swap() -> bytes:
+    """Genuine-looking invoice whose PromptPay QR pays a different tax ID (QR-swap scam)."""
+    from datagen.thai_qr import case_pdf
+
+    return case_pdf("swapped_payee", "SFP-INV-2026-0146")
 
 
 def generate(output: Path = OUTPUT) -> list[Path]:
@@ -490,6 +495,7 @@ def generate(output: Path = OUTPUT) -> list[Path]:
         ("04_duplicate.pdf", resaved),
         ("purchase_order.pdf", purchase_order),
         ("05_tampered.pdf", _tampered()),
+        ("06_qr_swap.pdf", _qr_swap()),
     ):
         path = demo / filename
         path.write_bytes(content)

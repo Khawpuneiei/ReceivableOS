@@ -42,6 +42,11 @@ FRAUD_WEIGHTS = {
     "pdf_appended_text_layer": 0.05,
     "pdf_font_anomaly": 0.05,
     "pdf_incremental_update": 0.05,
+    # Thai payment QR cross-check (app/promptpay.py); amount/payee contradictions weigh like PO mismatches.
+    "qr_amount_mismatch": 0.40,
+    "qr_payee_mismatch": 0.40,
+    "qr_crc_invalid": 0.15,
+    "qr_payee_unverified": 0.05,
 }
 
 
@@ -101,4 +106,6 @@ ANOMALY_FAMILIES = {
     "pdf_appended_text_layer": "tamper",
     "pdf_font_anomaly": "tamper",
     "pdf_incremental_update": "tamper",
+    "qr_amount_mismatch": "amount",
+    "qr_payee_mismatch": "identity",
 }

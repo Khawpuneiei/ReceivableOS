@@ -38,6 +38,7 @@ from app.models import (
     InvoicePoVerificationResult,
 )
 from app.normalize import normalize_date, normalize_number
+from app.promptpay import qr_findings
 from app.qwen import read_candidates
 from app.validate import CRITICAL_FIELDS, validate_document
 from shared.schemas import ExtractedInvoice, LineItem, Party
@@ -143,6 +144,10 @@ def extract(content: bytes, document_type: str, settings: Settings) -> Extractio
                 except (ValueError, ArithmeticError):
                     doc.review_reasons.append(f"{reader}_UNGROUNDED:{name}")
     result.document = validate_document(doc)
+    result.forensic_findings = [
+        *result.forensic_findings,
+        *qr_findings(parsed.qr_payloads, result.document),
+    ]
     return result
 
 

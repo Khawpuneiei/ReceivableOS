@@ -62,6 +62,7 @@ services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/demo_loop.py --strict -
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/eval.py
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/injection_eval.py
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/tamper_eval.py
+services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/qr_eval.py
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/benchmark_cache.py
 # Complete release check, with fresh clone/environment:
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/release_check.py --fresh --strict
