@@ -1,4 +1,4 @@
-"""The orchestrator's wallet steps: register, approve, execute, settle.
+"""The orchestrator's flow and wallet steps: register, approve, execute, settle, the caller check and resume.
 The other services are stubbed here."""
 
 import json
@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from app import main
 
 SELLER = "SELLER:siam-fresh-pack"
+CALLER = {"X-Orchestrator-Token": "caller-test-token"}
 INVOICE = {
     "invoice_id": "inv_test_1",
     "amount": "749000.00",
@@ -33,6 +34,7 @@ DECISION = {
     "decision_hash": "0x" + "ef" * 32,
 }
 EXECUTED = {"status": "executed", "tx_id": "tx_1", "audit_ref": "aud_1"}
+PDF = ("01_happy.pdf", b"%PDF-1.4 stub")
 
 
 class Upstream:
@@ -65,24 +67,57 @@ class Upstream:
         raise AssertionError(f"no call to {path}: {self.paths()}")
 
 
-@pytest.fixture
-def world(monkeypatch):
-    upstream = Upstream()
+class OcrRefuses(Upstream):
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/ocr/extract":
+            self.calls.append((request.url.path, dict(request.headers), None))
+            return httpx.Response(415, json={"detail": "Only PDF, JPEG and PNG uploads are supported"})
+        return super().__call__(request)
+
+
+class PolicyRefuses(Upstream):
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/policy/decide":
+            self.calls.append((request.url.path, dict(request.headers), None))
+            return httpx.Response(422, json={"detail": "invalid request"})
+        return super().__call__(request)
+
+
+class WalletUnreachable(Upstream):
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path.startswith("/wallet/"):
+            self.calls.append((request.url.path, dict(request.headers), None))
+            raise httpx.ConnectError("connection refused", request=request)
+        return super().__call__(request)
+
+
+def serve(monkeypatch, upstream: Upstream) -> None:
+    """Route every httpx call to the stub and reset the orchestrator's state and tokens."""
     real = httpx.AsyncClient
     monkeypatch.setattr(
         httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(upstream), **kw)
     )
+    monkeypatch.setattr(main, "ORCHESTRATOR_TOKEN", "caller-test-token")
     monkeypatch.setattr(main, "WALLET_AGENT_TOKEN", "agent-test-token")
     monkeypatch.setattr(main, "WALLET_RISK_ORACLE_TOKEN", "oracle-test-token")
-    monkeypatch.setattr(main, "_registered", set())
-    monkeypatch.setattr(main, "_financed", {})
+    monkeypatch.setattr(main, "_flows", {})
+
+
+@pytest.fixture
+def world(monkeypatch):
+    upstream = Upstream()
+    serve(monkeypatch, upstream)
     return upstream
 
 
-def run_flow() -> dict:
-    r = TestClient(main.app).post("/flow/run", files={"file": ("01_happy.pdf", b"%PDF-1.4 stub")})
+def run_flow(headers: dict = CALLER) -> dict:
+    r = TestClient(main.app).post("/flow/run", headers=headers, files={"file": PDF})
     assert r.status_code == 200, r.text
     return r.json()
+
+
+def repay(data: dict, headers: dict = CALLER):
+    return TestClient(main.app).post("/flow/repay", headers=headers, data=data)
 
 
 def test_an_approved_invoice_is_registered_approved_and_drawn(world):
@@ -114,6 +149,23 @@ def test_an_approved_invoice_is_registered_approved_and_drawn(world):
     assert body["decision_hash"] == DECISION["decision_hash"]
 
 
+def test_callers_without_the_token_are_refused_before_anything_runs(world, monkeypatch):
+    client = TestClient(main.app)
+    assert client.post("/flow/run", files={"file": PDF}).status_code == 403
+    assert (
+        client.post("/flow/run", files={"file": PDF}, headers={"X-Orchestrator-Token": "wrong"}).status_code
+        == 403
+    )
+    assert client.post("/flow/repay", data={"invoice_id": "inv_test_1"}).status_code == 403
+    assert world.calls == []  # nothing reached ocr-ai, policy-ai or the wallet
+
+    monkeypatch.setattr(main, "ORCHESTRATOR_TOKEN", "")  # no token configured: every caller is refused
+    assert (
+        client.post("/flow/run", files={"file": PDF}, headers={"X-Orchestrator-Token": ""}).status_code == 403
+    )
+    assert world.calls == []
+
+
 def test_a_wallet_refusal_is_reported_not_raised(world):
     world.replies["/wallet/register"] = (403, {"detail": "Unauthorized"})
     result = run_flow()
@@ -131,6 +183,29 @@ def test_a_blocked_register_stops_before_approval(world):
     assert "/wallet/approve" not in world.paths()
 
 
+def test_a_failed_approve_resumes_on_the_retry(world):
+    world.replies["/wallet/approve"] = (503, {"detail": "unavailable"})
+    first = run_flow()
+    assert first["outcome"].startswith("failed: wallet returned HTTP 503")
+
+    world.replies.pop("/wallet/approve")
+    world.calls.clear()
+    second = run_flow()
+
+    assert second["outcome"] == "executed"
+    # The retry does not register again or re-run the policy. It approves and draws with the stored decision.
+    assert world.paths() == ["/ocr/extract", "/wallet/approve", "/wallet/execute"]
+
+
+def test_a_second_run_of_a_financed_invoice_is_refused(world):
+    run_flow()
+    world.calls.clear()
+    result = run_flow()
+
+    assert result["outcome"] == "blocked: invoice already financed"
+    assert not [p for p in world.paths() if p.startswith("/wallet/")]
+
+
 def test_a_declined_policy_moves_nothing(world):
     world.decision = {**DECISION, "decision": "reject"}
     result = run_flow()
@@ -144,23 +219,62 @@ def test_a_draw_waiting_for_an_approver_is_not_settled_yet(world):
         200,
         {"status": "pending_approval", "tx_id": "tx_2", "audit_ref": "aud_2"},
     )
-    client = TestClient(main.app)
     result = run_flow()
 
     assert result["outcome"] == "pending_approval"
-    repay = client.post("/flow/repay", data={"invoice_id": "inv_test_1"}).json()
-    assert repay["outcome"].startswith("not settled")
+    assert repay({"invoice_id": "inv_test_1"}).json()["outcome"].startswith("not settled")
 
 
 def test_repay_settles_the_financed_invoice(world):
     run_flow()
-    repay = TestClient(main.app).post("/flow/repay", data={"invoice_id": "inv_test_1"}).json()
+    result = repay({"invoice_id": "inv_test_1"}).json()
 
-    assert repay["outcome"] == "executed"
+    assert result["outcome"] == "executed"
     headers, body = world.call("/wallet/settle")
     assert headers["x-agent-token"] == "agent-test-token"
     assert body["amount_paid"] == "749000.00"
     assert body["invoice_fingerprint"] == INVOICE["invoice_fingerprint"]
+
+
+@pytest.mark.parametrize("raw", ["0", "-5", "749000.01", "abc", "10.555", "NaN"])
+def test_a_repayment_amount_must_be_a_sensible_money_amount(world, raw):
+    run_flow()
+    assert repay({"invoice_id": "inv_test_1", "amount_paid": raw}).status_code == 422
+
+
+def test_a_short_payment_is_allowed_and_passed_to_the_wallet(world):
+    run_flow()
+    result = repay({"invoice_id": "inv_test_1", "amount_paid": "1.00"}).json()
+
+    assert (
+        result["outcome"] == "executed"
+    )  # the wallet's waterfall and flags decide what a short payment means
+    _, body = world.call("/wallet/settle")
+    assert body["amount_paid"] == "1.00"
+
+
+@pytest.mark.parametrize(
+    "path,status,expected",
+    [
+        ("/ocr/extract", None, "failed: ocr-ai returned HTTP 415"),
+        ("/policy/decide", None, "failed: policy-ai returned HTTP 422"),
+    ],
+)
+def test_an_upstream_refusal_is_a_result_not_a_500(monkeypatch, path, status, expected):
+    upstream = OcrRefuses() if path == "/ocr/extract" else PolicyRefuses()
+    serve(monkeypatch, upstream)
+    r = TestClient(main.app).post("/flow/run", headers=CALLER, files={"file": PDF})
+
+    assert r.status_code == 200
+    assert r.json()["outcome"].startswith(expected)
+
+
+def test_an_unreachable_wallet_is_a_result_not_a_500(monkeypatch):
+    serve(monkeypatch, WalletUnreachable())
+    r = TestClient(main.app).post("/flow/run", headers=CALLER, files={"file": PDF})
+
+    assert r.status_code == 200
+    assert r.json()["outcome"] == "failed: wallet returned HTTP 503: wallet unreachable"
 
 
 def test_the_quote_is_the_best_advance_inside_the_apr_cap(monkeypatch):
@@ -173,7 +287,7 @@ def test_the_quote_is_the_best_advance_inside_the_apr_cap(monkeypatch):
     assert main.select_quote(face, limit) is None
 
 
-def test_the_draw_never_exceeds_the_approved_limit(monkeypatch):
+def test_the_draw_never_exceeds_the_approved_limit():
     # A limit below the quoted advance wins: the wallet would refuse anything above it.
     quote = main.select_quote(Decimal("749000.00"), Decimal("400000.00"))
     assert quote["amount"] == Decimal("400000.00")

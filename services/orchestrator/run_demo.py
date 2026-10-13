@@ -12,6 +12,7 @@ from pathlib import Path
 import httpx
 
 ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "http://localhost:8000")
+ORCHESTRATOR_TOKEN = os.getenv("ORCHESTRATOR_TOKEN", "")  # the caller's token, X-Orchestrator-Token
 DEFAULT_INVOICE = (
     Path(__file__).resolve().parents[2] / "data" / "invoices" / "demo" / "01_happy.pdf"
 )  # ocr-ai reads PDFs
@@ -19,8 +20,11 @@ DEFAULT_INVOICE = (
 
 def main() -> int:
     invoice_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_INVOICE
+    headers = {"X-Orchestrator-Token": ORCHESTRATOR_TOKEN}
     with invoice_path.open("rb") as f, httpx.Client(timeout=120) as client:
-        r = client.post(f"{ORCHESTRATOR_URL}/flow/run", files={"file": (invoice_path.name, f)})
+        r = client.post(
+            f"{ORCHESTRATOR_URL}/flow/run", headers=headers, files={"file": (invoice_path.name, f)}
+        )
     r.raise_for_status()
     print(json.dumps(r.json(), indent=2))
     return 0
