@@ -109,6 +109,13 @@ INJECTION_CATEGORY = {
     "decision_coercion": "tries to force an approval",
     "payee_redirect": "tries to redirect the payment",
     "score_tampering": "tries to zero the risk score",
+    "addressed_command": "gives the AI a direct order",
+    "tool_invocation": "tries to make the AI call a tool",
+    "exfiltration": "tries to make the AI leak data",
+}
+# OCR validation_flags (newer ocr-ai): checks that the invoice agrees with itself.
+VALIDATION_PLAIN = {
+    "AMOUNT_WORDS_MISMATCH": "the total written in words does not match the digits",
 }
 INJECTION_TECHNIQUE = {
     "plain": "plain",
@@ -143,6 +150,9 @@ def findings(inv: dict) -> list[dict]:
     for code in inv.get("fraud_flags", []):
         if code not in seen:
             out.append({"kind": "fraud", "headline": FINDING_PLAIN.get(code, code.replace("_", " "))})
+    for code in inv.get("validation_flags") or []:
+        words = VALIDATION_PLAIN.get(code, str(code).replace("_", " ").lower())
+        out.append({"kind": "fraud", "headline": words})
     injections = inv.get("injection_details") or []
     for i in injections:
         what = INJECTION_CATEGORY.get(i.get("category"), str(i.get("category", "")).replace("_", " "))
