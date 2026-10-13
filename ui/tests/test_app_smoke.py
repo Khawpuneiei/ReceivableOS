@@ -96,3 +96,8 @@ def test_each_demo_case_posts_its_own_pdf_and_a_duplicate_runs_happy_first(monke
     assert sent == ["01_happy.pdf", "04_duplicate.pdf"]  # the happy run failed, so it isn't marked as run
     at.button(key="case_injected").click().run()
     assert sent[-1] == "02_injected.pdf" and not at.exception
+
+
+def test_the_verdict_says_saved_demo_when_nothing_ran_live():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert "Funded inside the rules (saved demo)" in _text(at)

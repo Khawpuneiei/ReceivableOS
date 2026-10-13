@@ -210,6 +210,8 @@ def header(view: dict) -> None:
 def section_flow(view: dict) -> None:
     """Where the invoice got to, in one line a judge can read from the back of the room."""
     state, headline, sentence = story.verdict(view, st.session_state.paid)
+    if view.get("source") == "fixtures":
+        headline += " (saved demo)"  # never let a saved result read as this run's
     st.markdown(
         f'<div class="verdict" style="background:{story.STATE_COLOUR[state]}"><b>{esc(headline)}</b>'
         f"{esc(sentence)}</div>",
