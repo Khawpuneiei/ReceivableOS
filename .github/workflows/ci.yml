@@ -64,6 +64,35 @@ jobs:
       - name: pytest
         run: python -m pytest -q -p no:cacheprovider ${{ matrix.service }}
 
+  redteam:
+    name: wallet red-team (no unauthorized payment)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            services/*/requirements*.txt
+      - name: Install
+        run: python -m pip install -r requirements-dev.txt
+      # Every attack case set against a fresh mock wallet: exits 1 if the full stack lets any unauthorized
+      # payment through. Then the committed REDTEAM.md (the pitch numbers) must match what this run produced.
+      - name: Red-team summary
+        run: |
+          if [ -f services/agent-wallet/eval/redteam_summary.py ]; then
+            python services/agent-wallet/eval/redteam_summary.py
+            git diff --exit-code -- services/agent-wallet/eval/REDTEAM.md \
+              || { echo "::error::eval/REDTEAM.md is stale; rerun redteam_summary.py and commit it"; exit 1; }
+          else
+            echo "no red-team summary on this branch yet"
+          fi
+
   e2e:
     name: end-to-end demo (mock ledger)
     runs-on: ubuntu-latest
