@@ -17,6 +17,7 @@ from pathlib import Path
 
 import client as orch
 import format as fmt
+import story
 import streamlit as st
 
 HERE = Path(__file__).resolve().parent
@@ -53,6 +54,14 @@ html, body, [class*="css"], .stMarkdown p, .stMarkdown li { font-size: 18px; }
 .gauge .fill { position:absolute; height:100%; border-radius:4px; }
 .gauge .cap { position:absolute; top:-4px; height:30px; border-left:3px dashed #c62828; }
 code { font-size: 15px; }
+.verdict { padding:14px 20px; border-radius:8px; color:#fff; margin:8px 0 12px; }
+.verdict b { font-size: 28px; display:block; }
+.steps { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+.step { flex:1 1 140px; border-top:8px solid; border-radius:6px; padding:8px 10px;
+        background:rgba(127,127,127,.08); min-width:140px; }
+.step .n { font-weight:700; } .step .d { font-size:15px; }
+.step .i { display:inline-block; width:24px; height:24px; border-radius:12px; color:#fff;
+           text-align:center; font-weight:700; margin-right:6px; line-height:24px; }
 </style>
 """
 
@@ -152,6 +161,25 @@ def header(view: dict) -> None:
         st.info("FIXTURE MODE: saved responses from ui/fixtures/, no backend called.")
     else:
         st.success(f"LIVE: orchestrator at {orch.base_url()} · flow state {view.get('state')}")
+
+
+def section_flow(view: dict) -> None:
+    """Where the invoice got to, in one line a judge can read from the back of the room."""
+    state, headline, sentence = story.verdict(view, st.session_state.paid)
+    st.markdown(
+        f'<div class="verdict" style="background:{story.STATE_COLOUR[state]}"><b>{esc(headline)}</b>'
+        f"{esc(sentence)}</div>",
+        unsafe_allow_html=True,
+    )
+    cards = []
+    for n, s in enumerate(story.steps(view, st.session_state.paid), 1):
+        colour = story.STATE_COLOUR[s["state"]]
+        cards.append(
+            f'<div class="step" style="border-color:{colour}"><span class="i" style="background:{colour}">'
+            f'{story.STATE_ICON[s["state"]]}</span><span class="n">{n}. {esc(s["name"])}</span>'
+            f'<div class="d">{esc(s["detail"])}</div></div>'
+        )
+    st.markdown(f'<div class="steps">{"".join(cards)}</div>', unsafe_allow_html=True)
 
 
 def section_mandate(view: dict) -> None:
@@ -329,13 +357,15 @@ def section_attacks() -> None:
         codes = ", ".join(esc(c) for c in a.get("policy_reasons", []))
         stopped = a["status"] in ("blocked", "failed", "reject", "review")
         label = f" <i>({esc(a['label'])})</i>" if a.get("label") else ""
+        why = story.plain(a.get("block_reason"))
+        why_line = f"<br>Why: {esc(why)}." if why and stopped else ""
         st.markdown(
             row(
                 f"<b>{'BLOCKED' if stopped else esc(a['status']).upper()} {esc(a['case'])}</b>: "
                 f"{esc(a['title'])}{label}<br>"
                 f"stopped by <b>{esc(a['stopped_by'])}</b>"
                 f"{policy} {codes} · revert <b>{esc(a.get('block_reason') or '-')}</b> · "
-                f"<code>{esc(fmt.short_hash(a.get('chain_ref')))}</code>",
+                f"<code>{esc(fmt.short_hash(a.get('chain_ref')))}</code>{why_line}",
                 "blocked" if stopped else a["status"],
             ),
             unsafe_allow_html=True,
@@ -360,6 +390,7 @@ def main() -> None:
     header(view)
     if live():
         run_controls()
+    section_flow(view)
     section_mandate(view)
     section_invoice(view)
     section_decision(view)
