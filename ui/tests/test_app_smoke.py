@@ -71,3 +71,10 @@ def test_live_mode_without_an_orchestrator_degrades_to_fixtures(monkeypatch):
     at.button(key="attack_a3").click().run()
     assert not at.exception
     assert "BLOCKED A3" in _text(at) and "fixture: orchestrator has no attack route" in _text(at)
+
+
+def test_live_mode_says_what_it_will_call_before_any_run(monkeypatch):
+    monkeypatch.setenv("UI_MODE", "live")
+    monkeypatch.setenv("ORCHESTRATOR_URL", "http://127.0.0.1:9")
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert "SAVED DEMO" in at.info[0].value and "127.0.0.1:9" in at.info[0].value

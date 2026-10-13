@@ -20,7 +20,7 @@ import format as fmt
 import streamlit as st
 
 HERE = Path(__file__).resolve().parent
-DEMO_INVOICE = HERE.parent / "data" / "invoices" / "demo_invoice.txt"
+DEMO_INVOICE = HERE.parent / "data" / "invoices" / "demo" / "01_happy.pdf"  # a real PDF; OCR refuses the .txt
 FIXTURES = HERE / "fixtures"
 ATTACKS = ("a1", "a2", "a3", "a4", "a5", "a6")
 ATTACK_LABELS = {
@@ -92,6 +92,17 @@ def fixture_label(view: dict, part: str) -> None:
         st.caption(f"FIXTURE: the orchestrator does not return {part} yet; showing saved data.")
 
 
+def not_reached(view: dict, part: str) -> bool:
+    """True (and says so on screen) when the live flow stopped before this part ran."""
+    if part not in view.get("not_reached", []):
+        return False
+    st.markdown(
+        row(f"Not reached: the flow stopped earlier (<b>{esc(view.get('state'))}</b>).", "unknown"),
+        unsafe_allow_html=True,
+    )
+    return True
+
+
 def run_controls() -> None:
     """Live mode: run the flow through the orchestrator with the demo invoice or an upload."""
     upload = st.file_uploader("Invoice file", key="upload")
@@ -103,8 +114,12 @@ def run_controls() -> None:
             raw = orch.Orchestrator().run_flow(content, name)
             st.session_state.view = orch.to_view(raw, load_fixture("happy"))
             st.session_state.update(paid=False, approved=False, notice=None, extra_tx=[])
+        except orch.ServiceError as exc:
+            st.session_state.notice = f"The flow stopped with an error: {exc.plain}. Showing the saved demo."
         except (orch.Unavailable, orch.Unsupported, ValueError) as exc:
-            st.session_state.notice = f"Orchestrator unavailable ({exc}); showing fixtures."
+            st.session_state.notice = (
+                f"Orchestrator unavailable at {orch.base_url()} ({exc}). Showing the saved demo."
+            )
         st.rerun()
 
 
@@ -123,14 +138,17 @@ def init_state() -> None:
 
 def header(view: dict) -> None:
     chain = (view.get("wallet") or {}).get("chain") or "unknown"
+    ledger_state = {"mock": "pending_approval", "fisco": "executed"}.get(chain, "unknown")
     st.markdown(
         "## ReceivableOS · AI that can move money — only inside the rules "
-        + badge(f"ledger: {chain}", "pending_approval" if chain == "mock" else "executed"),
+        + badge(f"ledger: {chain}", ledger_state),
         unsafe_allow_html=True,
     )
     if st.session_state.notice:
         st.warning(st.session_state.notice)
-    if view.get("source") == "fixtures":
+    if view.get("source") == "fixtures" and live():
+        st.info(f"SAVED DEMO: nothing has run live yet. Run an invoice below to call {orch.base_url()}.")
+    elif view.get("source") == "fixtures":
         st.info("FIXTURE MODE: saved responses from ui/fixtures/, no backend called.")
     else:
         st.success(f"LIVE: orchestrator at {orch.base_url()} · flow state {view.get('state')}")
@@ -233,6 +251,8 @@ def section_decision(view: dict) -> None:
 def section_offers(view: dict) -> None:
     st.subheader("4. Offers")
     fixture_label(view, "offers")
+    if not_reached(view, "offers"):
+        return
     rows = []
     for o in view.get("offers", []):
         state = "executed" if o["chosen"] else "reject" if not o["within_mandate"] else "unknown"
@@ -269,7 +289,9 @@ def section_chain(view: dict) -> None:
         timeline.append(view["repay"])
     timeline += st.session_state.extra_tx
     st.markdown("".join(tx_row(t) for t in timeline) or "No transactions.", unsafe_allow_html=True)
-    if not st.session_state.paid and st.button("Buyer paid"):
+    if "wallet" in view.get("not_reached", []):
+        st.caption("The wallet was never asked to pay: no credit approval (TX-2) and no draw (TX-4).")
+    if wallet.get("status") == "executed" and not st.session_state.paid and st.button("Buyer paid"):
         action(lambda o: o.repay(view), "TX-5", "Buyer paid", "paid")
 
 

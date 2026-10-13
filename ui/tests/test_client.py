@@ -135,3 +135,74 @@ def test_attack_row_reports_what_the_orchestrator_returned():
     assert live["status"] == "blocked" and live["chain_ref"] == "mock:0x01" and live["label"] == "live"
     leaked = orch.attack_row({"status": "executed"}, saved)
     assert leaked["status"] == "executed"  # never relabelled as blocked
+
+
+def _tx(status="executed", block_reason=None) -> dict:
+    return {
+        "tx_id": "tx_1",
+        "status": status,
+        "chain_ref": "mock:0x01",
+        "chain": "mock",
+        "block_reason": block_reason,
+    }
+
+
+def test_todays_orchestrator_fills_the_whole_timeline_and_the_offers():
+    offers = [
+        {
+            "lender": "Andaman",
+            "advance_rate": "0.70",
+            "apr": "0.1095",
+            "within_mandate": True,
+            "chosen": True,
+        },
+        {"lender": "Isan", "advance_rate": "0.75", "apr": "0.15", "within_mandate": False, "chosen": False},
+    ]
+    raw = {**_stub_response("executed"), "register": _tx(), "approve": _tx(), "offers": offers}
+    view = orch.to_view(raw, FIXTURE)
+    assert [t["step"] for t in view["timeline"]] == ["TX-1", "TX-2", "TX-4"]
+    assert view["from_fixture"] == ["mandate"] and view["not_reached"] == []
+    assert [o["reason"] for o in view["offers"]] == [
+        "highest advance within the approved APR",
+        "APR above the approved rate",
+    ]
+
+
+def test_a_review_shows_the_register_tx_and_marks_offers_and_wallet_not_reached():
+    raw = {
+        "mandate_id": "mdt_001",
+        "ocr": FIXTURE["ocr"],
+        "register": _tx(),
+        "registry": {"duplicate": False},
+        "policy": {**FIXTURE["policy"], "decision": "review"},
+        "outcome": "review: wallet not called",
+    }
+    view = orch.to_view(raw, FIXTURE)
+    assert view["offers"] == [] and view["not_reached"] == ["offers", "wallet"]
+    assert [t["step"] for t in view["timeline"]] == ["TX-1"]
+    assert view["wallet"]["chain"] == "mock"  # the ledger badge still says which ledger the TX-1 went to
+
+
+def test_a_live_duplicate_keeps_the_wallets_own_block_row():
+    raw = {
+        "ocr": FIXTURE["ocr"],
+        "register": _tx("blocked", "DuplicateReceivable"),
+        "registry": {"duplicate": True},
+        "outcome": "blocked: DuplicateReceivable",
+    }
+    view = orch.to_view(raw, FIXTURE)
+    assert len(view["timeline"]) == 1 and view["timeline"][0]["block_reason"] == "DuplicateReceivable"
+
+
+def test_a_failing_service_is_named_in_plain_words():
+    detail = 'http://localhost:8001/ocr/extract answered 415: {"detail":"unsupported file type"}'
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(502, json={"detail": detail})
+
+    with pytest.raises(orch.ServiceError) as err:
+        _client(handler).run_flow(b"x", "invoice.txt")
+    assert err.value.plain == "the OCR service refused the request (HTTP 415): unsupported file type"
+    assert orch.plain_error("http://w:8003/wallet/execute answered 500: boom").startswith(
+        "the agent wallet failed"
+    )
