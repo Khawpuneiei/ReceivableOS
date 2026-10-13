@@ -80,6 +80,15 @@ class Orchestrator:
         except (Unavailable, Unsupported, httpx.HTTPStatusError):
             return False
 
+    def audit_proof(self, audit_ref: str) -> dict:
+        """Merkle proof for a wallet result's audit entry; Unsupported until the wallet has proofs (501)."""
+        try:
+            return self._call("GET", f"/flow/audit/{audit_ref}/proof")
+        except (ServiceError, Unavailable) as exc:
+            if "HTTP 501" in str(exc):
+                raise Unsupported("/flow/audit proof") from exc
+            raise
+
     def run_flow(self, content: bytes, filename: str, mandate_id: str = "mdt_001") -> dict:
         return self._call(
             "POST", "/flow/run", files={"file": (filename, content)}, data={"mandate_id": mandate_id}

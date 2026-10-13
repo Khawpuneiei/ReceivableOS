@@ -58,6 +58,12 @@ one line per invoice: its verdict badge, the plain-language reason, and a Show b
 The header line counts funded / sent to a person / stopped. In live mode, reset the OCR demo history first or
 Happy itself will be a duplicate; in fixture mode it lists the saved runs.
 
+After a live draw executed, **Check this payment in the audit log** fetches the wallet's Merkle inclusion proof
+through the orchestrator (`GET /flow/audit/{audit_ref}/proof`) and checks it on screen with `ui/merkle.py`, an
+independent RFC 9162 verifier: the entry matches its own hash and its path leads to the log's root. It says
+whether that root is anchored on chain yet (the wallet anchors it at settlement, so check again after
+[Buyer paid]). With a wallet or orchestrator that has no proofs yet it says so instead.
+
 ## What is on screen, and where the numbers come from
 
 | Section | Content | Source in fixture mode |
