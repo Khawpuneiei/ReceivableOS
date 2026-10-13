@@ -2,40 +2,51 @@
 
 Owner: PM. Scope: the end-to-end flow and demo glue (scope doc section 4.4).
 
-Endpoints on port 8000: `GET /health`, `POST /flow/run` (multipart `file`, optional form `mandate_id`), `POST /flow/repay` (form `invoice_id`, optional `amount_paid`). The two POST endpoints need the header `X-Orchestrator-Token`. Without it, or with no `ORCHESTRATOR_TOKEN` configured, they return 403.
+Endpoints on port 8000: `GET /health`, `POST /flow/run` (multipart `file`, optional form `mandate_id`, default
+`mdt_001`), `POST /flow/repay` (form `invoice_id`, optional `amount_paid` and `paid_at`).
 
-Status: the wallet steps are wired. `POST /flow/run` runs ocr-ai, policy-ai, a mock lender quote, then agent-wallet: register (TX-1), approve (TX-2, only when the policy says `approve`) and execute (TX-4). `POST /flow/repay` settles a financed invoice (TX-5).
+Status: wired end to end on the mock ledger. `/flow/run` calls ocr-ai, then the agent wallet's `register` (TX-1:
+the on-chain `ReceivableRegistry` is the duplicate check, so a re-saved PDF with the same fingerprint comes back
+`blocked: DuplicateReceivable`), then policy-ai. When the decision is `approve` it calls the wallet's `approve`
+(TX-2, risk-oracle token, the whole decision plus its `decision_hash`), picks the lender quote from
+`data/agent/lender_quotes.json` (highest advance within the approved APR), and calls `execute` (TX-4, agent
+token) with the fingerprint, `doc_hash`, `decision_hash`, the seller's payee registry id, the lender and the
+mandate. A `review` or `reject` decision stops after policy: the wallet is not called. `/flow/repay` calls the
+wallet's `settle` (TX-5) for an invoice this process has run.
 
-- A refusal from ocr-ai, policy-ai or the wallet, or an unreachable service, comes back in the result as `failed: <service> returned HTTP <status>: …`, with HTTP 200. It is not raised as a 500.
-- Progress is kept per invoice. A retry resumes from the last step that succeeded and reuses the stored decision, so it does not register again or re-run the policy. The wallet's idempotency keys make the repeated calls safe. A wallet result that was stored as blocked stays blocked under the same key.
-- An invoice that is already financed is refused. One waiting for an approver (a draw at or above THB 837,500) is reported as waiting; the orchestrator does not finish it.
-- `amount_paid` must be above 0, at most the face value, and at most two decimals. Absent means the full face value. A short payment is allowed, and the wallet's waterfall flags it.
-- The in-memory progress does not survive a restart. The wallet's register is the on-chain duplicate check.
+The response of `/flow/run` carries every step: `mandate_id, ocr, register, registry, policy, offers, approve,
+wallet, outcome`. Steps the flow did not reach are absent.
 
-- `run_demo.py` posts an invoice to `/flow/run` and prints every step.
+- `run_demo.py` posts an invoice to `/flow/run`, then `/flow/repay` when the draw executed, and prints every
+  step plus a short summary.
 - `samples/profiles.json` holds the demo supplier and buyer profiles.
-- Demo invoices (clean and attack cases) live in `data/invoices/`, built by the AI engineers and rechecked by the PM.
+- Demo invoices (clean and attack cases) live in `data/invoices/demo/`, built by the AI engineers and rechecked
+  by the PM.
 
 ## Run
 
-From the repo root, with the other three services running:
+From the repo root, with the other three services running. Export the `.env` values first; no service loads
+`.env` by itself. The orchestrator needs `WALLET_AGENT_TOKEN` and `WALLET_RISK_ORACLE_TOKEN` (the same values the
+wallet runs with), ocr-ai needs `FINGERPRINT_HMAC_KEY` and `BANK_TOKEN_HMAC_KEY`, and `WALLET_SELLER_PAYEE`
+names the seller in the wallet's payee registry (default `SELLER:siam-fresh-pack`).
 
 ```bash
+set -a; source .env; set +a
 python -m uvicorn app.main:app --app-dir services/orchestrator --port 8000 --reload
-python services/orchestrator/run_demo.py                       # default sample
-python services/orchestrator/run_demo.py path/to/invoice.pdf   # your own file
+python services/orchestrator/run_demo.py                                   # data/invoices/demo/01_happy.pdf
+python services/orchestrator/run_demo.py data/invoices/demo/02_injected.pdf  # review: wallet not called
+python services/orchestrator/run_demo.py path/to/invoice.pdf --no-repay    # skip the "buyer paid" step
 ```
 
 Service URLs come from `OCR_URL`, `POLICY_URL`, `WALLET_URL` (ports 8001, 8002, 8003 on localhost by default).
-
-The orchestrator needs three tokens. `ORCHESTRATOR_TOKEN` is the caller's token: `run_demo.py` sends it as `X-Orchestrator-Token`. `WALLET_AGENT_TOKEN` (register, execute, settle) and `WALLET_RISK_ORACLE_TOKEN` (approve) must match the wallet's environment. Without the wallet tokens the wallet returns 403, and the result says so.
-
-`run_demo.py` uses `data/invoices/demo/01_happy.pdf` by default, because ocr-ai reads PDF, JPEG and PNG only. The `.txt` demo invoice is refused with HTTP 415.
-
-Lender quotes are the mock lenders in `samples/lenders.json` (the same quotes as `data/agent/lender_quotes.json`). The draw is the quoted advance, capped at the policy limit.
+ocr-ai remembers every invoice it has seen, so a second run of the same PDF is a duplicate; reset its demo
+history between rehearsals (see `services/ocr-ai/README.md`).
 
 ## Test
 
 ```bash
 pytest services/orchestrator
 ```
+
+`tests/test_flow.py` runs the flow against fake services (`httpx.MockTransport`) and checks the call order, the
+token header on each wallet route and the fields the wallet's guard binds to.
