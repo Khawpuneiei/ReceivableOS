@@ -2,7 +2,7 @@
 
 For P and the pitch. These are six upgrades, each in its own PR, each measured in this repo. The numbers are from
 `pytest`, `eval/run_eval.py` and a local full-stack run on the mock ledger (`CHAIN_MODE=mock`, no LLM). The PRs are
-stacked on `main` at `4f4dbd6`: merge them in the order #49, #53, #56, #58, #60, #63, #68 (each branch already contains
+stacked on `main` at `4f4dbd6`: merge them in the order #49, #53, #56, #58, #60, #63, #68, #77 (each branch already contains
 the ones before it). With all seven merged: 209 passed, 2 skipped. Where a claim depends on a step outside the wallet folder, the
 section says so.
 
@@ -19,6 +19,11 @@ closes a gap on the known-limits list or turns a detector miss into a stop.
 | #58 | Merkle-root audit anchoring with per-entry proofs | Proving one entry needed the whole log, including other borrowers' entries | One entry proves with about log2(n) hashes against the on-chain root; edited entries fail |
 | #60 | Ed25519-signed credit decisions at approval | Known limit 1: "the decision is checked by hash, not signed" | A stolen risk-oracle token can't approve a self-written decision; no replay onto another invoice |
 | #68 | Hardened human approval for large draws | Queued draws never expired, a decline stayed queued on the ledger, a declined invoice could never be redrawn | `eval/approval_cases.jsonl`: main 3/4 attacks caught, 1/3 benign completed → **4/4, 3/3** |
+
+**All numbers in one table:** `python services/agent-wallet/eval/redteam_summary.py` (#77, merge last) writes
+`eval/REDTEAM.md`. Over 218 attacks in 8 case sets: the scanner alone flags 135, the full stack lets **0**
+unauthorized payments through, and an adaptive attacker (one caught probe first) gets 0 attacks to execute;
+84 of 86 benign cases complete.
 
 ## How each maps to the state of the art
 
@@ -69,4 +74,7 @@ own recall (14 of 24, 10 of 27) is reported as it is."*
   check means the model adds explanation, not authority.
 - The approval expiry is enforced by the wallet service, which holds the approver key in the MVP. The deployed
   `AgentWallet.confirm` has no expiry of its own; adding one needs a contract change and a redeploy.
+- PD (the buyer's default probability) is checked only off-chain. With the guard bypassed, three red-team cases
+  (W07, S15, S16) pay out on a high-PD decision that the risk oracle had approved. Moving PD on chain needs a
+  contract change and a redeploy.
 - The PRs are stacked, so merging one out of order pulls in the ones before it.
