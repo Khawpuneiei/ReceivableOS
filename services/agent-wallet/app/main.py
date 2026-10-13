@@ -18,6 +18,7 @@ from app.guard.classifier import load_classifier
 from app.models import ExecuteRequest, load_mandate, load_payees
 from app.settings import get_settings
 from app.wallet.lifecycle import WalletService
+from app.wallet.persist import StateFile
 from app.wallet.store import Store
 from shared.schemas import (
     MandateActivateRequest,
@@ -68,6 +69,10 @@ def build_service(clock: Callable[[], datetime] = _now) -> WalletService:
     payees = load_payees(CONFIG / "payees.json")
     ledger = build_ledger(settings, payees, clock)
     classifier = load_classifier(settings.injection_model_dir) if settings.injection_model_dir else None
+    state = None
+    if settings.wallet_state_file and settings.ledger_mode == "fisco":
+        # Tied to the deployed AgentWallet, so state from an earlier deployment is never loaded.
+        state = StateFile(settings.wallet_state_file, ledger.contracts["AgentWallet"])
     return WalletService(
         ledger,
         Store(),
@@ -78,6 +83,7 @@ def build_service(clock: Callable[[], datetime] = _now) -> WalletService:
         canary=settings.agent_canary,
         classifier=classifier,
         classifier_action=settings.injection_classifier_action,
+        state=state,
     )
 
 

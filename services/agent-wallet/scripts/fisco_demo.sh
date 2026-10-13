@@ -94,7 +94,7 @@ restart_wallet() {
     -e CHAIN_DEPLOYMENTS_FILE=/repo/services/agent-wallet/contracts/deployments.json \
     -e WALLET_OWNER_TOKEN="$WALLET_OWNER_TOKEN" -e WALLET_APPROVER_TOKEN="$WALLET_APPROVER_TOKEN" \
     -e WALLET_RISK_ORACLE_TOKEN="$WALLET_RISK_ORACLE_TOKEN" -e WALLET_AGENT_TOKEN="$WALLET_AGENT_TOKEN" \
-    -e DEMO_MODE=1 \
+    -e DEMO_MODE=1 -e WALLET_STATE_FILE=/work/wallet-state.json \
     "$CONTAINER" bash -c "/opt/venv/bin/python -m uvicorn app.main:app --app-dir services/agent-wallet \
       --host 0.0.0.0 --port $PORT > /work/wallet.log 2>&1"
   for _ in $(seq 1 60); do

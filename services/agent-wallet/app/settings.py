@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     injection_classifier_action: Literal["log", "hold", "block"] = "log"
     platform_fee_rate: Decimal = Decimal("0.003")
     demo_mode: bool = False  # enables the skip_offchain_checks bypass for on-stage reverts
+    # FISCO only: a JSON file that keeps holds, pending approvals, idempotency results and the audit log
+    # across restarts. Unset means in memory only. Ignored on the mock, whose ledger does not survive.
+    wallet_state_file: str | None = None
 
     # LLM: optional; the deterministic picker runs when unset
     llm_provider: str | None = None
