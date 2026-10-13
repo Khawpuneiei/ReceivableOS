@@ -219,3 +219,26 @@ def test_a_refused_upload_is_a_plain_error_not_a_crash():
     assert (
         err.value.plain == "the OCR service refused the request (HTTP 415): Only PDF, JPEG, and PNG uploads"
     )
+
+
+def test_the_orchestrator_token_rides_every_call(monkeypatch):
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.headers.get("X-Orchestrator-Token"))
+        return httpx.Response(200, json=_stub_response())
+
+    monkeypatch.setenv("ORCHESTRATOR_TOKEN", "t0ken")
+    _client(handler).run_flow(b"%PDF", "invoice.pdf")
+    monkeypatch.delenv("ORCHESTRATOR_TOKEN")
+    _client(handler).run_flow(b"%PDF", "invoice.pdf")
+    assert seen == ["t0ken", None]
+
+
+def test_a_missing_token_is_said_plainly():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, json={"detail": "Unauthorized"})
+
+    with pytest.raises(orch.ServiceError) as err:
+        _client(handler).run_flow(b"%PDF", "invoice.pdf")
+    assert "set ORCHESTRATOR_TOKEN" in err.value.plain
