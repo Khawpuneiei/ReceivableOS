@@ -20,6 +20,14 @@ start() {
   # OCR remembers every invoice it has seen; a fresh state file makes 01_happy.pdf a first sighting again.
   export OCR_STATE_PATH="${OCR_STATE_PATH:-$STACK_DIR/ocr-state.sqlite}"
   rm -f "$OCR_STATE_PATH" "$OCR_STATE_PATH"-*
+  # A server already on a port would answer /health for us and hide a failed start (e.g. docker compose is up).
+  for entry in "${SERVICES[@]}"; do
+    read -r name port <<<"$entry"
+    if curl -fs "http://localhost:$port/health" >/dev/null 2>&1; then
+      echo "port $port is already serving; stop it first (scripts/stack.sh stop or docker compose down)" >&2
+      exit 1
+    fi
+  done
   for entry in "${SERVICES[@]}"; do
     read -r name port <<<"$entry"
     "$PYTHON" -m uvicorn app.main:app --app-dir "$ROOT/services/$name" --port "$port" \
@@ -44,12 +52,16 @@ stop() {
     pid_file="$STACK_DIR/$name.pid"
     if [[ -f "$pid_file" ]]; then kill "$(cat "$pid_file")" 2>/dev/null || true; rm -f "$pid_file"; fi
   done
+  for entry in "${SERVICES[@]}"; do  # wait until every port is free, so a restart can start cleanly
+    read -r _ port <<<"$entry"
+    for _ in $(seq 1 20); do curl -fs "http://localhost:$port/health" >/dev/null 2>&1 || break; sleep 0.5; done
+  done
 }
 
 case "${1:-}" in
   start) start ;;
   stop) stop ;;
-  restart) stop; sleep 1; start ;;
+  restart) stop; start ;;
   logs) tail -n 50 "$STACK_DIR"/*.log ;;
   *) echo "usage: $0 start|stop|restart|logs" >&2; exit 2 ;;
 esac
