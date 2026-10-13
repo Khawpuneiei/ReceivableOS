@@ -95,6 +95,8 @@ English is the primary evaluated language. Thai is secondary and its scan result
 
 Numeric grouping and decimal separators require sufficient locale evidence. Monetary calculations use `Decimal`; currency minor-unit precision and explicit source tax basis matter. Do not round away a printed discrepancy. A resolved invoice/PO mismatch requires review. Partial invoicing cannot establish remaining PO capacity without an authoritative allocation ledger.
 
+`app/amount_words.py` parses the total printed in words, in Thai BAHTTEXT form (`...บาทถ้วน`, `...สตางค์`) or English `Amount in words: ... only` / `Say: ... only`, and adds `AMOUNT_WORDS_MISMATCH` (review) when it disagrees with the extracted total. That catches digits that were regenerated consistently, where line, subtotal and VAT arithmetic all agree. Phrases that are not purely number words are skipped, never guessed, so an invoice without a clean amount in words is unaffected. `scripts/amount_words_eval.py` scores 4 honest and 4 regenerated fictional invoices.
+
 ## OCR engine decision and performance
 
 PDF text/layout is preferred because it is fast, preserves original text evidence, and avoids OCR errors. PaddleOCR is the local scan engine and runs only for unreadable pages when enabled. Use the staged v5 detector plus the language-matched recognizer; recognition scores are not calibrated extraction accuracy.
