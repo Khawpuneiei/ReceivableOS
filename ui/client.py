@@ -67,7 +67,11 @@ class Orchestrator:
             if detail:
                 raise ServiceError(f"HTTP {r.status_code} from {path}: {detail}", plain_error(detail))
             raise Unavailable(f"HTTP {r.status_code} from {path}")
-        r.raise_for_status()
+        if (
+            r.status_code >= 400
+        ):  # e.g. 415 when OCR refuses the uploaded file: the file's fault, said plainly
+            detail = _detail(r) or f"HTTP {r.status_code}"
+            raise ServiceError(f"HTTP {r.status_code} from {path}: {detail}", plain_error(detail))
         return r.json()
 
     def health(self) -> bool:
