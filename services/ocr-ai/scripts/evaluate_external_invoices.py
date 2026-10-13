@@ -119,7 +119,37 @@ def selected_inputs() -> list[tuple[Path, dict, str]]:
     return inputs
 
 
-def main() -> None:
+def summarize(records: list[dict]) -> dict:
+    """Failures stay in denominators and cannot count as complete documents."""
+    evaluated = [record for record in records if record["status"] == "evaluated"]
+    header_fields = sum(record["header_field_count"] for record in records)
+    line_fields = sum(record["expected_line_count"] * len(LINE_FIELDS) for record in records)
+    header_matches = sum(record.get("header_match_count", 0) for record in evaluated)
+    line_matches = sum(
+        field["match"]
+        for record in evaluated
+        for line in record.get("line_fields", [])
+        for field in line.values()
+    )
+    return {
+        "header_field_matches": header_matches,
+        "header_fields": header_fields,
+        "header_match_rate": round(header_matches / header_fields, 4) if header_fields else None,
+        "documents_with_all_header_fields": sum(
+            record.get("header_match_count") == record["header_field_count"]
+            and record["header_field_count"] > 0
+            for record in evaluated
+        ),
+        "line_field_matches": line_matches,
+        "line_fields": line_fields,
+        "line_match_rate": round(line_matches / line_fields, 4) if line_fields else None,
+        "expected_lines": sum(record["expected_line_count"] for record in records),
+        "observed_lines": sum(record.get("observed_line_count", 0) for record in evaluated),
+        "elapsed_seconds": round(sum(record.get("elapsed_seconds", 0) for record in records), 3),
+    }
+
+
+def main() -> int:
     if not DETECTOR.is_dir() or not ENGLISH_RECOGNIZER.is_dir():
         raise SystemExit(
             "Stage PP-OCRv5_mobile_det and en_PP-OCRv5_mobile_rec first; see services/ocr-ai/README.md."
@@ -155,6 +185,8 @@ def main() -> None:
             "language": expected.get("language"),
             "sha256": sha256(path),
             "expected_sha256": sha256(path.parent / "expected.json"),
+            "header_field_count": len(HEADER_FIELDS),
+            "expected_line_count": len(expected.get("lines", [])),
         }
         try:
             result = extract(path.read_bytes(), "invoice", settings)
@@ -261,14 +293,6 @@ def main() -> None:
         str(path.relative_to(SERVICE)): sha256(path) for path in sorted((SERVICE / "app").rglob("*.py"))
     }
     code_hashes[str(Path(__file__).relative_to(SERVICE))] = sha256(Path(__file__))
-    total_header_matches = sum(item.get("header_match_count", 0) for item in records)
-    total_header_fields = sum(item.get("header_field_count", 0) for item in records)
-    total_expected_lines = sum(item.get("expected_line_count", 0) for item in records)
-    total_observed_lines = sum(item.get("observed_line_count", 0) for item in records)
-    total_line_field_matches = sum(
-        field["match"] for item in records for line in item.get("line_fields", []) for field in line.values()
-    )
-    total_line_fields = sum(len(line) for item in records for line in item.get("line_fields", []))
     report = {
         "status": "complete" if all(item["status"] == "evaluated" for item in records) else "partial",
         "data_origin": "external-publisher synthetic fixtures; no customer documents",
@@ -291,21 +315,7 @@ def main() -> None:
                 "OCR-local extract(); no HTTP compatibility, history, or fraud calibration claim"
             ),
         },
-        "totals": {
-            "header_field_matches": total_header_matches,
-            "header_fields": total_header_fields,
-            "header_match_rate": round(total_header_matches / total_header_fields, 4)
-            if total_header_fields
-            else None,
-            "documents_with_all_header_fields": sum(
-                item.get("header_match_count") == item.get("header_field_count") for item in records
-            ),
-            "line_field_matches": total_line_field_matches,
-            "line_fields": total_line_fields,
-            "expected_lines": total_expected_lines,
-            "observed_lines": total_observed_lines,
-            "elapsed_seconds": round(sum(item.get("elapsed_seconds", 0) for item in records), 3),
-        },
+        "totals": summarize(records),
         "evaluation_role": (
             "development challenge only after parser changes; publisher-authored synthetic labels, "
             "not an independent holdout or production accuracy estimate"
@@ -361,7 +371,8 @@ def main() -> None:
     }
     OUTPUT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({"status": report["status"], "summary": summary}, ensure_ascii=False), flush=True)
+    return 0 if report["status"] == "complete" else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
