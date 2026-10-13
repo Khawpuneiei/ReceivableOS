@@ -65,5 +65,5 @@ E2E_LIVE=1 pytest services/orchestrator/tests/test_e2e_live.py
 | `02_injected.pdf` | `injection_flags` set, review, wallet not called |
 | `03_inflated.pdf` | fraud score at or above 0.30, reject, wallet not called |
 | `04_duplicate.pdf`, `01_happy.pdf` again | same fingerprint, TX-1 blocked `DuplicateReceivable`, policy not called |
-| `05_tampered.pdf`, `06_qr_swap.pdf` (once OCR's forensics PRs land) | review / reject on fraud flags, wallet not called |
+| `05_tampered.pdf`, `06_qr_swap.pdf`, `07_words_mismatch.pdf`, `08_terms_mismatch.pdf` (once OCR's PRs land) | review / reject / review / review (fraud flags or failed cross-checks), wallet not called |
 | a `.txt` upload | 415 from ocr-ai, passed through (an upload the OCR refuses is the caller's fault, not a 502) |

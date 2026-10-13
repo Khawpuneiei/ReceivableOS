@@ -116,6 +116,8 @@ def test_repay_of_an_invoice_that_never_ran_is_404(http):
     [
         ("05_tampered.pdf", "review"),  # PDF edit traces (ocr-ai forensics) score below 0.30: review
         ("06_qr_swap.pdf", "reject"),  # PromptPay QR pays another tax ID: qr_payee_mismatch 0.40, reject
+        ("07_words_mismatch.pdf", "review"),  # amount in words disagrees with the digits: confidence < 0.80
+        ("08_terms_mismatch.pdf", "review"),  # payment terms disagree with the due date: confidence < 0.80
     ],
 )
 def test_forged_invoices_never_reach_the_wallet(http, matrix, name, decision):
@@ -125,7 +127,8 @@ def test_forged_invoices_never_reach_the_wallet(http, matrix, name, decision):
         r = http.post("/flow/run", files={"file": (name, f, "application/pdf")})
     assert r.status_code == 200, r.text
     steps = r.json()
-    assert steps["ocr"]["fraud_flags"]
+    ocr = steps["ocr"]
+    assert ocr["fraud_flags"] or ocr["confidence"] < 0.80  # a forensic flag, or a failed cross-check
     assert steps["policy"]["decision"] == decision
     assert "approve" not in steps and "wallet" not in steps
     assert steps["outcome"] == f"{decision}: wallet not called"
