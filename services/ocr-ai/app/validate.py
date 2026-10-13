@@ -37,6 +37,13 @@ def _validate_document(doc: DocumentExtraction) -> DocumentExtraction:
                 party.legal_identifier.confidence = 0
                 party.legal_identifier.value = None
                 party.legal_identifier.status = "unsupported"
+    supplier_id, buyer_id = (
+        (party.country.value, party.identifier_scheme.value, party.legal_identifier.value)
+        for party in (doc.supplier, doc.buyer)
+    )
+    if supplier_id[2] and supplier_id == buyer_id:
+        # A company cannot sell to itself; a receivable on such an invoice has no independent debtor.
+        reasons.append("SUPPLIER_IS_BUYER")
     if doc.due_date.value and doc.issue_date.value and doc.due_date.value < doc.issue_date.value:
         reasons.append("DUE_BEFORE_ISSUE")
     if doc.issue_date.value and doc.issue_date.value > datetime.now(ZoneInfo("Asia/Bangkok")).date():

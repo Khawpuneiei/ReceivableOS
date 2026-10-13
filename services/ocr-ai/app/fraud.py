@@ -1,6 +1,7 @@
 """Explainable deterministic duplicate and scoped shared-account graph signals."""
 
 import math
+from decimal import Decimal
 
 import networkx as nx
 
@@ -9,6 +10,10 @@ from app.graph import build_graph
 from app.history import InvoiceObservation
 from app.models import FraudFinding
 from app.normalize import normalize_reference
+
+# Round trip: the reverse invoice is within this many days and this fraction of the current amount.
+CIRCULAR_WINDOW_DAYS = 90
+CIRCULAR_AMOUNT_TOLERANCE = Decimal("0.10")
 
 
 def finding(code: str, reason: str, refs=None, entities=None, path=None) -> FraudFinding:
@@ -119,6 +124,29 @@ def graph_findings(records: list[tuple[str, InvoiceObservation]], current_id: st
                         "Same scoped parties, invoice reference, currency, and "
                         "issue date have different amounts; review the candidate similarity",
                         [*current.evidence_refs, *previous.evidence_refs],
+                        path=[current_id, oid],
+                    )
+                )
+                break
+    if current.supplier_token and current.buyer_token and current.amount and current.issue_date:
+        for oid, previous in records:
+            if (
+                oid != current_id
+                and previous.supplier_token == current.buyer_token
+                and previous.buyer_token == current.supplier_token
+                and previous.currency == current.currency
+                and previous.amount
+                and previous.issue_date
+                and abs((current.issue_date - previous.issue_date).days) <= CIRCULAR_WINDOW_DAYS
+                and abs(previous.amount - current.amount) <= CIRCULAR_AMOUNT_TOLERANCE * current.amount
+            ):
+                signals.append(
+                    finding(
+                        "circular_invoicing",
+                        "The buyer invoiced this supplier back for a similar amount within "
+                        f"{CIRCULAR_WINDOW_DAYS} days; confirm that real goods or services moved both ways",
+                        [*current.evidence_refs, *previous.evidence_refs],
+                        entities=[current.supplier_token, current.buyer_token],
                         path=[current_id, oid],
                     )
                 )
