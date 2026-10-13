@@ -33,6 +33,9 @@ import httpx
 
 SERVICE = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(SERVICE), str(SERVICE.parents[1])]
+sys.path.insert(0, str(SERVICE / "scripts"))
+
+from verify_audit_proof import check as check_proof  # noqa: E402
 
 from app.models import canonical_hash, load_mandate  # noqa: E402
 from shared.schemas import PolicyDecision  # noqa: E402
@@ -292,6 +295,13 @@ def run(url: str, owner: str, approver: str, risk_oracle: str, agent: str) -> in
     audit = demo.http.get(f"/wallet/audit/{tagged('inv_happy')}").json()
     events = [e["event"] for e in audit["entries"]]
     print(f"  entries {len(events)}  verified {audit['verified']}  last event {events[-1]}")
+    executed = next(e for e in audit["entries"] if e["action"] == "draw" and e["event"] == "EXECUTED")
+    bundle = demo.http.get(f"/wallet/audit/proof/{executed['seq']}").json()
+    problems = check_proof(bundle)
+    print(
+        f"  draw entry {executed['seq']}: {len(bundle['proof'])}-hash Merkle proof to anchored root "
+        f"{bundle['root'][:18]}... {'VERIFIED' if not problems else problems}"
+    )
 
     out = write_report()
     print(f"\nwrote {out.relative_to(SERVICE.parents[1]).as_posix()}")

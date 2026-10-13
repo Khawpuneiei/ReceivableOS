@@ -123,6 +123,7 @@ def create_app(service: WalletService | None = None) -> FastAPI:
         yield
 
     app = FastAPI(title="agent-wallet", lifespan=lifespan)
+    app.state.wallet = svc
 
     @app.get("/health")
     def health() -> dict:
@@ -215,6 +216,27 @@ def create_app(service: WalletService | None = None) -> FastAPI:
     @app.get("/wallet/audit/ref/{audit_ref}")
     def audit_by_ref(audit_ref: str) -> dict:
         return _audit_view(svc.audit.for_ref(audit_ref))
+
+    @app.get("/wallet/audit/proof/{seq}")
+    def audit_proof(seq: int) -> dict:
+        """Inclusion proof for one entry; scripts/verify_audit_proof.py checks it offline."""
+        try:
+            return svc.audit_proof(seq)
+        except KeyError as err:
+            raise HTTPException(status_code=404, detail="unknown entry") from err
+
+    @app.post("/wallet/audit/anchor")
+    def anchor_now(
+        x_owner_token: str | None = Header(default=None), x_approver_token: str | None = Header(default=None)
+    ) -> dict:
+        """On-demand anchor, e.g. at the end of a day without settlements."""
+        for expected, given, who in (
+            (settings.wallet_owner_token, x_owner_token, "owner"),
+            (settings.wallet_approver_token, x_approver_token, "approver"),
+        ):
+            if expected and given and hmac.compare_digest(expected, given):
+                return svc.anchor_audit(actor=who)
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
     @app.get("/wallet/tx/{tx_id}", response_model=WalletResult)
     def get_tx(tx_id: str) -> WalletResult:

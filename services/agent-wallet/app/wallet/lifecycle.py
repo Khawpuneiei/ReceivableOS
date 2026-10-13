@@ -79,6 +79,7 @@ class WalletService:
         self.mandate: Mandate | None = None
         self.paused = False
         self.audit = AuditLog()
+        self.anchors: list[dict[str, Any]] = []  # Merkle roots written on chain, oldest first
 
     # ----- helpers -----
 
@@ -222,17 +223,47 @@ class WalletService:
             data=data,
         )
         if action == "settle" and result.status == TxStatus.executed:
-            head = self.audit.head
-            anchor = self.ledger.anchor_audit(head, len(self.audit.entries))
-            self.audit.record(
-                invoice_id=invoice_id,
-                audit_ref=ref,
-                action="anchor",
-                event="ANCHORED",
-                actor=actor,
-                tx_id=result.tx_id,
-                data={"head": head, "entries": len(self.audit.entries), "chain_ref": anchor.tx_hash},
-            )
+            self.anchor_audit(invoice_id, actor, result.tx_id, ref)
+
+    def anchor_audit(
+        self, invoice_id: str = "wallet", actor: str = "agent", tx_id: str | None = None, ref: str = ""
+    ) -> dict[str, Any]:
+        """Writes the Merkle root of the log so far on chain, then records that it did. The ANCHORED entry
+        itself falls in the next anchor, so every entry is eventually covered."""
+        size = len(self.audit.entries)
+        root, head = self.audit.merkle_root(size), self.audit.head
+        res = self.ledger.anchor_audit(root, size)
+        anchor = {"root": root, "entries": size, "head": head, "chain_ref": res.tx_hash, "ok": res.ok}
+        if res.ok:
+            self.anchors.append(anchor)
+        self.audit.record(
+            invoice_id=invoice_id,
+            audit_ref=ref or f"anc_{size}",
+            action="anchor",
+            event="ANCHORED" if res.ok else "ANCHOR_FAILED",
+            actor=actor,
+            tx_id=tx_id,
+            data=anchor,
+        )
+        return anchor
+
+    def audit_proof(self, seq: int) -> dict[str, Any]:
+        """Inclusion proof for entry `seq` against the first anchor that covers it, or against the current
+        root (anchored: False) when no anchor covers it yet. KeyError when there is no such entry."""
+        if not 1 <= seq <= len(self.audit.entries):
+            raise KeyError(seq)
+        anchor = next((a for a in self.anchors if a["entries"] >= seq), None)
+        size = anchor["entries"] if anchor else len(self.audit.entries)
+        entry = self.audit.entries[seq - 1]
+        return {
+            "entry": entry,
+            "leaf_index": seq - 1,
+            "tree_size": size,
+            "proof": self.audit.inclusion_proof(seq, size),
+            "root": anchor["root"] if anchor else self.audit.merkle_root(size),
+            "anchored": anchor is not None,
+            "chain_ref": anchor["chain_ref"] if anchor else None,
+        }
 
     def _invoice_of(self, fingerprint: str) -> str:
         fact = self.store.receivables.get(fingerprint)

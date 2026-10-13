@@ -12,7 +12,7 @@ Build brief for the service: [`CLAUDE.md`](CLAUDE.md). Request and response mode
   against them with `CHAIN_MODE=fisco`, and the demo's on-chain transactions are checked on chain. The records are in
   [`eval/fisco-deployment.md`](eval/fisco-deployment.md) and [`eval/demo_tx_hashes_fisco.md`](eval/demo_tx_hashes_fisco.md).
 - **Local Anvil:** `scripts/deploy.py` and `scripts/evm_smoke.py` pass 7 of 7 checks.
-- **Tests:** `pytest` 141 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
+- **Tests:** `pytest` 154 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
 - **Orchestrator:** the integration isn't finished. See `docs/orchestrator-integration.md`.
 
 Per-item status is in the table in [`docs/03-agent-wallet.md`](../../docs/03-agent-wallet.md) section 8.
@@ -135,8 +135,27 @@ The red-team eval: `python services/agent-wallet/eval/run_eval.py` (default case
 | GET | `/wallet/audit/{invoice_id}` | none | Audit entries for one invoice, plus `verified` |
 | GET | `/wallet/audit/ref/{audit_ref}` | none | Audit entries for one action, plus `verified` |
 | GET | `/wallet/tx/{tx_id}` | none | The result of one transaction |
+| GET | `/wallet/audit/proof/{seq}` | none | Merkle inclusion proof for one audit entry against the anchored root |
+| POST | `/wallet/audit/anchor` | owner or approver token | Anchor the audit log's Merkle root now |
 
 A missing or wrong token gets HTTP 403. A malformed body gets 422 before the token check runs.
+### Audit anchoring with Merkle proofs (`app/audit/merkle.py`)
+
+After each settlement, and on demand, the wallet writes the **Merkle root** of the audit log on chain
+(`AgentWallet.anchorAudit(root, entries)`, no contract change). It used to write the hash-chain head. The tree
+follows RFC 9162 (Certificate Transparency v2), with 0x00 and 0x01 prefixes for leaves and nodes. An auditor
+checks one entry with `GET /wallet/audit/proof/{seq}`: about log2(n) sibling hashes, and no other borrower's
+entries. The check runs offline:
+
+```bash
+python services/agent-wallet/scripts/verify_audit_proof.py --url http://127.0.0.1:8003 --seq 25
+```
+
+It recomputes the entry's own hash from its contents, follows the path to the root, and prints the root and
+the anchor's `chain_ref` to compare with the `AuditAnchored` event on chain. An edited entry, or one rehashed
+to hide the edit, fails. The hash chain and `verified` are unchanged. `scripts/demo.py` section 8 prints one
+verified proof.
+
 Not built: `GET /wallet/registry/{invoice_fingerprint}` and the optional `POST /agent/run`.
 
 ## Settings
