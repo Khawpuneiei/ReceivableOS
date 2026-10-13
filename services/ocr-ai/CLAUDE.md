@@ -95,6 +95,8 @@ English is the primary evaluated language. Thai is secondary and its scan result
 
 Numeric grouping and decimal separators require sufficient locale evidence. Monetary calculations use `Decimal`; currency minor-unit precision and explicit source tax basis matter. Do not round away a printed discrepancy. A resolved invoice/PO mismatch requires review. Partial invoicing cannot establish remaining PO capacity without an authoritative allocation ledger.
 
+`app/payment_terms.py` reads the printed payment terms (`Net 45`, `Payment terms: 30 days`, `pay within 45 days`, `Due on receipt`, Thai `เครดิต 30 วัน` / `ชำระภายใน 30 วัน`, Thai digits included) and adds `DUE_DATE_TERMS_MISMATCH` (review) when issue date + N days is not the extracted due date. A day count only counts next to a payment word, `EOM` terms and documents with conflicting terms are skipped, and no due date is ever inferred from terms. `scripts/payment_terms_eval.py` scores 6 honest and 4 re-dated fictional invoices.
+
 ## OCR engine decision and performance
 
 PDF text/layout is preferred because it is fast, preserves original text evidence, and avoids OCR errors. PaddleOCR is the local scan engine and runs only for unreadable pages when enabled. Use the staged v5 detector plus the language-matched recognizer; recognition scores are not calibrated extraction accuracy.
