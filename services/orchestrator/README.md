@@ -17,6 +17,16 @@ wallet's `settle` (TX-5) for an invoice this process has run.
 The response of `/flow/run` carries every step: `mandate_id, ocr, register, registry, policy, offers, approve,
 wallet, outcome`. Steps the flow did not reach are absent.
 
+`POST /flow/attack/{case}` (A1 to A5, optional form `mandate_id`) runs one attack live for the demo screen's
+section 6. Each builds a fresh receivable from `samples/attack_invoice.json` (new invoice_id, fingerprint and
+doc_hash every time, so it never collides with the happy flow), runs the real register / policy / approve calls
+up to the attack, then makes one bad call: A1 an injected invoice (policy says review) drawn to `0xAttacker`
+with no approval; A2 the same fingerprint registered again with a new doc_hash; A3 an approved receivable drawn
+at 19% APR; A4 the same drawn at full face value; A5 a supplier with expired KYB (policy rejects) drawn anyway.
+It returns `case, title, invoice_id, register, policy, approve, wallet, status, stopped_by`; an attack that
+is not stopped comes back with its real status. A6 (expired or paused mandate) needs the owner token and is
+not served.
+
 - `run_demo.py` posts an invoice to `/flow/run`, then `/flow/repay` when the draw executed, and prints every
   step plus a short summary.
 - `samples/profiles.json` holds the demo supplier and buyer profiles.
