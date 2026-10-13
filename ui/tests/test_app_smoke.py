@@ -64,7 +64,7 @@ def test_live_mode_without_an_orchestrator_degrades_to_fixtures(monkeypatch):
     monkeypatch.setenv("ORCHESTRATOR_URL", "http://127.0.0.1:9")
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert not at.exception
-    next(b for b in at.button if b.label == "Use demo invoice").click().run()
+    at.button(key="case_happy").click().run()
     assert not at.exception
     assert "Orchestrator unavailable" in at.warning[0].value
     assert "APPROVE" in _text(at)  # the fixture view is still on screen
@@ -78,3 +78,21 @@ def test_live_mode_says_what_it_will_call_before_any_run(monkeypatch):
     monkeypatch.setenv("ORCHESTRATOR_URL", "http://127.0.0.1:9")
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert "SAVED DEMO" in at.info[0].value and "127.0.0.1:9" in at.info[0].value
+
+
+def test_each_demo_case_posts_its_own_pdf_and_a_duplicate_runs_happy_first(monkeypatch):
+    import client as orch
+
+    sent = []
+
+    def fake_run_flow(self, content, filename, mandate_id="mdt_001"):
+        sent.append(filename)
+        raise orch.Unavailable("stub")
+
+    monkeypatch.setenv("UI_MODE", "live")
+    monkeypatch.setattr(orch.Orchestrator, "run_flow", fake_run_flow)
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.button(key="case_duplicate").click().run()
+    assert sent == ["01_happy.pdf", "04_duplicate.pdf"]  # the happy run failed, so it isn't marked as run
+    at.button(key="case_injected").click().run()
+    assert sent[-1] == "02_injected.pdf" and not at.exception
