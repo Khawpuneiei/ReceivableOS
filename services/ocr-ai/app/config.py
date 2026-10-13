@@ -37,6 +37,11 @@ FRAUD_WEIGHTS = {
     "shared_bank_token": 0.15,
     "bank_account_changed": 0.25,
     "suspicious_cluster": 0.15,
+    # PDF edit traces (app/forensics.py); all four together score 0.271, below Policy's 0.30 reject line.
+    "pdf_text_covered": 0.15,
+    "pdf_appended_text_layer": 0.05,
+    "pdf_font_anomaly": 0.05,
+    "pdf_incremental_update": 0.05,
 }
 
 
@@ -92,4 +97,8 @@ ANOMALY_FAMILIES = {
     "po_amount_mismatch": "amount",
     "po_party_mismatch": "identity",
     "po_currency_mismatch": "currency",
+    "pdf_text_covered": "tamper",
+    "pdf_appended_text_layer": "tamper",
+    "pdf_font_anomaly": "tamper",
+    "pdf_incremental_update": "tamper",
 }

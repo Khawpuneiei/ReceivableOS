@@ -444,6 +444,13 @@ def _validate_profile(profile: dict) -> None:
             raise ValueError(f"{profile['style']} line math is inconsistent for {line[0]}")
 
 
+def _tampered() -> bytes:
+    """Amounts raised consistently by redact-and-retype; only the PDF edit trace is left."""
+    from datagen.tamper_corpus import forge
+
+    return forge("redact_retype", "SFP-INV-2026-0145")
+
+
 def generate(output: Path = OUTPUT) -> list[Path]:
     output.mkdir(parents=True, exist_ok=True)
     profile = SHOWCASE_PROFILES[0]
@@ -482,6 +489,7 @@ def generate(output: Path = OUTPUT) -> list[Path]:
         ("03_inflated.pdf", build_pdf(variants)),
         ("04_duplicate.pdf", resaved),
         ("purchase_order.pdf", purchase_order),
+        ("05_tampered.pdf", _tampered()),
     ):
         path = demo / filename
         path.write_bytes(content)
