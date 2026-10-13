@@ -239,6 +239,8 @@ def _match(text: str) -> str | None:
 def _views(text: str) -> list[tuple[str, str]]:
     plain = re.sub(r"\s+", " ", text).casefold()
     normalized = re.sub(r"\s+", " ", unicodedata.normalize("NFKC", _visible(text))).casefold()
+    # NFKC splits Thai SARA AM (ำ) into NIKHAHIT + SARA AA; rejoin it so "คำสั่ง" and "ชำระ" still match.
+    normalized = normalized.replace("\u0e4d\u0e32", "\u0e33")
     # OCR and per-glyph PDF spans can separate Thai vowels and tone marks from their base letter.
     normalized = "".join(
         char
