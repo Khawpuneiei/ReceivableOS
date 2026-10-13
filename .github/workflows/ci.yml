@@ -114,6 +114,7 @@ jobs:
         run: scripts/ci_env.sh
       - name: Demo matrix (live)
         run: |
+          set -a; . ./.env; set +a  # the clients send ORCHESTRATOR_TOKEN once /flow/* requires it
           if [ -f services/orchestrator/tests/test_e2e_live.py ]; then
             scripts/stack.sh start
             E2E_LIVE=1 python -m pytest -q -p no:cacheprovider services/orchestrator/tests/test_e2e_live.py
@@ -123,6 +124,7 @@ jobs:
           fi
       - name: run_demo.py (definition of done)
         run: |
+          set -a; . ./.env; set +a
           scripts/stack.sh restart
           python services/orchestrator/run_demo.py | tee demo.out
           grep -q "outcome   executed" demo.out
