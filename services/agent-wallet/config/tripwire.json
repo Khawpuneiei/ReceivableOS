@@ -1,0 +1,9 @@
+{
+  "_comment": "Decoys: no legitimate flow ever uses these. Any request that carries one is blocked and pauses the wallet.",
+  "honeytokens": [
+    "SELLER:siam-fresh-pack-old",
+    "0x7d2c1f0b9a4e3d5c6b8a9f0e1d2c3b4a5f6e7d8c"
+  ],
+  "threshold": 3,
+  "window_minutes": 10
+}

@@ -23,6 +23,7 @@ from pydantic import ValidationError
 from app.audit.log import AuditLog
 from app.guard.injection import Classifier, scan_payload
 from app.guard.pipeline import GuardContext, check_draw
+from app.guard.tripwire import Tripwire
 from app.models import (
     ApproveIntent,
     DrawIntent,
@@ -66,6 +67,7 @@ class WalletService:
         canary: str | None = None,
         classifier: Classifier | None = None,
         classifier_action: str = "log",
+        tripwire: Tripwire | None = None,
     ) -> None:
         self.ledger = ledger
         self.store = store
@@ -80,6 +82,7 @@ class WalletService:
         self.paused = False
         self.audit = AuditLog()
         self.anchors: list[dict[str, Any]] = []  # Merkle roots written on chain, oldest first
+        self.tripwire = tripwire or Tripwire(honeytokens=set(), threshold=0)
 
     # ----- helpers -----
 
@@ -174,17 +177,35 @@ class WalletService:
         checks.append(GuardCheck(layer="L5", code=code, passed=False))
         return WalletResult(status=TxStatus.blocked, block_reason=code, checks=checks, **common)
 
-    def _run(self, action: str, invoice_id: str, key: str, run: Callable[[], WalletResult]) -> WalletResult:
-        """Idempotent write. A repeat returns the stored result, sends nothing, and is audited."""
+    def _run(
+        self,
+        action: str,
+        invoice_id: str,
+        key: str,
+        run: Callable[[], WalletResult],
+        request: Any = None,
+        fingerprint: str = "",
+    ) -> WalletResult:
+        """Idempotent write. A repeat returns the stored result, sends nothing, and is audited.
+        The tripwire runs first (honeytoken, quarantine) and learns from every blocked result."""
         if key in self.store.results:
             stored = self.store.results[key]
             replay = GuardCheck(layer="IDEM", code="IdempotentReplay", passed=True)
             result = stored.model_copy(update={"checks": [*stored.checks, replay]})
             self._audit(invoice_id, action, result, event="REPLAY")
             return result
-        result = run()
+        if self.tripwire.honeytoken_in(request.model_dump(mode="json") if request else None):
+            result = self._offchain_block("HoneytokenTouched", "TRIP")
+        elif action != "settle" and self.tripwire.is_quarantined(fingerprint):  # repayment is never held
+            result = self._offchain_block("InvoiceQuarantined", "TRIP")
+        else:
+            result = run()
         self.store.results[key] = result
         self._audit(invoice_id, action, result)
+        if result.status == TxStatus.blocked:
+            codes = {result.block_reason} | {c.code for c in result.checks if not c.passed}
+            if self.tripwire.observe(self.clock(), fingerprint, {c for c in codes if c}) and not self.paused:
+                self.pause(True, actor="tripwire")
         return result
 
     def _audit(
@@ -280,7 +301,9 @@ class WalletService:
 
     def register(self, req: WalletRegisterRequest) -> WalletResult:
         key = req.idempotency_key
-        return self._run("register", req.invoice_id, key, lambda: self._register(req))
+        return self._run(
+            "register", req.invoice_id, key, lambda: self._register(req), req, req.invoice_fingerprint
+        )
 
     def _seller_kyc(self, seller_address: str | None) -> bool:
         """The KYC flag of the payee at this address, while its credential has not expired.
@@ -335,7 +358,7 @@ class WalletService:
     def approve(self, req: WalletApproveRequest) -> WalletResult:
         key = req.idempotency_key
         invoice_id = self._invoice_of(req.invoice_fingerprint)
-        return self._run("approve", invoice_id, key, lambda: self._approve(req))
+        return self._run("approve", invoice_id, key, lambda: self._approve(req), req, req.invoice_fingerprint)
 
     def _approve(self, req: WalletApproveRequest) -> WalletResult:
         # The approval must name an approve decision and match it: the hash covers the decision, and the limit
@@ -380,7 +403,9 @@ class WalletService:
     def execute(self, req: WalletRequest) -> WalletResult:
         fingerprint = req.invoice_fingerprint or ""
         key = req.idempotency_key or self._request_key(req)
-        return self._run("draw", req.invoice_id, key, lambda: self._execute(req, fingerprint))
+        return self._run(
+            "draw", req.invoice_id, key, lambda: self._execute(req, fingerprint), req, fingerprint
+        )
 
     def _execute(self, req: WalletRequest, fingerprint: str) -> WalletResult:
         resolved = self._payee_address(req.payee)
@@ -489,7 +514,9 @@ class WalletService:
 
     def settle(self, req: WalletSettleRequest) -> WalletResult:
         key = req.idempotency_key
-        return self._run("settle", req.invoice_id, key, lambda: self._settle(req))
+        return self._run(
+            "settle", req.invoice_id, key, lambda: self._settle(req), req, req.invoice_fingerprint
+        )
 
     def _settle(self, req: WalletSettleRequest) -> WalletResult:
         try:
@@ -535,11 +562,13 @@ class WalletService:
         self._audit(invoice_id, "draw", result, actor="approver")
         return result
 
-    def pause(self, on: bool) -> WalletResult:
+    def pause(self, on: bool, actor: str = "operator") -> WalletResult:
         result = self._finish(self.ledger.pause(on))
         if result.status == TxStatus.executed:
             self.paused = on
-        self._audit("wallet", "pause" if on else "unpause", result, actor="operator")
+            if not on:
+                self.tripwire.reset()  # the owner unpaused: the breaker re-arms
+        self._audit("wallet", "pause" if on else "unpause", result, actor=actor)
         return result
 
     def activate_mandate(self, mandate_dict: dict, max_tx: Decimal, daily_cap: Decimal) -> Mandate:
