@@ -206,3 +206,16 @@ def test_a_failing_service_is_named_in_plain_words():
     assert orch.plain_error("http://w:8003/wallet/execute answered 500: boom").startswith(
         "the agent wallet failed"
     )
+
+
+def test_a_refused_upload_is_a_plain_error_not_a_crash():
+    detail = 'http://localhost:8001/ocr/extract answered 415: {"detail":"Only PDF, JPEG, and PNG uploads"}'
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(415, json={"detail": detail})
+
+    with pytest.raises(orch.ServiceError) as err:
+        _client(handler).run_flow(b"x", "notes.txt")
+    assert (
+        err.value.plain == "the OCR service refused the request (HTTP 415): Only PDF, JPEG, and PNG uploads"
+    )
