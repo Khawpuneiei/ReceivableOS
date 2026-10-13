@@ -12,6 +12,7 @@ sed \
   -e 's/^WALLET_RISK_ORACLE_TOKEN=.*/WALLET_RISK_ORACLE_TOKEN=ci-only-risk-oracle-token/' \
   -e 's/^WALLET_AGENT_TOKEN=.*/WALLET_AGENT_TOKEN=ci-only-agent-token/' \
   -e 's/^AGENT_CANARY=.*/AGENT_CANARY=ci-only-canary-7f3a/' \
+  -e 's/^ORCHESTRATOR_TOKEN=.*/ORCHESTRATOR_TOKEN=ci-only-orchestrator-token/' \
   -e 's/^LLM_API_KEY=.*/LLM_API_KEY=/' \
   -e 's/^CHAIN_MODE=.*/CHAIN_MODE=mock/' \
   "$ROOT/.env.example" >"$OUT"
