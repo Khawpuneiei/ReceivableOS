@@ -29,7 +29,7 @@ class LedgerAdapter(Protocol):
     ) -> ChainResult: ...  # TX-1: AgentWallet.execute -> Registry.register
     def approve(self, a: ApproveIntent) -> ChainResult: ...  # TX-2: riskOracle -> Registry.approve
     def execute(self, d: DrawIntent) -> ChainResult: ...  # TX-4: AgentWallet.execute -> Vault.draw
-    def confirm(self, pending_id: int) -> ChainResult: ...  # approver -> AgentWallet.confirm
+    def confirm(self, pending_id: int, approve: bool = True) -> ChainResult: ...  # AgentWallet.confirm
     def settle(self, s: SettleIntent) -> ChainResult: ...  # TX-5: AgentWallet.execute -> Vault.repay
     def set_mandate(
         self, mandate: Mandate, payee_addresses: list[str], targets: list[str]
