@@ -13,8 +13,10 @@ from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException
 from ledger.mock import MockLedger
+from pydantic import BaseModel
 
 from app.guard.classifier import load_classifier
+from app.guard.tripwire import Tripwire
 from app.models import ExecuteRequest, load_mandate, load_payees
 from app.settings import get_settings
 from app.wallet.lifecycle import WalletService
@@ -29,6 +31,10 @@ from shared.schemas import (
 )
 
 CONFIG = Path(__file__).resolve().parents[1] / "config"
+
+
+class QuarantineRelease(BaseModel):
+    invoice_fingerprint: str
 
 
 def _now() -> datetime:
@@ -78,6 +84,7 @@ def build_service(clock: Callable[[], datetime] = _now) -> WalletService:
         canary=settings.agent_canary,
         classifier=classifier,
         classifier_action=settings.injection_classifier_action,
+        tripwire=Tripwire.load(CONFIG / "tripwire.json"),
     )
 
 
@@ -123,6 +130,7 @@ def create_app(service: WalletService | None = None) -> FastAPI:
         yield
 
     app = FastAPI(title="agent-wallet", lifespan=lifespan)
+    app.state.wallet = svc
 
     @app.get("/health")
     def health() -> dict:
@@ -204,6 +212,28 @@ def create_app(service: WalletService | None = None) -> FastAPI:
     def list_holds(x_approver_token: str | None = Header(default=None)) -> dict:
         _check_token(settings.wallet_approver_token, x_approver_token)  # only the approver sees the queue
         return {"holds": svc.list_holds()}
+
+    @app.get("/wallet/tripwire")
+    def tripwire_status(x_approver_token: str | None = Header(default=None)) -> dict:
+        _check_token(settings.wallet_approver_token, x_approver_token)
+        return {"paused": svc.paused, **svc.tripwire.status(svc.clock())}
+
+    @app.post("/wallet/quarantine/release")
+    def release_quarantine(
+        req: QuarantineRelease, x_approver_token: str | None = Header(default=None)
+    ) -> dict:
+        _check_token(settings.wallet_approver_token, x_approver_token)  # a human clears it, never the agent
+        if not svc.tripwire.release(req.invoice_fingerprint):
+            raise HTTPException(status_code=404, detail="not quarantined")
+        svc.audit.record(
+            invoice_id=svc._invoice_of(req.invoice_fingerprint),
+            audit_ref=f"trp_{len(svc.audit.entries) + 1}",
+            action="quarantine",
+            event="RELEASED",
+            actor="approver",
+            data={"invoice_fingerprint": req.invoice_fingerprint},
+        )
+        return {"released": req.invoice_fingerprint}
 
     def _audit_view(entries: list[dict]) -> dict:
         return {"entries": entries, "verified": svc.audit.verify()}  # whole-chain check, not just these rows

@@ -12,7 +12,7 @@ Build brief for the service: [`CLAUDE.md`](CLAUDE.md). Request and response mode
   against them with `CHAIN_MODE=fisco`, and the demo's on-chain transactions are checked on chain. The records are in
   [`eval/fisco-deployment.md`](eval/fisco-deployment.md) and [`eval/demo_tx_hashes_fisco.md`](eval/demo_tx_hashes_fisco.md).
 - **Local Anvil:** `scripts/deploy.py` and `scripts/evm_smoke.py` pass 7 of 7 checks.
-- **Tests:** `pytest` 141 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
+- **Tests:** `pytest` 151 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
 - **Orchestrator:** the integration isn't finished. See `docs/orchestrator-integration.md`.
 
 Per-item status is in the table in [`docs/03-agent-wallet.md`](../../docs/03-agent-wallet.md) section 8.
@@ -135,8 +135,25 @@ The red-team eval: `python services/agent-wallet/eval/run_eval.py` (default case
 | GET | `/wallet/audit/{invoice_id}` | none | Audit entries for one invoice, plus `verified` |
 | GET | `/wallet/audit/ref/{audit_ref}` | none | Audit entries for one action, plus `verified` |
 | GET | `/wallet/tx/{tx_id}` | none | The result of one transaction |
+| GET | `/wallet/tripwire` | approver token | Tripwire state: paused, recent hostile blocks, quarantined invoices |
+| POST | `/wallet/quarantine/release` | approver token | Release a quarantined invoice fingerprint |
 
 A missing or wrong token gets HTTP 403. A malformed body gets 422 before the token check runs.
+### Tripwire (`app/guard/tripwire.py`, `config/tripwire.json`)
+
+Each caught attack becomes state, so the attacker's next try meets a closed door:
+
+| Code | When |
+|---|---|
+| `HoneytokenTouched` | a request carries a decoy payee id or address anywhere (field or free text). It is blocked and the wallet pauses at once, on the ledger too |
+| `InvoiceQuarantined` | the invoice already drew a hostile block (injection, canary, tampered decision, payee swap, mandate mismatch). Settlement is exempt; an approver releases it |
+| breaker | 3 hostile blocks within 10 minutes pause the wallet. Only the owner unpauses, which re-arms it |
+
+Policy refusals (APR, limit, caps) never count, so an honest mistake doesn't freeze the wallet. Measured with
+`run_eval.py --probe-first` (each attack is preceded by one probe the scanner catches on the same invoice):
+held-out v3 goes from 10 of 24 attacks reaching execute to 0 of 24, and held-out v4 from 18 of 30 to 0 of 30.
+The scanner's own recall is unchanged; the reports are `eval/report_heldout_v*_cases_probe_first.md`.
+
 Not built: `GET /wallet/registry/{invoice_fingerprint}` and the optional `POST /agent/run`.
 
 ## Settings
