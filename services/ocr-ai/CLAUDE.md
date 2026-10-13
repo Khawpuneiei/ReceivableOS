@@ -96,6 +96,8 @@ The deterministic extractor binds values to explicit labels and source geometry.
 
 English is the primary evaluated language. Thai is secondary and its scan results still have gaps. Simplified Chinese remains experimental and forces review. Arabic and Arabic-English documents are not a supported language profile. Currency code recognition or OCR text visibility does not prove that other invoice fields were extracted correctly.
 
+Dates accept ISO, `dd/mm/yyyy` with locale evidence, Thai full and abbreviated month names (`1 ตุลาคม 2569`, `1 ต.ค. 2569`), English month names (`1 Oct 2026`, `October 1, 2026`) and Thai digits. Years 2400–2700, or any year marked `พ.ศ.`/`B.E.`, are Buddhist Era and are converted to CE (minus 543) before validation and fingerprinting, so a BE re-submission of a CE invoice is still a duplicate. Two-digit years and years above 2200 that are not BE stay unresolved. `scripts/thai_date_eval.py` measures ten notations.
+
 Numeric grouping and decimal separators require sufficient locale evidence. Monetary calculations use `Decimal`; currency minor-unit precision and explicit source tax basis matter. Do not round away a printed discrepancy. A resolved invoice/PO mismatch requires review. Partial invoicing cannot establish remaining PO capacity without an authoritative allocation ledger.
 
 ## OCR engine decision and performance
