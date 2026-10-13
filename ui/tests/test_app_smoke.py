@@ -112,3 +112,30 @@ def test_attack_rows_show_live_or_saved_and_only_the_deciding_policy_codes():
 def test_the_verdict_says_saved_demo_when_nothing_ran_live():
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert "Funded inside the rules (saved demo)" in _text(at)
+
+
+@pytest.mark.parametrize(
+    ("case", "headline"),
+    [
+        ("happy", "Funded inside the rules"),
+        ("injected", "Sent to a person"),
+        ("inflated", "Rejected"),
+        ("duplicate", "Stopped: duplicate invoice"),
+    ],
+)
+def test_fixture_mode_shows_the_saved_run_of_each_case(case, headline):
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.button(key=f"case_{case}").click().run()
+    assert not at.exception
+    assert "SAVED RUN" in at.info[0].value
+    assert headline in _text(at) and "(saved demo)" in _text(at)
+
+
+def test_live_failure_falls_back_to_the_saved_run_of_the_same_case(monkeypatch):
+    monkeypatch.setenv("UI_MODE", "live")
+    monkeypatch.setenv("ORCHESTRATOR_URL", "http://127.0.0.1:9")
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    at.button(key="case_inflated").click().run()
+    assert not at.exception
+    assert "saved run of this case" in at.warning[0].value
+    assert "Rejected" in _text(at) and "SAVED RUN: Inflated amount" in at.info[0].value

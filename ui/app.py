@@ -117,7 +117,7 @@ def live() -> bool:
 
 
 def fixture_label(view: dict, part: str) -> None:
-    if view.get("source") == "orchestrator" and part in view.get("from_fixture", []):
+    if view.get("source") in ("orchestrator", "saved") and part in view.get("from_fixture", []):
         st.caption(f"FIXTURE: the orchestrator does not return {part} yet; showing saved data.")
 
 
@@ -132,36 +132,54 @@ def not_reached(view: dict, part: str) -> bool:
     return True
 
 
-def run_file(content: bytes, name: str, case: str | None = None) -> None:
-    """POST one invoice to /flow/run and put the result on screen; errors become a readable notice."""
+def run_file(content: bytes, name: str, case: str | None = None) -> str | None:
+    """POST one invoice to /flow/run and put the result on screen. Returns a readable error, or None."""
     try:
         raw = orch.Orchestrator().run_flow(content, name)
         st.session_state.view = orch.to_view(raw, load_fixture("happy"))
-        st.session_state.update(paid=False, approved=False, notice=None, extra_tx=[], case=case or name)
-        st.session_state.ran.add(case or name)
     except orch.ServiceError as exc:
-        st.session_state.notice = f"The flow stopped with an error: {exc.plain}. Showing the saved demo."
+        return f"The flow stopped with an error: {exc.plain}."
     except (orch.Unavailable, orch.Unsupported, ValueError) as exc:
-        st.session_state.notice = (
-            f"Orchestrator unavailable at {orch.base_url()} ({exc}). Showing the saved demo."
-        )
+        return f"Orchestrator unavailable at {orch.base_url()} ({exc})."
+    st.session_state.update(paid=False, approved=False, notice=None, extra_tx=[], case=case or name)
+    st.session_state.ran.add(case or name)
+    return None
+
+
+def show_saved_run(case: str, notice: str | None) -> None:
+    """The case's /flow/run response recorded from the live stack (ui/fixtures/runs/), labelled SAVED."""
+    raw = json.loads((FIXTURES / "runs" / f"{case}.json").read_text(encoding="utf-8"))
+    happy = load_fixture("happy")
+    view = orch.to_view(raw, happy)
+    view.update(source="saved", repay={**happy["repay"], "label": "saved"})
+    st.session_state.view = view
+    st.session_state.update(paid=False, approved=False, notice=notice, extra_tx=[], case=case)
 
 
 def run_case(case: str, filename: str) -> None:
+    """Live: run the case's PDF; if the stack fails, show the saved run of the same case instead."""
+    if not live():
+        show_saved_run(case, None)
+        return
     if case == "duplicate" and "happy" not in st.session_state.ran:
         run_file(DEMO_INVOICE.read_bytes(), DEMO_INVOICE.name, "happy")  # something to be a duplicate of
-    run_file((DEMO_DIR / filename).read_bytes(), filename, case)
+    error = run_file((DEMO_DIR / filename).read_bytes(), filename, case)
+    if error:
+        show_saved_run(case, f"{error} Showing the saved run of this case instead.")
 
 
 def run_controls() -> None:
-    """Live mode: one click per demo case, or an uploaded invoice, through the orchestrator."""
-    st.markdown("**Run a demo invoice through the live flow**")
+    """One click per demo case: live through the orchestrator, or the saved run in fixture mode."""
+    title = "Run a demo invoice through the live flow" if live() else "Show a recorded run of a demo invoice"
+    st.markdown(f"**{title}**")
     cols = st.columns(len(DEMO_CASES))
     for col, (case, label, filename, hint) in zip(cols, DEMO_CASES, strict=True):
         if col.button(label, key=f"case_{case}", type="primary" if case == "happy" else "secondary"):
             run_case(case, filename)
             st.rerun()
         col.caption(hint)
+    if not live():
+        return
     st.caption(
         "Each invoice can be financed once: running Happy twice is blocked as a duplicate, by design. "
         "Reset the OCR demo history between rehearsals (services/ocr-ai/README.md)."
@@ -169,7 +187,9 @@ def run_controls() -> None:
     with st.expander("Or upload your own invoice"):
         upload = st.file_uploader("Invoice file", key="upload")
         if upload and st.button("Run flow with this file"):
-            run_file(upload.getvalue(), upload.name)
+            error = run_file(upload.getvalue(), upload.name)
+            if error:
+                st.session_state.notice = f"{error} Showing the saved demo."
             st.rerun()
 
 
@@ -199,7 +219,12 @@ def header(view: dict) -> None:
     )
     if st.session_state.notice:
         st.warning(st.session_state.notice)
-    if view.get("source") == "fixtures" and live():
+    if view.get("source") == "saved":
+        label = {c[0]: c[1] for c in DEMO_CASES}.get(st.session_state.case, st.session_state.case)
+        st.info(
+            f"SAVED RUN: {label}, recorded from the live stack on the mock ledger. Nothing was called now."
+        )
+    elif view.get("source") == "fixtures" and live():
         st.info(f"SAVED DEMO: nothing has run live yet. Run an invoice below to call {orch.base_url()}.")
     elif view.get("source") == "fixtures":
         st.info("FIXTURE MODE: saved responses from ui/fixtures/, no backend called.")
@@ -213,7 +238,7 @@ def header(view: dict) -> None:
 def section_flow(view: dict) -> None:
     """Where the invoice got to, in one line a judge can read from the back of the room."""
     state, headline, sentence = story.verdict(view, st.session_state.paid)
-    if view.get("source") == "fixtures":
+    if view.get("source") in ("fixtures", "saved"):
         headline += " (saved demo)"  # never let a saved result read as this run's
     st.markdown(
         f'<div class="verdict" style="background:{story.STATE_COLOUR[state]}"><b>{esc(headline)}</b>'
@@ -388,7 +413,7 @@ def section_chain(view: dict) -> None:
 def action(call, step: str, label: str, flag: str) -> None:
     """Approve / Buyer paid: through the orchestrator when live; the fixture otherwise or when unsupported."""
     st.session_state[flag] = True
-    if live() and st.session_state.get("view"):
+    if live() and (st.session_state.get("view") or {}).get("source") == "orchestrator":
         try:
             st.session_state.extra_tx.append(orch.action_row(call(orch.Orchestrator()), step, label))
         except (orch.Unavailable, orch.Unsupported, KeyError) as exc:
@@ -469,8 +494,7 @@ def main() -> None:
     init_state()
     view = load_view()
     header(view)
-    if live():
-        run_controls()
+    run_controls()
     section_flow(view)
     section_mandate(view)
     section_invoice(view)
