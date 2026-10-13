@@ -60,3 +60,43 @@ def test_a_duplicate_stops_at_the_registry_and_skips_the_rest():
 def test_unknown_codes_have_no_made_up_explanation():
     assert story.plain("SOMETHING.NEW") is None and story.plain(None) is None
     assert story.plain("AprAboveMandate") == "the lender's APR is above the SME's ceiling"
+
+
+def test_findings_use_the_ocr_details_when_present_and_the_flags_otherwise():
+    newer = {
+        "fraud_flags": ["qr_payee_mismatch"],
+        "fraud_details": [{"code": "qr_payee_mismatch", "weight": 0.4, "reason": "possible QR swap"}],
+        "injection_flags": ["VISIBLE_INSTRUCTION"],
+        "injection_details": [
+            {"category": "payee_redirect", "technique": "homoglyph", "channel": "page_text"}
+        ],
+    }
+    found = story.findings(newer)
+    assert found[0] == {
+        "kind": "fraud",
+        "headline": "the payment QR pays someone other than the supplier",
+        "detail": "possible QR swap",
+        "weight": 0.4,
+    }
+    assert found[1]["headline"] == "hidden instructions for the AI: tries to redirect the payment"
+    assert found[1]["detail"] == "look-alike-letter text in the page text"
+    older = {
+        "fraud_flags": ["math_inconsistent", "brand_new_code"],
+        "injection_flags": ["VISIBLE_INSTRUCTION"],
+    }
+    assert [f["headline"] for f in story.findings(older)] == [
+        "the line items do not add up to the total",
+        "brand new code",
+        "instructions for the AI found in the document (VISIBLE_INSTRUCTION)",
+    ]
+    assert story.findings({}) == []
+
+
+def test_the_verdict_names_what_the_document_checks_found():
+    view = copy.deepcopy(HAPPY)
+    view["ocr"]["fraud_flags"] = ["pdf_appended_text_layer"]
+    view["policy"] = {**view["policy"], "decision": "review", "reasons": ["REVIEW.FRAUD_FLAGS: 1 flag"]}
+    view["timeline"], view["wallet"] = view["timeline"][:1], {"status": "review: wallet not called"}
+    assert story.verdict(view)[2].endswith(
+        "The document checks found: text was added to the PDF after it was made."
+    )

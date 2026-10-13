@@ -46,6 +46,12 @@ responses recorded on the mock ledger (OCR evidence and wallet check lists trimm
 each case live on fresh state and saving the response. An unreachable orchestrator gives an amber "Orchestrator unavailable … showing fixtures" banner and the fixture
 screen. A live attack response that was **not** stopped is shown with its real status, never relabelled BLOCKED.
 
+Under the invoice, **What the document checks found** lists each OCR finding in plain words: `fraud_details`
+(PDF tampering, PromptPay QR swap, inflated totals) and `injection_details` (what the hidden text tries to
+make the AI do). The verdict banner repeats the deciding finding. Unknown codes fall back to the reason text the
+OCR service sent, and the section is hidden when OCR returns neither field. The Tampered PDF and QR swap
+buttons appear only when `05_tampered.pdf` / `06_qr_swap.pdf` are in `data/invoices/demo/`.
+
 ## What is on screen, and where the numbers come from
 
 | Section | Content | Source in fixture mode |
