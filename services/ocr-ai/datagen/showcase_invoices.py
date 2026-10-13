@@ -444,6 +444,13 @@ def _validate_profile(profile: dict) -> None:
             raise ValueError(f"{profile['style']} line math is inconsistent for {line[0]}")
 
 
+def _qr_swap() -> bytes:
+    """Genuine-looking invoice whose PromptPay QR pays a different tax ID (QR-swap scam)."""
+    from datagen.thai_qr import case_pdf
+
+    return case_pdf("swapped_payee", "SFP-INV-2026-0146")
+
+
 def generate(output: Path = OUTPUT) -> list[Path]:
     output.mkdir(parents=True, exist_ok=True)
     profile = SHOWCASE_PROFILES[0]
@@ -482,6 +489,7 @@ def generate(output: Path = OUTPUT) -> list[Path]:
         ("03_inflated.pdf", build_pdf(variants)),
         ("04_duplicate.pdf", resaved),
         ("purchase_order.pdf", purchase_order),
+        ("06_qr_swap.pdf", _qr_swap()),
     ):
         path = demo / filename
         path.write_bytes(content)

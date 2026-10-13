@@ -37,6 +37,11 @@ FRAUD_WEIGHTS = {
     "shared_bank_token": 0.15,
     "bank_account_changed": 0.25,
     "suspicious_cluster": 0.15,
+    # Thai payment QR cross-check (app/promptpay.py); amount/payee contradictions weigh like PO mismatches.
+    "qr_amount_mismatch": 0.40,
+    "qr_payee_mismatch": 0.40,
+    "qr_crc_invalid": 0.15,
+    "qr_payee_unverified": 0.05,
 }
 
 
@@ -92,4 +97,6 @@ ANOMALY_FAMILIES = {
     "po_amount_mismatch": "amount",
     "po_party_mismatch": "identity",
     "po_currency_mismatch": "currency",
+    "qr_amount_mismatch": "amount",
+    "qr_payee_mismatch": "identity",
 }

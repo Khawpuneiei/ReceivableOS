@@ -37,6 +37,7 @@ from app.models import (
     InvoicePoVerificationResult,
 )
 from app.normalize import normalize_date, normalize_number
+from app.promptpay import qr_findings
 from app.qwen import read_candidates
 from app.validate import CRITICAL_FIELDS, validate_document
 from shared.schemas import ExtractedInvoice, LineItem, Party
@@ -139,6 +140,10 @@ def extract(content: bytes, document_type: str, settings: Settings) -> Extractio
                 except (ValueError, ArithmeticError):
                     doc.review_reasons.append(f"{reader}_UNGROUNDED:{name}")
     result.document = validate_document(doc)
+    result.forensic_findings = [
+        *result.forensic_findings,
+        *qr_findings(parsed.qr_payloads, result.document),
+    ]
     return result
 
 
@@ -346,7 +351,7 @@ def extract_invoice(content: bytes, settings: Settings, idempotency_key: str | N
         settings,
         digest(b"extract-v1\0" + content),
         idempotency_key,
-        validation_findings(result.document),
+        [*validation_findings(result.document), *result.forensic_findings],
     )
     response.invoice_id = observation_id
     response.fraud_details, response.fraud_flags = (
@@ -372,7 +377,7 @@ def verify(
     invoice_result = extract(invoice_bytes, "invoice", settings)
     po_result = extract(po_bytes, "purchase_order", settings)
     checks = compare_documents(invoice_result.document, po_result.document)
-    findings = validation_findings(invoice_result.document)
+    findings = [*validation_findings(invoice_result.document), *invoice_result.forensic_findings]
     for check in checks:
         if check.status != "mismatch":
             continue
