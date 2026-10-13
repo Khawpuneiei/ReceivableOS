@@ -1,0 +1,5 @@
+{
+  "_comment": "Ed25519 public keys that may sign credit decisions (hex, raw 32 bytes). Private keys stay in policy-ai's .env. enforce=true makes a signature mandatory at /wallet/approve.",
+  "enforce": false,
+  "signers": {}
+}
