@@ -391,6 +391,11 @@ class WalletService:
             GuardCheck(layer="L1", code="NotApproved", passed=decision.decision == DecisionKind.approve),
             GuardCheck(layer="L1", code="DecisionTampered", passed=matches),
         ]
+        # PD is not on chain, so it is bound here: a decision above the mandate's PD ceiling gets no TX-2, and
+        # a draw on it then reverts NotApproved on chain even with every off-chain check bypassed.
+        if self.mandate is not None:
+            pd_ok = Decimal(str(decision.risk_score)) <= self.mandate.max_predicted_default
+            checks.append(GuardCheck(layer="L3", code="PdAboveMandate", passed=pd_ok))
         # The signature is over the decision hash the approval names and the invoice it is for.
         if signature or self.decision_signers.enforce:
             signed = self.decision_signers.check(signature, req.decision_hash, req.invoice_fingerprint)

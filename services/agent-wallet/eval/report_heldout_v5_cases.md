@@ -14,9 +14,9 @@ Mode: guard on (L0-L4), then chain (L5); detectors: rules-v2. Ledger: mock. Case
 Where attacks were stopped (first layer):
 
 - L0: 2
-- L1: 2
+- L1: 4
 - L2: 4
-- L3: 16
+- L3: 14
 
 Unauthorized movements (CLAUDE.md 7.4):
 

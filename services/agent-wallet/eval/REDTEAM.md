@@ -5,15 +5,15 @@ Each case gets a fresh wallet. Case files are in `eval/`; per-set detail is in `
 
 | Case set | Attacks | Scanner alone flags | Chain alone stops (unauthorized) | Full stack stops | Full stack: reached execute / unauthorized | Adaptive attacker: reached execute | Benign completed |
 |---|---|---|---|---|---|---|---|
-| Seed set (CLAUDE.md 7.4) (`cases.jsonl`) | 40 | 11/40 | 28/38 (1) | 40/40 | 0 / **0** | 0/40 | 11/11 |
+| Seed set (CLAUDE.md 7.4) (`cases.jsonl`) | 40 | 11/40 | 29/38 (0) | 40/40 | 0 / **0** | 0/40 | 11/11 |
 | Dev set (`dev_cases.jsonl`) | 36 | 36/36 | 0/36 (0) | 36/36 | 0 / **0** | 0/36 | 18/18 |
 | Held-out v1 (`heldout_cases.jsonl`) | 30 | 30/30 | 0/30 (0) | 30/30 | 0 / **0** | 0/30 | 10/10 |
 | Held-out v2 (`heldout_v2_cases.jsonl`) | 30 | 28/30 | 0/30 (0) | 28/30 | 2 / **0** | 0/30 | 10/10 |
 | Held-out v3 (`heldout_v3_cases.jsonl`) | 24 | 14/24 | 0/24 (0) | 14/24 | 10 / **0** | 0/24 | 9/10 |
 | Held-out v4 (`heldout_v4_cases.jsonl`) | 30 | 12/30 | 0/30 (0) | 12/30 | 18 / **0** | 0/30 | 14/14 |
-| Held-out v5 (`heldout_v5_cases.jsonl`) | 24 | 4/24 | 19/24 (2) | 24/24 | 0 / **0** | 0/24 | 9/10 |
+| Held-out v5 (`heldout_v5_cases.jsonl`) | 24 | 4/24 | 21/24 (0) | 24/24 | 0 / **0** | 0/24 | 9/10 |
 | Human-approval path (`approval_cases.jsonl`) | 4 | 0/4 | 3/4 (0) | 4/4 | 0 / **0** | 0/4 | 3/3 |
-| **All sets** | 218 | 135/218 | 50/216 (3) | 188/218 | 30 / **0** | 0/218 | 84/86 |
+| **All sets** | 218 | 135/218 | 53/216 (0) | 188/218 | 30 / **0** | 0/218 | 84/86 |
 
 How to read it:
 
@@ -21,8 +21,8 @@ How to read it:
   held-out sets, which is why the wallet does not rely on it.
 - **Chain alone** is the contracts' rules with every off-chain layer bypassed (`DEMO_MODE`,
   `skip_offchain_checks`). The number in brackets is unauthorized payments. The contracts keep money inside
-  the mandate with nothing off-chain running, except the borrower's default probability (PD), which only the
-  off-chain guard checks: PD is not on chain. Agent-loop cases are not run in this mode.
+  the mandate with nothing off-chain running. PD is not on chain, so the TX-2 approval refuses a decision
+  above the PD ceiling and the draw then reverts `NotApproved`. Agent-loop cases are not run in this mode.
 - **Full stack** is the configuration the demo runs. *Reached execute* counts attacks that executed inside the
   mandate: the scanner missed the text, but the payee, amount and APR were still the mandate's. *Unauthorized*
   must be 0.
@@ -42,5 +42,4 @@ Benign cases blocked (full stack):
 
 Unauthorized payments with the off-chain guard bypassed (chain alone):
 
-- Seed set (CLAUDE.md 7.4): W07
-- Held-out v5: S15, S16
+- none

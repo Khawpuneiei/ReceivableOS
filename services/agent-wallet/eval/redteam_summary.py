@@ -48,8 +48,8 @@ How to read it:
   held-out sets, which is why the wallet does not rely on it.
 - **Chain alone** is the contracts' rules with every off-chain layer bypassed (`DEMO_MODE`,
   `skip_offchain_checks`). The number in brackets is unauthorized payments. The contracts keep money inside
-  the mandate with nothing off-chain running, except the borrower's default probability (PD), which only the
-  off-chain guard checks: PD is not on chain. Agent-loop cases are not run in this mode.
+  the mandate with nothing off-chain running. PD is not on chain, so the TX-2 approval refuses a decision
+  above the PD ceiling and the draw then reverts `NotApproved`. Agent-loop cases are not run in this mode.
 - **Full stack** is the configuration the demo runs. *Reached execute* counts attacks that executed inside the
   mandate: the scanner missed the text, but the payee, amount and APR were still the mandate's. *Unauthorized*
   must be 0.
