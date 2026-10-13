@@ -1,14 +1,18 @@
 """Hash-chained audit log (CLAUDE.md 5.8). Owner: Agent AI engineer.
 
 Every wallet action leaves entries, whether it executed or was blocked. Each entry commits to the one before
-it, so editing, reordering or dropping an entry makes verify() fail. The head is anchored on chain after
-each settlement (ledger.anchor_audit). Entries hold ids, hashes, amounts and codes only, never invoice text.
+it, so editing, reordering or dropping an entry makes verify() fail. After each settlement, and on demand, the
+Merkle root over the entry hashes is anchored on chain (ledger.anchor_audit), so one entry can be proved
+against it with a short inclusion proof (app/audit/merkle.py). Entries hold ids, hashes, amounts and codes
+only, never invoice text.
 """
 
 import hashlib
 import json
 from datetime import datetime, timezone
 from typing import Any
+
+from app.audit import merkle
 
 GENESIS = "0x" + "00" * 32
 
@@ -64,6 +68,15 @@ class AuditLog:
                 return False
             prev = entry["hash"]
         return True
+
+    def merkle_root(self, size: int | None = None) -> str:
+        """Root over the first `size` entries (all by default)."""
+        entries = self.entries if size is None else self.entries[:size]
+        return merkle.root([merkle.leaf_hash(e["hash"]) for e in entries])
+
+    def inclusion_proof(self, seq: int, size: int) -> list[str]:
+        """Audit path for entry `seq` (1-based) in the tree over the first `size` entries."""
+        return merkle.proof([merkle.leaf_hash(e["hash"]) for e in self.entries[:size]], seq - 1)
 
     def for_invoice(self, invoice_id: str) -> list[dict[str, Any]]:
         return [e for e in self.entries if e["invoice_id"] == invoice_id]

@@ -13,15 +13,20 @@ from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException
 from ledger.mock import MockLedger
+from pydantic import BaseModel
 
+from app.agent.loop import AgentLoop, AgentRunRequest, AgentRunResult
 from app.guard.classifier import load_classifier
 from app.guard.signatures import DecisionSigners
+from app.guard.tripwire import Tripwire
 from app.models import ExecuteRequest, load_mandate, load_payees
 from app.settings import get_settings
 from app.wallet.lifecycle import WalletService
+from app.wallet.sessions import Session, SessionGrant, SessionStore
 from app.wallet.store import Store
 from shared.schemas import (
     MandateActivateRequest,
+    TxStatus,
     WalletApproveRequest,
     WalletConfirmRequest,
     WalletRegisterRequest,
@@ -30,6 +35,10 @@ from shared.schemas import (
 )
 
 CONFIG = Path(__file__).resolve().parents[1] / "config"
+
+
+class QuarantineRelease(BaseModel):
+    invoice_fingerprint: str
 
 
 def _now() -> datetime:
@@ -80,6 +89,7 @@ def build_service(clock: Callable[[], datetime] = _now) -> WalletService:
         classifier=classifier,
         classifier_action=settings.injection_classifier_action,
         decision_signers=DecisionSigners.load(CONFIG / "decision_signers.json"),
+        tripwire=Tripwire.load(CONFIG / "tripwire.json"),
     )
 
 
@@ -131,19 +141,90 @@ def create_app(service: WalletService | None = None) -> FastAPI:
     def health() -> dict:
         return {"status": "ok", "service": "agent-wallet", "ledger": svc.ledger.name}
 
+    sessions = SessionStore()
+    app.state.sessions = sessions
+
+    def _agent(
+        action: str,
+        token: str | None,
+        session_token: str | None,
+        invoice_id: str,
+        fingerprint: str | None,
+        amount: Decimal | None = None,
+    ) -> tuple[Session | None, WalletResult | None]:
+        """Agent auth: a session key (X-Agent-Session) inside its scope, or the static agent token.
+        Returns (session, None) to proceed, or (session, blocked result) when outside the grant."""
+        if session_token is None:
+            _check_token(settings.wallet_agent_token, token)
+            return None, None
+        session = sessions.find(session_token)
+        if session is None:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+        mandate_hash = svc.mandate.mandate_hash if svc.mandate else None
+        code = sessions.check(session, action, svc.clock(), mandate_hash, fingerprint, amount)
+        if code is None:
+            return session, None
+        blocked = svc._offchain_block(code, "SK")
+        svc._audit(invoice_id, action, blocked, actor=session.session_id)
+        return session, blocked
+
+    def _charge(session: Session | None, result: WalletResult, amount: Decimal) -> WalletResult:
+        """Counts a draw against the session budget once: executed or pending, never a replay."""
+        replay = any(c.code == "IdempotentReplay" for c in result.checks)
+        if session and not replay and result.status in (TxStatus.executed, TxStatus.pending_approval):
+            session.spent += amount
+            session.uses.append(result.tx_id)
+        return result
+
     @app.post("/wallet/execute", response_model=WalletResult)
-    def execute(req: ExecuteRequest, x_agent_token: str | None = Header(default=None)) -> WalletResult:
-        _check_token(settings.wallet_agent_token, x_agent_token)  # the agent's calls need the agent token
+    def execute(
+        req: ExecuteRequest,
+        x_agent_token: str | None = Header(default=None),
+        x_agent_session: str | None = Header(default=None),
+    ) -> WalletResult:
+        # A replay of a stored draw sends nothing, so it is not checked against the budget again.
+        replay = (req.idempotency_key or svc._request_key(req)) in svc.store.results
+        amount = None if replay else req.amount
+        session, blocked = _agent(
+            "execute", x_agent_token, x_agent_session, req.invoice_id, req.invoice_fingerprint, amount
+        )
+        if blocked:
+            return blocked
         if req.skip_offchain_checks and not settings.demo_mode:
             return svc._offchain_block("SchemaInvalid", "L0")  # the bypass exists only with DEMO_MODE=1
-        return svc.execute(req)
+        return _charge(session, svc.execute(req), req.amount)
+
+    @app.post("/agent/run", response_model=AgentRunResult)
+    def agent_run(req: AgentRunRequest, x_agent_token: str | None = Header(default=None)) -> AgentRunResult:
+        _check_token(settings.wallet_agent_token, x_agent_token)
+        result = AgentLoop(svc).run(req)
+        svc.audit.record(
+            invoice_id=req.invoice_id,
+            audit_ref=f"agt_{len(svc.audit.entries) + 1}",
+            action="agent_run",
+            event="AGENT_RUN",
+            actor="agent",
+            tx_id=result.wallet.tx_id if result.wallet else None,
+            data={
+                "planner": result.planner,
+                "selected": result.selected_lender,
+                "status": result.status,
+                "block_reason": result.block_reason,
+                "tools": [[c.tool, c.allowed, c.code] for c in result.trace],
+            },
+        )
+        return result
 
     @app.post("/wallet/register", response_model=WalletResult)
     def register(
-        req: WalletRegisterRequest, x_agent_token: str | None = Header(default=None)
+        req: WalletRegisterRequest,
+        x_agent_token: str | None = Header(default=None),
+        x_agent_session: str | None = Header(default=None),
     ) -> WalletResult:
-        _check_token(settings.wallet_agent_token, x_agent_token)
-        return svc.register(req)
+        _, blocked = _agent(
+            "register", x_agent_token, x_agent_session, req.invoice_id, req.invoice_fingerprint
+        )
+        return blocked or svc.register(req)
 
     @app.post("/wallet/approve", response_model=WalletResult)
     def approve(
@@ -155,9 +236,64 @@ def create_app(service: WalletService | None = None) -> FastAPI:
         return svc.approve(req, x_decision_signature)  # policy-ai's signature, checked when configured
 
     @app.post("/wallet/settle", response_model=WalletResult)
-    def settle(req: WalletSettleRequest, x_agent_token: str | None = Header(default=None)) -> WalletResult:
-        _check_token(settings.wallet_agent_token, x_agent_token)
-        return svc.settle(req)
+    def settle(
+        req: WalletSettleRequest,
+        x_agent_token: str | None = Header(default=None),
+        x_agent_session: str | None = Header(default=None),
+    ) -> WalletResult:
+        _, blocked = _agent("settle", x_agent_token, x_agent_session, req.invoice_id, req.invoice_fingerprint)
+        return blocked or svc.settle(req)
+
+    def _owner_or_approver(owner: str | None, approver: str | None) -> str:
+        for expected, given, who in (
+            (settings.wallet_owner_token, owner, "owner"),
+            (settings.wallet_approver_token, approver, "approver"),
+        ):
+            if expected and given and hmac.compare_digest(expected, given):
+                return who
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    @app.post("/wallet/session")
+    def issue_session(grant: SessionGrant, x_owner_token: str | None = Header(default=None)) -> dict:
+        _check_token(settings.wallet_owner_token, x_owner_token)  # only the owner delegates spending power
+        if svc.mandate is None:
+            raise HTTPException(status_code=409, detail="no mandate active")
+        if grant.max_per_tx > svc.mandate.max_amount_per_tx or grant.budget > svc.mandate.daily_cap:
+            raise HTTPException(status_code=422, detail="SessionOutOfBounds: above the mandate's caps")
+        try:
+            session, token = sessions.issue(grant, svc.mandate.mandate_hash, svc.clock())
+        except ValueError as err:
+            raise HTTPException(status_code=422, detail=f"SessionOutOfBounds: {err}") from err
+        svc.audit.record(
+            invoice_id="wallet",
+            audit_ref=session.session_id,
+            action="session",
+            event="ISSUED",
+            actor="owner",
+            data={k: v for k, v in session.view().items() if k != "uses"},
+        )
+        return {**session.view(), "token": token}  # the token is shown once and never stored
+
+    @app.get("/wallet/sessions")
+    def list_sessions(
+        x_owner_token: str | None = Header(default=None), x_approver_token: str | None = Header(default=None)
+    ) -> dict:
+        _owner_or_approver(x_owner_token, x_approver_token)
+        return {"sessions": [s.view() for s in sessions.sessions.values()]}
+
+    @app.post("/wallet/session/{session_id}/revoke")
+    def revoke_session(
+        session_id: str,
+        x_owner_token: str | None = Header(default=None),
+        x_approver_token: str | None = Header(default=None),
+    ) -> dict:
+        who = _owner_or_approver(x_owner_token, x_approver_token)
+        if not sessions.revoke(session_id):
+            raise HTTPException(status_code=404, detail="unknown session")
+        svc.audit.record(
+            invoice_id="wallet", audit_ref=session_id, action="session", event="REVOKED", actor=who
+        )
+        return {"session_id": session_id, "revoked": True}
 
     @app.post("/wallet/confirm/{tx_id}", response_model=WalletResult)
     def confirm(
@@ -210,6 +346,28 @@ def create_app(service: WalletService | None = None) -> FastAPI:
         _check_token(settings.wallet_approver_token, x_approver_token)  # only the approver sees the queue
         return {"holds": svc.list_holds()}
 
+    @app.get("/wallet/tripwire")
+    def tripwire_status(x_approver_token: str | None = Header(default=None)) -> dict:
+        _check_token(settings.wallet_approver_token, x_approver_token)
+        return {"paused": svc.paused, **svc.tripwire.status(svc.clock())}
+
+    @app.post("/wallet/quarantine/release")
+    def release_quarantine(
+        req: QuarantineRelease, x_approver_token: str | None = Header(default=None)
+    ) -> dict:
+        _check_token(settings.wallet_approver_token, x_approver_token)  # a human clears it, never the agent
+        if not svc.tripwire.release(req.invoice_fingerprint):
+            raise HTTPException(status_code=404, detail="not quarantined")
+        svc.audit.record(
+            invoice_id=svc._invoice_of(req.invoice_fingerprint),
+            audit_ref=f"trp_{len(svc.audit.entries) + 1}",
+            action="quarantine",
+            event="RELEASED",
+            actor="approver",
+            data={"invoice_fingerprint": req.invoice_fingerprint},
+        )
+        return {"released": req.invoice_fingerprint}
+
     def _audit_view(entries: list[dict]) -> dict:
         return {"entries": entries, "verified": svc.audit.verify()}  # whole-chain check, not just these rows
 
@@ -220,6 +378,27 @@ def create_app(service: WalletService | None = None) -> FastAPI:
     @app.get("/wallet/audit/ref/{audit_ref}")
     def audit_by_ref(audit_ref: str) -> dict:
         return _audit_view(svc.audit.for_ref(audit_ref))
+
+    @app.get("/wallet/audit/proof/{seq}")
+    def audit_proof(seq: int) -> dict:
+        """Inclusion proof for one entry; scripts/verify_audit_proof.py checks it offline."""
+        try:
+            return svc.audit_proof(seq)
+        except KeyError as err:
+            raise HTTPException(status_code=404, detail="unknown entry") from err
+
+    @app.post("/wallet/audit/anchor")
+    def anchor_now(
+        x_owner_token: str | None = Header(default=None), x_approver_token: str | None = Header(default=None)
+    ) -> dict:
+        """On-demand anchor, e.g. at the end of a day without settlements."""
+        for expected, given, who in (
+            (settings.wallet_owner_token, x_owner_token, "owner"),
+            (settings.wallet_approver_token, x_approver_token, "approver"),
+        ):
+            if expected and given and hmac.compare_digest(expected, given):
+                return svc.anchor_audit(actor=who)
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
     @app.get("/wallet/tx/{tx_id}", response_model=WalletResult)
     def get_tx(tx_id: str) -> WalletResult:
