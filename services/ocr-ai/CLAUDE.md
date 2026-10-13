@@ -58,6 +58,7 @@ The parser and OCR run in child processes with a restricted environment. The ser
 | `app/supporting.py` | English supporting-template fields, case relationships and non-authoritative declared balances |
 | `app/compare.py` | Evidence-backed invoice/PO checks (`invoice-po-rules-v3`) |
 | `app/fingerprint.py`, `app/history.py` | Registry-v1 fingerprint, local scoped HMAC tokens and bounded atomic observation history |
+| `app/promptpay.py` | Thai payment QR (EMVCo PromptPay / bill payment) parser with CRC check; cross-checks QR amount and tax-ID payee against printed, already-grounded fields (`thai-qr-v1`) |
 | `app/fraud.py`, `app/graph.py` | Rule findings, uncalibrated noisy-OR score and finding-scoped graph (`graph-rules-v2`, including same-supplier bank-account change candidates) |
 | `app/pipeline.py` | Extraction, compatibility projection, comparison, observation, fraud graph and handoff orchestration |
 
@@ -110,6 +111,8 @@ A scanned-document Paddle worker currently starts per request and initializes it
 ## Fraud and data-protection boundaries
 
 Current rule weights are defined in `app/config.py`: exact/semantic duplicate 0.80, near duplicate 0.15, arithmetic mismatch 0.40, PO amount/party/currency mismatch 0.50, shared bank token 0.15, suspicious cluster 0.15. `app/fraud.py` combines unique codes with noisy-OR. These values are not calibrated to real fraud outcomes and must not be mapped to approve/reject thresholds without Policy-owner review.
+
+Thai payment QR codes (`app/promptpay.py`) are compared, never used as a source: `qr_amount_mismatch` 0.40 and `qr_payee_mismatch` 0.40 (QR pays a different tax ID than the printed supplier, the QR-swap scam) weigh like a PO mismatch; `qr_crc_invalid` 0.15 and `qr_payee_unverified` 0.05 (mobile or e-wallet payee) route to review. Findings never echo the QR payload, payee or amount. Only PromptPay credit transfer (tag 29) and bill payment (tag 30) are parsed; other QR payloads are ignored. `scripts/qr_eval.py` runs eight fictional cases; `data/invoices/demo/06_qr_swap.pdf` is the QR-swap demo file.
 
 Bank accounts are transient private extraction values. Graph links use institution/country/scheme-scoped HMAC tokens; unknown scope or low confidence requires review. Raw bank values and document text must not enter SQLite, graph node IDs, logs, metrics, or public evidence. A shared token is a correlation signal, not proof of common ownership or fraud. Graph export is bounded to the current observation and finding-related evidence.
 
