@@ -8,6 +8,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from uuid import uuid4
 
+from app.amount_words import amount_words_reason
 from app.config import FIELD_CONFIDENCE
 from app.ingest import ParsedDocument, Span
 from app.injection import InstructionPattern, detect, split_hits
@@ -466,6 +467,9 @@ def extract_document(parsed: ParsedDocument, document_type: str) -> Extraction:
         doc.review_reasons.append("EXPERIMENTAL_CHINESE_REQUIRES_REVIEW")
     if any(not span.hidden and REVISION_MARKER.search(span.text) for span in parsed.spans):
         doc.review_reasons.append("REVISION_OR_CREDIT_NOTE_REQUIRES_REVIEW")
+    visible_text = " ".join(span.text for row in source_rows(parsed.spans, INSTRUCTION) for span in row)
+    if words_reason := amount_words_reason([visible_text], doc.amount.value):
+        doc.review_reasons.append(words_reason)
     if any(
         not any(script in unicodedata.name(char, "") for script in ("LATIN", "THAI", "CJK UNIFIED"))
         for char in letters
