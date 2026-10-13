@@ -35,12 +35,13 @@ DEMO_CASES = (
         "04_duplicate.pdf",
         "the happy invoice, re-saved as a new file",
     ),
-    # Shown only once ocr-ai's tamper, QR, amount-in-words and terms checks land with their demo PDFs
+    # Shown only once ocr-ai's tamper, QR, words, terms and related-party checks land with their demo PDFs
     # (see case_available).
     ("tampered", "Tampered PDF", "05_tampered.pdf", "text was added to the PDF after it was made"),
     ("qr_swap", "QR swap", "06_qr_swap.pdf", "the payment QR pays someone other than the supplier"),
     ("words", "Amount in words", "07_words_mismatch.pdf", "the total in words disagrees with the digits"),
     ("terms", "Payment terms", "08_terms_mismatch.pdf", "the due date breaks the invoice's own terms"),
+    ("self_invoice", "Self-invoice", "09_self_invoice.pdf", "the supplier billed its own branch"),
 )
 CASES_PER_ROW = 4
 FIXTURES = HERE / "fixtures"
