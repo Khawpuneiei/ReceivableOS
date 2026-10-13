@@ -100,3 +100,15 @@ def test_the_verdict_names_what_the_document_checks_found():
     assert story.verdict(view)[2].endswith(
         "The document checks found: text was added to the PDF after it was made."
     )
+
+
+def test_validation_flags_and_newer_injection_categories_read_in_words():
+    inv = {
+        "validation_flags": ["AMOUNT_WORDS_MISMATCH"],
+        "injection_details": [{"category": "exfiltration", "technique": "plain", "channel": "page_text"}],
+    }
+    heads = [f["headline"] for f in story.findings(inv)]
+    assert heads == [
+        "the total written in words does not match the digits",
+        "hidden instructions for the AI: tries to make the AI leak data",
+    ]
