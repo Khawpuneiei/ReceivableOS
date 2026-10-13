@@ -73,6 +73,21 @@ scripts/stack.sh start && python services/orchestrator/run_demo.py; scripts/stac
 
 `scripts/ci_env.sh` writes a `.env` with test-only secrets (mock ledger, no LLM key), the one CI uses.
 
+### One-command deploy (Docker)
+
+```bash
+cp .env.example .env     # fill in real secrets, or: scripts/ci_env.sh (test-only values)
+docker compose up --build -d --wait
+open http://localhost:3000   # UI in live mode; APIs on 127.0.0.1:8000-8003
+docker compose exec orchestrator python services/orchestrator/run_demo.py
+docker compose up -d --force-recreate ocr-ai agent-wallet   # rehearsal reset: forget seen invoices
+docker compose down
+```
+
+One image (`deploy/Dockerfile`) runs all five containers on the mock ledger, offline OCR and no LLM key. On
+every push to `main`, CD (`.github/workflows/cd.yml`) builds it, runs the demo against the containers and
+publishes `ghcr.io/khawpuneiei/receivableos:<sha>` and `:latest`.
+
 Tests and lint (run tests one service at a time):
 
 ```bash

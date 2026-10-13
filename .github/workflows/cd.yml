@@ -1,0 +1,55 @@
+name: CD
+
+# On main: build the stack image, start the whole stack with docker compose, run the demo against it, and
+# only then publish the image to GitHub Container Registry (ghcr.io/<owner>/receivableos:<sha> and :latest).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: cd-main
+  cancel-in-progress: false
+
+jobs:
+  image:
+    name: build, smoke-test, publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build
+        run: docker compose build
+      - name: Start the stack (test-only secrets, mock ledger)
+        run: |
+          scripts/ci_env.sh
+          docker compose up -d --wait --wait-timeout 180
+      - name: Demo against the containers
+        run: |
+          docker compose exec -T orchestrator python services/orchestrator/run_demo.py | tee demo.out
+          grep -q "outcome   executed" demo.out
+          grep -q "settle    TX-5 executed" demo.out
+          curl -fs http://localhost:3000/_stcore/health
+      - name: Container logs
+        if: always()
+        run: docker compose logs --no-color --tail 100
+      - name: Publish to ghcr.io
+        if: github.event_name == 'push' || github.ref == 'refs/heads/main'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag receivableos:local "$image:${GITHUB_SHA::12}"
+          docker tag receivableos:local "$image:latest"
+          docker push "$image:${GITHUB_SHA::12}"
+          docker push "$image:latest"
+      - name: Stop
+        if: always()
+        run: docker compose down
