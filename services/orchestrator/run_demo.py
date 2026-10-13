@@ -12,7 +12,9 @@ from pathlib import Path
 import httpx
 
 ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "http://localhost:8000")
-DEFAULT_INVOICE = Path(__file__).resolve().parents[2] / "data" / "invoices" / "demo_invoice.txt"
+DEFAULT_INVOICE = (
+    Path(__file__).resolve().parents[2] / "data" / "invoices" / "demo" / "01_happy.pdf"
+)  # ocr-ai reads PDFs
 
 
 def main() -> int:
