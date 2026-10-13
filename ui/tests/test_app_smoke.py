@@ -96,3 +96,14 @@ def test_each_demo_case_posts_its_own_pdf_and_a_duplicate_runs_happy_first(monke
     assert sent == ["01_happy.pdf", "04_duplicate.pdf"]  # the happy run failed, so it isn't marked as run
     at.button(key="case_injected").click().run()
     assert sent[-1] == "02_injected.pdf" and not at.exception
+
+
+def test_attack_rows_show_live_or_saved_and_only_the_deciding_policy_codes():
+    import app as ui_app
+
+    a1 = json.loads((UI / "fixtures" / "a1.json").read_text(encoding="utf-8"))
+    live = ui_app.attack_row_html({**a1, "label": "live", "chain_ref": None, "block_reason": "NotApproved"})
+    assert "LIVE" in live and "stopped before the ledger" in live and "no recorded credit approval" in live
+    assert "HARD.INJECTION" in live and "TERMS.MANDATE_CAP" not in live
+    saved = ui_app.attack_row_html({**a1, "label": "fixture: orchestrator has no attack route"})
+    assert "SAVED" in saved and "LIVE" not in saved

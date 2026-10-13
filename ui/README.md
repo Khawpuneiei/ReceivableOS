@@ -53,7 +53,7 @@ screen. A live attack response that was **not** stopped is shown with its real s
 | 3. Decision | APPROVE / REVIEW / REJECT badge, advance, limit, fee as "0.90% / 30 days (10.95% APR)", PD gauge against the mandate's 5% line, reasons with rule ids, a "Why?" expander with the model drivers and the rule trace | real `/policy/decide` response for scenario 1 (model `credit-lr-2026-10-10.2`) |
 | 4. Offers | lender quotes; chosen row green, out-of-mandate rows red with the reason | hand-written from `docs/00-scope.md` (Lender A 70% at 10.95% APR, Lender B 65% at 9.13%) |
 | 5. On-chain | TX-1, TX-2, TX-4 with status and short tx ref; [Approve] when the wallet returns `pending_approval`; [Buyer paid] adds TX-5 | hand-written in the `WalletResult` shape with `mock:0x…` refs |
-| 6. Attacks | A1–A6 buttons; each adds a red BLOCKED row: who stopped it, the policy decision and codes, the revert reason, the tx ref | A1, A2 and A5 carry real policy decisions (scenarios 4, 5 and 7); revert reasons and refs are hand-written |
+| 6. Attacks | A1–A6 buttons in two rows of three, full labels; each row says LIVE (the wallet's real answer) or SAVED (fixture, with why), a plain "Why:", who stopped it, only the deciding policy codes (HARD / KO / REVIEW), the code, and the ref or "stopped before the ledger"; each adds a red BLOCKED row: who stopped it, the policy decision and codes, the revert reason, the tx ref | A1, A2 and A5 carry real policy decisions (scenarios 4, 5 and 7); revert reasons and refs are hand-written |
 
 `python ui/build_fixtures.py` rebuilds every fixture from policy-ai's own fixtures, so the policy numbers on screen
 change only when the policy service changes. Registry, quotes and wallet parts stand in for the orchestrator until

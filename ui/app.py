@@ -406,30 +406,49 @@ def run_attack(case: str) -> dict:
         return {**saved, "label": f"fixture: orchestrator has no attack route ({exc})"}
 
 
+def attack_row_html(a: dict) -> str:
+    """One attack: verdict and title, a plain Why, then who stopped it, the deciding policy codes, the ref."""
+    stopped = a["status"] in ("blocked", "failed", "reject", "review")
+    label = a.get("label") or ""
+    source = (
+        badge("LIVE", "executed")
+        if label == "live"
+        else badge("SAVED", "unknown") + f" <i>({esc(label)})</i>"
+        if label
+        else ""
+    )
+    why = story.plain(a.get("block_reason"))
+    deciding = [c for c in a.get("policy_reasons", []) if c.startswith(("HARD.", "KO.", "REVIEW."))]
+    policy = (
+        f" · policy <b>{esc(a['policy_decision'])}</b>"
+        + (f" ({', '.join(esc(c) for c in deciding)})" if deciding else "")
+        if a.get("policy_decision")
+        else ""
+    )
+    ref = a.get("chain_ref")
+    where = f"<code>{esc(fmt.short_hash(ref))}</code>" if ref else "stopped before the ledger"
+    return row(
+        f"<b>{'BLOCKED' if stopped else esc(a['status']).upper()} {esc(a['case'])}</b>: {esc(a['title'])} "
+        f"{source}<br>"
+        + (f"Why: {esc(why)}.<br>" if why and stopped else "")
+        + f'<span style="font-size:15px">stopped by <b>{esc(a["stopped_by"])}</b>{policy} · '
+        f"code <b>{esc(a.get('block_reason') or '-')}</b> · {where}</span>",
+        "blocked" if stopped else a["status"],
+    )
+
+
 def section_attacks() -> None:
     st.subheader("6. Attacks")
-    cols = st.columns(len(ATTACKS))
-    for col, case in zip(cols, ATTACKS, strict=True):
-        if col.button(ATTACK_LABELS[case], key=f"attack_{case}"):
-            st.session_state.attacks.append(run_attack(case))
+    st.caption(
+        "Each button tries to make the agent move money it should not. Every one must come back BLOCKED."
+    )
+    for start in range(0, len(ATTACKS), 3):
+        cols = st.columns(3)
+        for col, case in zip(cols, ATTACKS[start : start + 3], strict=True):
+            if col.button(ATTACK_LABELS[case], key=f"attack_{case}", width="stretch"):
+                st.session_state.attacks.append(run_attack(case))
     for a in reversed(st.session_state.attacks):
-        policy = f" · policy {esc(a['policy_decision'])}" if a.get("policy_decision") else ""
-        codes = ", ".join(esc(c) for c in a.get("policy_reasons", []))
-        stopped = a["status"] in ("blocked", "failed", "reject", "review")
-        label = f" <i>({esc(a['label'])})</i>" if a.get("label") else ""
-        why = story.plain(a.get("block_reason"))
-        why_line = f"<br>Why: {esc(why)}." if why and stopped else ""
-        st.markdown(
-            row(
-                f"<b>{'BLOCKED' if stopped else esc(a['status']).upper()} {esc(a['case'])}</b>: "
-                f"{esc(a['title'])}{label}<br>"
-                f"stopped by <b>{esc(a['stopped_by'])}</b>"
-                f"{policy} {codes} · revert <b>{esc(a.get('block_reason') or '-')}</b> · "
-                f"<code>{esc(fmt.short_hash(a.get('chain_ref')))}</code>{why_line}",
-                "blocked" if stopped else a["status"],
-            ),
-            unsafe_allow_html=True,
-        )
+        st.markdown(attack_row_html(a), unsafe_allow_html=True)
 
 
 def footer(view: dict) -> None:
