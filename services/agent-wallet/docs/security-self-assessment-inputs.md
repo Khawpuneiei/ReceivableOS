@@ -107,7 +107,7 @@ teammate. The submission rules need someone else to do it.
 
 ## 4. Test evidence
 
-- `pytest services/agent-wallet`: 141 passed, 2 skipped, at the branch head with the CHAIN_MODE change (135 at `a901820`). The two model tests need `INJECTION_MODEL_DIR`.
+- `pytest services/agent-wallet`: 149 passed, 2 skipped, with the durable state file (135 at `a901820`). The two model tests need `INJECTION_MODEL_DIR`.
 - `forge test --offline` in `contracts/`: 42 passed (40 revert, settlement and flow tests, and 2 time-unit tests). Every revert string has a test.
 - `ruff check`: clean.
 
@@ -157,8 +157,13 @@ teammate. The submission rules need someone else to do it.
 14. **Lesson from the FISCO run: the chains differ.** FISCO's block timestamp is in milliseconds, and the Anvil runs could
     not show the resulting expiry error. The time unit is now a deploy parameter. Any further EVM-compatibility
     assumption needs a test on the target chain.
-15. **Holds and pending approvals are in memory.** A restart loses them. A confirm for a draw sent before the restart
-    returns `NotPending`, though the chain still holds the pending call. A durable store is the fix.
+15. **Wallet state is one local file.** With `WALLET_STATE_FILE` (FISCO only), holds, pending approvals, idempotency
+    results and the audit log survive a restart. Checked on FISCO on 13 Oct: a 980,000.00 draw went to pending
+    approval, the wallet was restarted, and the approver's confirm then executed on chain. Without the setting,
+    a restart still loses them. Remaining limits: a crash between a ledger call and the write loses that one
+    result (the chain still refuses a repeat); the file is not replicated; it holds the stored requests in clear
+    text, with no keys or tokens; and the audit check at load detects an edited log, but not a file that was
+    replaced whole. The on-chain audit anchor is the check for that.
 16. **No cap on outstanding exposure.** The daily cap limits what can be drawn in 24 hours. Nothing on chain limits the
     total balance outstanding across invoices. docs/06 §6 asks for this to appear in the pitch's known limits.
 17. **The audit log has no `flow_id`.** docs/06 §6 asks for one on every entry, with an anchor at the end of each flow.

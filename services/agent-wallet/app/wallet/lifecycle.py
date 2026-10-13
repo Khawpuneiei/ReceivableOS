@@ -42,6 +42,7 @@ from app.models import (
     canonical_json,
 )
 from app.money import apr_to_bps
+from app.wallet.persist import StateFile
 from app.wallet.store import ChainPending, Hold, ReceivableFact, Store
 from shared.money import fee_rate_30d_to_apr
 from shared.schemas import Decision as DecisionKind
@@ -76,6 +77,7 @@ class WalletService:
         classifier_action: str = "log",
         decision_signers: DecisionSigners | None = None,
         tripwire: Tripwire | None = None,
+        state: StateFile | None = None,
     ) -> None:
         self.ledger = ledger
         self.store = store
@@ -92,6 +94,12 @@ class WalletService:
         self.decision_signers = decision_signers or DecisionSigners()
         self.anchors: list[dict[str, Any]] = []  # Merkle roots written on chain, oldest first
         self.tripwire = tripwire or Tripwire(honeytokens=set(), threshold=0)
+        # Durable state (FISCO): what a restart must not lose. See app/wallet/persist.py.
+        self.state = state
+        if state is not None:
+            paused = state.load_into(self.store, self.audit, self.anchors)
+            if paused is not None:
+                self.paused = paused
 
     # ----- helpers -----
 
@@ -256,6 +264,8 @@ class WalletService:
         )
         if action == "settle" and result.status == TxStatus.executed:
             self.anchor_audit(invoice_id, actor, result.tx_id, ref)
+        if self.state is not None:
+            self.state.save(self.store, self.audit, self.paused, self.anchors)
 
     def anchor_audit(
         self, invoice_id: str = "wallet", actor: str = "agent", tx_id: str | None = None, ref: str = ""
@@ -277,6 +287,8 @@ class WalletService:
             tx_id=tx_id,
             data=anchor,
         )
+        if self.state is not None:
+            self.state.save(self.store, self.audit, self.paused, self.anchors)
         return anchor
 
     def audit_proof(self, seq: int) -> dict[str, Any]:
