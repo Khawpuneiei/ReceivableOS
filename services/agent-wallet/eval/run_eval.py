@@ -7,7 +7,8 @@ the case request. Prints the metrics and writes eval/report.md. Exit code 1 if a
     python services/agent-wallet/eval/run_eval.py --skip-offchain  # DEMO_MODE bypass: the chain alone (L5)
     python services/agent-wallet/eval/run_eval.py --probe-first    # adaptive attacker: a caught probe first
 
-Scope: ledger=mock only. agent_run cases (the optional agent loop) are reported as skipped.
+Scope: ledger=mock only. agent_run cases (the agent loop) run with the guard on and are skipped with
+--skip-offchain, since the loop is off-chain code.
 """
 
 import argparse
@@ -258,12 +259,23 @@ def build_call(
     if endpoint == "confirm":
         tx_id = tx.get("execute", {}).get("tx_id", "missing")
         return f"/wallet/confirm/{tx_id}", substitute(case["body"], case_id, canary), headers
+    if endpoint == "agent_run":
+        signed = substitute(effective_decision(case, case_id), case_id, canary)
+        body = {
+            "invoice_id": f"inv_{case_id}",
+            "invoice_fingerprint": substitute("fp:{id}", case_id, canary),
+            "decision": {**signed, "decision_hash": decision_hash(signed)},
+            "quotes": substitute(case["quotes"], case_id, canary),
+            "invoice_text": substitute(case.get("invoice_text", ""), case_id, canary),
+            "mandate_id": "mdt_001",
+        }
+        return "/agent/run", body, headers
     raise ValueError(f"unsupported endpoint: {endpoint}")
 
 
 def run_case(case: dict, canary: str, skip_offchain: bool) -> dict:
     case_id = case["id"]
-    if case.get("endpoint") == "agent_run":
+    if case.get("endpoint") == "agent_run" and skip_offchain:
         return {"id": case_id, "skipped": True}
     h = Harness(canary, skip_offchain)
     h._case_env = case.get("env", {})
@@ -323,6 +335,8 @@ def evaluate(case: dict, result: dict) -> tuple[bool, str]:
         return False, f"status {body.get('status')}, want {expected} ({body.get('block_reason')})"
     if case.get("expected_code") and case["expected_code"] not in codes:
         return False, f"code {case['expected_code']} missing, got {sorted(c for c in codes if c)}"
+    if case.get("expect_selected") and body.get("selected_lender") != case["expect_selected"]:
+        return False, f"agent selected {body.get('selected_lender')}, want {case['expect_selected']}"
     split = case.get("expect_split")
     if split:
         if not result["settle_events"]:
@@ -347,6 +361,8 @@ def stopped_at(result: dict) -> str:
     if body.get("status") == "executed" or body.get("status") is None:
         return "-"
     layers = [c["layer"] for c in body.get("checks", []) if not c["passed"]]
+    if not layers and "planner" in body:  # the agent loop stopped before proposing
+        return "L2" if body.get("block_reason") in ("InjectionSuspected", "CanaryLeak") else "agent-firewall"
     return layers[0] if layers else "-"
 
 

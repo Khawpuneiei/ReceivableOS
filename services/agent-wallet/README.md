@@ -12,7 +12,7 @@ Build brief for the service: [`CLAUDE.md`](CLAUDE.md). Request and response mode
   against them with `CHAIN_MODE=fisco`, and the demo's on-chain transactions are checked on chain. The records are in
   [`eval/fisco-deployment.md`](eval/fisco-deployment.md) and [`eval/demo_tx_hashes_fisco.md`](eval/demo_tx_hashes_fisco.md).
 - **Local Anvil:** `scripts/deploy.py` and `scripts/evm_smoke.py` pass 7 of 7 checks.
-- **Tests:** `pytest` 151 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
+- **Tests:** `pytest` 167 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
 - **Orchestrator:** the integration isn't finished. See `docs/orchestrator-integration.md`.
 
 Per-item status is in the table in [`docs/03-agent-wallet.md`](../../docs/03-agent-wallet.md) section 8.
@@ -113,7 +113,7 @@ cd services/agent-wallet/contracts && FOUNDRY_SOLC=/path/to/solc-0.8.11 forge te
 The tests need `pytest`, `ruff` and `httpx` on top of the service requirements (`pip install pytest ruff httpx`).
 The two classifier model tests run only when `INJECTION_MODEL_DIR` points at the pinned model.
 
-The red-team eval: `python services/agent-wallet/eval/run_eval.py` (default cases, mock ledger). Pass
+The red-team eval: `python services/agent-wallet/eval/run_eval.py` (default cases, mock ledger; the agent-loop cases AG1 and AG2 run too). Pass
 `--cases eval/heldout_v5_cases.jsonl` for another set, and `--skip-offchain` for the chain alone. Reports are in
 `eval/report*.md`.
 
@@ -137,8 +137,11 @@ The red-team eval: `python services/agent-wallet/eval/run_eval.py` (default case
 | GET | `/wallet/tx/{tx_id}` | none | The result of one transaction |
 | GET | `/wallet/tripwire` | approver token | Tripwire state: paused, recent hostile blocks, quarantined invoices |
 | POST | `/wallet/quarantine/release` | approver token | Release a quarantined invoice fingerprint |
+| POST | `/agent/run` | `X-Agent-Token` | Agent loop: pick a lender quote inside the mandate and propose one draw through the tool firewall |
 
 A missing or wrong token gets HTTP 403. A malformed body gets 422 before the token check runs.
+Not built: `GET /wallet/registry/{invoice_fingerprint}`.
+
 ### Tripwire (`app/guard/tripwire.py`, `config/tripwire.json`)
 
 Each caught attack becomes state, so the attacker's next try meets a closed door:
@@ -154,7 +157,26 @@ Policy refusals (APR, limit, caps) never count, so an honest mistake doesn't fre
 held-out v3 goes from 10 of 24 attacks reaching execute to 0 of 24, and held-out v4 from 18 of 30 to 0 of 30.
 The scanner's own recall is unchanged; the reports are `eval/report_heldout_v*_cases_probe_first.md`.
 
-Not built: `GET /wallet/registry/{invoice_fingerprint}` and the optional `POST /agent/run`.
+### Agent loop and tool firewall (`app/agent/loop.py`)
+
+`POST /agent/run` takes `{invoice_id, invoice_fingerprint, decision, quotes[], invoice_text?, mandate_id?}` and
+returns `{status, planner, selected_lender, block_reason, findings, trace, wallet}`. The plan is fixed in code
+(get_quotes, select_quote, wallet_propose, tx_status). With `LLM_PROVIDER` set, the model fills one slot, the
+lender_id, and sees untrusted text only inside per-run `<<UNTRUSTED_nonce>>` tags. Without it, the deterministic
+rule picks (highest advance inside the mandate, ties to the lower APR; a quote's APR is the higher of the stated
+APR and the one its fee implies). The firewall blocks, each with a test:
+
+| Code | When |
+|---|---|
+| `InjectionSuspected` / `CanaryLeak` | the scanner hits a quote note, the invoice text or a policy reason, or the model says SUSPECTED_INJECTION; the run stops before wallet_propose |
+| `ToolArgNotAllowed` | the model adds an argument (a payee, an amount), names a lender that sent no quote, or an unknown verdict |
+| `AgentMisaligned` | the model's lender differs from the rule's pick on the same trusted numbers |
+| `NoQuoteInsideMandate` | no quote is inside the mandate's APR and advance limits |
+| `NotRegistered` | the invoice has no TX-1 |
+
+Every wallet_propose argument comes from a trusted source, and the trace says which: the payee is the seller
+bound at TX-1, the amount is `min(face x advance, decision limit, approved limit)`. The proposal then goes through
+`/wallet/execute`'s guard and the chain unchanged. Each run leaves an `AGENT_RUN` audit entry.
 
 ## Settings
 
@@ -225,5 +247,6 @@ Money is THB with two decimals.
   restart returns `NotPending`. The chain still holds the pending call.
 - The FISCO adapter does not retry a transaction that fails at the RPC level; such a failure raises an exception.
 - The 15-minute approval-age rule from CLAUDE.md §5.4 is not implemented.
-- The optional agent loop (`POST /agent/run`, CLAUDE.md §7.3) is not built, so the eval skips its two cases.
+- The agent loop calls a model only when `LLM_PROVIDER` is set; the alignment check then requires the model to agree
+  with the deterministic rule, so the model adds explanation, not authority. The loop is not on the orchestrator path yet.
 - Console or python-sdk screenshots for the submission are not in the repo. The verification output and the receipts are.
