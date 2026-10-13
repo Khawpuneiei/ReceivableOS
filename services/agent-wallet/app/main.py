@@ -15,6 +15,7 @@ from fastapi import FastAPI, Header, HTTPException
 from ledger.mock import MockLedger
 
 from app.guard.classifier import load_classifier
+from app.guard.signatures import DecisionSigners
 from app.models import ExecuteRequest, load_mandate, load_payees
 from app.settings import get_settings
 from app.wallet.lifecycle import WalletService
@@ -78,6 +79,7 @@ def build_service(clock: Callable[[], datetime] = _now) -> WalletService:
         canary=settings.agent_canary,
         classifier=classifier,
         classifier_action=settings.injection_classifier_action,
+        decision_signers=DecisionSigners.load(CONFIG / "decision_signers.json"),
     )
 
 
@@ -123,6 +125,7 @@ def create_app(service: WalletService | None = None) -> FastAPI:
         yield
 
     app = FastAPI(title="agent-wallet", lifespan=lifespan)
+    app.state.wallet = svc
 
     @app.get("/health")
     def health() -> dict:
@@ -144,10 +147,12 @@ def create_app(service: WalletService | None = None) -> FastAPI:
 
     @app.post("/wallet/approve", response_model=WalletResult)
     def approve(
-        req: WalletApproveRequest, x_risk_oracle_token: str | None = Header(default=None)
+        req: WalletApproveRequest,
+        x_risk_oracle_token: str | None = Header(default=None),
+        x_decision_signature: str | None = Header(default=None),
     ) -> WalletResult:
         _check_token(settings.wallet_risk_oracle_token, x_risk_oracle_token)  # only the risk oracle approves
-        return svc.approve(req)
+        return svc.approve(req, x_decision_signature)  # policy-ai's signature, checked when configured
 
     @app.post("/wallet/settle", response_model=WalletResult)
     def settle(req: WalletSettleRequest, x_agent_token: str | None = Header(default=None)) -> WalletResult:

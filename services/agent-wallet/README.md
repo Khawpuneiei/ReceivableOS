@@ -12,7 +12,7 @@ Build brief for the service: [`CLAUDE.md`](CLAUDE.md). Request and response mode
   against them with `CHAIN_MODE=fisco`, and the demo's on-chain transactions are checked on chain. The records are in
   [`eval/fisco-deployment.md`](eval/fisco-deployment.md) and [`eval/demo_tx_hashes_fisco.md`](eval/demo_tx_hashes_fisco.md).
 - **Local Anvil:** `scripts/deploy.py` and `scripts/evm_smoke.py` pass 7 of 7 checks.
-- **Tests:** `pytest` 141 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
+- **Tests:** `pytest` 151 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
 - **Orchestrator:** the integration isn't finished. See `docs/orchestrator-integration.md`.
 
 Per-item status is in the table in [`docs/03-agent-wallet.md`](../../docs/03-agent-wallet.md) section 8.
@@ -123,7 +123,7 @@ The red-team eval: `python services/agent-wallet/eval/run_eval.py` (default case
 |---|---|---|---|
 | GET | `/health` | none | Service status and ledger mode |
 | POST | `/wallet/register` | `X-Agent-Token` | TX-1: register a receivable, binding its seller (KYC-verified payees only) |
-| POST | `/wallet/approve` | `X-Risk-Oracle-Token` | TX-2: record a credit approval; the decision must be sent and must match it |
+| POST | `/wallet/approve` | `X-Risk-Oracle-Token` (+ `X-Decision-Signature` when enforced) | TX-2: record a credit approval; the decision must be sent and must match it |
 | POST | `/wallet/execute` | `X-Agent-Token` | TX-4: guard, then draw; may return `pending_approval` or a held draft |
 | POST | `/wallet/settle` | `X-Agent-Token` | TX-5: settle after the buyer pays |
 | GET | `/wallet/holds` | approver token | Open held drafts (ids, amounts, codes; no invoice text) |
@@ -137,6 +137,16 @@ The red-team eval: `python services/agent-wallet/eval/run_eval.py` (default case
 | GET | `/wallet/tx/{tx_id}` | none | The result of one transaction |
 
 A missing or wrong token gets HTTP 403. A malformed body gets 422 before the token check runs.
+### Signed credit decisions (`app/guard/signatures.py`)
+
+With a signer in `config/decision_signers.json`, `/wallet/approve` also checks
+`X-Decision-Signature: ed25519:<key_id>:<base64>` over `receivableos/decision/v1|<decision_hash>|<invoice_fingerprint>`.
+The private key belongs in policy-ai, so the risk-oracle token alone can no longer approve a decision someone
+wrote themselves, and a signed decision can't be replayed onto another invoice. Codes (layer L1):
+`DecisionUnsigned` (enforced, none sent), `DecisionSignerUnknown`, `DecisionSignatureInvalid`. With `enforce: false`
+(the default until policy-ai signs), a signature is checked only when one is sent.
+`scripts/decision_keys.py keygen` makes a key pair and prints the config entry; `sign` prints the header.
+
 Not built: `GET /wallet/registry/{invoice_fingerprint}` and the optional `POST /agent/run`.
 
 ## Settings

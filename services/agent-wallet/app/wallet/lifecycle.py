@@ -23,6 +23,7 @@ from pydantic import ValidationError
 from app.audit.log import AuditLog
 from app.guard.injection import Classifier, scan_payload
 from app.guard.pipeline import GuardContext, check_draw
+from app.guard.signatures import DecisionSigners
 from app.models import (
     ApproveIntent,
     DrawIntent,
@@ -66,6 +67,7 @@ class WalletService:
         canary: str | None = None,
         classifier: Classifier | None = None,
         classifier_action: str = "log",
+        decision_signers: DecisionSigners | None = None,
     ) -> None:
         self.ledger = ledger
         self.store = store
@@ -79,6 +81,7 @@ class WalletService:
         self.mandate: Mandate | None = None
         self.paused = False
         self.audit = AuditLog()
+        self.decision_signers = decision_signers or DecisionSigners()
 
     # ----- helpers -----
 
@@ -301,12 +304,12 @@ class WalletService:
 
     # ----- TX-2: credit approval (risk oracle) -----
 
-    def approve(self, req: WalletApproveRequest) -> WalletResult:
+    def approve(self, req: WalletApproveRequest, signature: str | None = None) -> WalletResult:
         key = req.idempotency_key
         invoice_id = self._invoice_of(req.invoice_fingerprint)
-        return self._run("approve", invoice_id, key, lambda: self._approve(req))
+        return self._run("approve", invoice_id, key, lambda: self._approve(req, signature))
 
-    def _approve(self, req: WalletApproveRequest) -> WalletResult:
+    def _approve(self, req: WalletApproveRequest, signature: str | None = None) -> WalletResult:
         # The approval must name an approve decision and match it: the hash covers the decision, and the limit
         # and fee are separate fields, so they are compared with it too.
         decision = req.decision
@@ -324,6 +327,10 @@ class WalletService:
             GuardCheck(layer="L1", code="NotApproved", passed=decision.decision == DecisionKind.approve),
             GuardCheck(layer="L1", code="DecisionTampered", passed=matches),
         ]
+        # The signature is over the decision hash the approval names and the invoice it is for.
+        if signature or self.decision_signers.enforce:
+            signed = self.decision_signers.check(signature, req.decision_hash, req.invoice_fingerprint)
+            checks.append(GuardCheck(layer="L1", code=signed or "DecisionSigned", passed=signed is None))
         if not all(c.passed for c in checks):
             return self._blocked(checks)
         max_apr_bps = apr_to_bps(fee_rate_30d_to_apr(req.fee_rate))
@@ -342,7 +349,7 @@ class WalletService:
         fact = self.store.receivables.get(req.invoice_fingerprint)
         if res.ok and fact is not None:
             fact.limit, fact.fee_rate, fact.decision_hash = req.limit, req.fee_rate, req.decision_hash
-        return self._finish(res)
+        return self._finish(res, extra=[c for c in checks if c.code == "DecisionSigned"])
 
     # ----- TX-4: draw -----
 
