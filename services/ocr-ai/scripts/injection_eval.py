@@ -45,7 +45,7 @@ def run_case(clean: bytes, case: dict) -> dict:
     return {**case, "flags": result.injection_flags, "fields": fields(result)}
 
 
-def evaluate(holdout: bool = False) -> dict:
+def evaluate(holdout: bool | str = False) -> dict:
     clean = build_pdf({**SHOWCASE_PROFILES[0], "invoice_no": "INJ-EVAL-0001"})
     baseline = fields(extract_document(parse(clean), "invoice"))
     attacks = [run_case(clean, case) for case in attack_cases(holdout)]
@@ -77,7 +77,12 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--json", type=Path)
     args = parser.parse_args()
-    report = {"development": evaluate(), "holdout": evaluate(holdout=True)}
+    report = {
+        "development": evaluate(),
+        "holdout": evaluate(holdout=True),
+        "holdout_v2": evaluate(holdout="v2"),
+        "holdout_v3": evaluate(holdout="v3"),
+    }
     if args.json:
         args.json.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
     for name, part in report.items():

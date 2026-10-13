@@ -19,6 +19,18 @@ from dataclasses import dataclass
 
 from app.layout import same_row
 
+# Who an embedded instruction speaks to, and what it tells them to do (generic addressee rules).
+# Bare role words ("Sales agent:", "Model: X200", "Reviewer: QA") are common on real invoices, so a
+# human-sounding role only counts as an addressee when it carries an AI or automation qualifier.
+ADDRESSEE = (
+    r"(?:ai|a\.i\.|llm|gpt|chatbot|(?:ai|automated|automatic|virtual|reviewing|review|underwriting|scoring|risk|"
+    r"credit|language|approval)\s+(?:agent|assistant|reviewer|underwriter|approver|model|system|bot)(?:\s+\w+)?)"
+)
+COMMAND = (
+    r"(?:approve|fund|finance|release|waive|skip|disable|grant|classify|report|reply|respond|wire|transfer|remit|"
+    r"send|ignore|accept|treat|mark|set|output|clear|fast[- ]?track|whitelist|disregard|move on|bypass|pay)"
+)
+
 RULES: tuple[tuple[str, str], ...] = (
     # Attempts to replace the reader's instructions or role.
     (
@@ -46,7 +58,7 @@ RULES: tuple[tuple[str, str], ...] = (
         "role_override",
         r"(?:^|[\s\"'(\[{])(?:system|assistant|developer|ai agent|ai reviewer|"
         r"note to (?:the )?ai(?: reviewer)?|to the ai)(?:\s+override)?\s*:"
-        r".{0,80}?\b(?:ignore|approved?|override|bypass|skip|set|release|transfer|send|pay|grant|disable|"
+        r".{0,80}?\b(?:ignore|approve(?:d(?!\s+by))?|override|bypass|skip|set|release|transfer|send|pay|grant|disable|"
         r"trusted|no (?:further )?(?:checks?|review)|do not)\b",
     ),
     # Attempts to force a credit or review outcome.
@@ -58,13 +70,13 @@ RULES: tuple[tuple[str, str], ...] = (
     (
         "decision_coercion",
         r"\b(?:mark|treat|classify|flag|consider|label)\b.{0,25}\bas\b.{0,10}\b(?:approved|verified|"
-        r"legitimate|safe|low[- ]risk|genuine|trusted|clean|valid)\b",
+        r"legitimate|safe|low[- ]risk|genuine|trusted|clean|valid|whitelisted|allow[- ]?listed|exempt)\b",
     ),
     (
         "decision_coercion",
         r"\b(?:skip|bypass|disable|turn off|waive|override)\b.{0,20}\b(?:fraud|risk|kyc|aml|compliance|"
         r"security|duplicate|credit|policy|manual|human)\b.{0,15}\b(?:checks?|reviews?|screening|verification|"
-        r"controls?|limits?|approval|polic(?:y|ies))\b",
+        r"controls?|limits?|approval|polic(?:y|ies)|detection|scoring|matching|validation)\b",
     ),
     (
         "decision_coercion",
@@ -73,7 +85,9 @@ RULES: tuple[tuple[str, str], ...] = (
     ),
     (
         "decision_coercion",
-        r"\brelease\b.{0,25}\b(?:full|entire|whole)\b.{0,20}\b(?:amount|advance|funds?|limit)\b",
+        r"\b(?:release|grant|fund|disburse|approve|give)\b.{0,25}\b(?:full|entire|whole|maximum|max|highest|top)\b"
+        r".{0,20}\b(?:amount|advance|funds?|limit|financing)\b|"
+        r"\b(?:fund|finance|release|approve)\s+(?:it\s+|this\s+\w+\s+|the\s+\w+\s+)?in full\b",
     ),
     ("decision_coercion", r"\boverride\b.{0,20}\b(?:credit|limit|polic|decision|guard|cap)"),
     # Attempts to write model or contract outputs.
@@ -116,17 +130,74 @@ RULES: tuple[tuple[str, str], ...] = (
         r"(?:your|the) instructions|api[_ ]?keys?|private keys?|seed phrase|mnemonic|secrets?|credentials|"
         r"passwords?|env(?:ironment)? variables?)\b",
     ),
+    # Generic: text that addresses an AI or automated reviewer and gives it a command.
+    (
+        "addressed_command",
+        r"(?:^|[\s\"'(\[{.,;:])(?:(?:dear|attention|attn|hey|hello|note to|message (?:for|to)|to)\s*:?\s+)?"
+        r"(?:the\s+)?(?:[\w-]+\s+){0,2}"
+        + ADDRESSEE
+        + r"(?:\s+(?:note|notice|directive|instructions?|guidance))?"
+        r"\s*[:,]\s*.{0,60}?\b" + COMMAND + r"\b",
+    ),
+    (
+        "addressed_command",
+        r"\b(?:dear|attention|attn|hey|hello)\s+(?:the\s+)?(?:[\w-]+\s+){0,2}"
+        + ADDRESSEE
+        + r"\b.{0,60}?\b"
+        + COMMAND
+        + r"\b|\b(?:instructs?|tells?|directs?|asks?|requires?)\s+(?:the|an?|any|all)\s+(?:[\w-]+\s+)?"
+        + ADDRESSEE
+        + r"\s+to\s+"
+        + COMMAND
+        + r"\b",
+    ),
+    # Generic: declaring the reader's rules void, or swapping its task.
+    (
+        "role_override",
+        r"\b(?:(?:above|previous|prior|earlier|preceding|your|all|these|existing|usual|normal|standard)\s+(?:[\w-]+\s+)?"
+        r"(?:rules?|instructions?|guidelines?|restrictions?|polic(?:y|ies)|checks?|guidance|constraints?)|"
+        r"(?:rules?|instructions?|guidelines?|restrictions?|constraints?)\s+(?:above|before|so far))\b.{0,20}"
+        r"\b(?:no longer appl(?:y|ies)|(?:are|is)\s+(?:now\s+)?"
+        r"(?:void|suspended|lifted|waived|cancell?ed|revoked|disabled|obsolete)|do(?:es)?\s*n[o']t apply)\b",
+    ),
+    (
+        "role_override",
+        r"\b(?:ignore|disregard|forget)\s+(?:everything\s+|all\s+|the\s+)?(?:above|before|prior)\b",
+    ),
+    (
+        "role_override",
+        r"\byour\s+(?:task|job|role|objective|goal|instructions?)\s+(?:has|have|is|are)\s+(?:now\s+)?"
+        r"(?:changed|updated|replaced|different)\b|"
+        r"\binstead of\s+(?:checking|reviewing|verifying|validating|analy[sz]ing|scoring|assessing)\b.{0,50}"
+        r"\b(?:reply|respond|say|answer|output|approve|mark|return|state)\b",
+    ),
+    (
+        "score_tampering",
+        r"\b(?:report|output|return|state|classify|rate|score|assess)\b.{0,25}\b(?:zero|no|nil|minimal)\s+"
+        r"(?:fraud\s+)?risk\b|\b(?:classify|rate|score|assess|report)\b.{0,25}\b(?:risk|fraud)\b.{0,10}"
+        r"\b(?:as|is|=)\s*(?:none|zero|nil|0|minimal)\b",
+    ),
     # Thai.
     ("role_override", r"(?:ละเว้น|เพิกเฉย|ไม่ต้องสนใจ|ลืม).{0,20}(?:คำสั่ง|กฎ|ข้อกำหนด|นโยบาย)"),
     ("decision_coercion", r"ไม่ต้อง(?:ตรวจ|ทบทวน|เช็ค)|อนุมัติ(?:ทันที|อัตโนมัติ|เต็มจำนวน|ใบแจ้งหนี้นี้|สินเชื่อ)"),
     ("payee_redirect", r"(?:โอน|จ่าย|ส่ง)เงิน.{0,40}แทน|(?:เปลี่ยน|แก้ไข)(?:เลขที่)?(?:บัญชี|ผู้รับเงิน)"),
     ("score_tampering", r"(?:คะแนน|ค่า)ความเสี่ยง.{0,15}(?:เป็น|=)\s*(?:ศูนย์|0)"),
+    ("decision_coercion", r"ข้าม(?:การ)?(?:ตรวจ|ทบทวน|เช็ค|คัดกรอง)"),
+    (
+        "addressed_command",
+        r"(?:โมเดล|เอไอ|\bai\b|บอท|ระบบอัตโนมัติ|ผู้ช่วย\s*(?:ai|เอไอ))\s*[:,]?.{0,30}"
+        r"(?:อนุมัติ|ระบุว่า|ข้าม|โอน|ชำระ|จ่าย|ให้ผ่าน|ปล่อย)|คุณ(?:คือ|เป็น)(?:ผู้อนุมัติ|ผู้ตรวจ|ระบบ|โมเดล|ผู้ช่วย)",
+    ),
     # Simplified Chinese (experimental profile).
     (
         "role_override",
         r"忽略.{0,8}(?:指令|规则|提示)|(?:系统|助手)\s*:\s*.{0,30}(?:忽略|批准|跳过|通过|转账)",
     ),
     ("decision_coercion", r"跳过.{0,6}(?:检查|审核|验证)|批准.{0,6}(?:发票|交易|融资|贷款)"),
+    (
+        "addressed_command",
+        r"(?:模型|AI|人工智能|机器人).{0,6}[:：,，].{0,20}(?:批准|放款|跳过|忽略|通过|转账|作废)",
+    ),
 )
 COMPILED = tuple((category, re.compile(pattern, re.IGNORECASE | re.DOTALL)) for category, pattern in RULES)
 
