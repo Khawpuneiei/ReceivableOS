@@ -37,6 +37,8 @@ FRAUD_WEIGHTS = {
     "shared_bank_token": 0.15,
     "bank_account_changed": 0.25,
     "suspicious_cluster": 0.15,
+    # Scoped amount far above this supplier-buyer pair's own history (app/fraud.py); review, not proof.
+    "amount_outlier": 0.15,
 }
 
 

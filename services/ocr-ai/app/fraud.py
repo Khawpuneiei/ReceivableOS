@@ -1,6 +1,8 @@
 """Explainable deterministic duplicate and scoped shared-account graph signals."""
 
 import math
+from decimal import Decimal
+from statistics import median
 
 import networkx as nx
 
@@ -9,6 +11,10 @@ from app.graph import build_graph
 from app.history import InvoiceObservation
 from app.models import FraudFinding
 from app.normalize import normalize_reference
+
+# An amount this many times the pair's median, after at least this many prior invoices, is an outlier.
+OUTLIER_RATIO = Decimal(3)
+OUTLIER_MIN_HISTORY = 3
 
 
 def finding(code: str, reason: str, refs=None, entities=None, path=None) -> FraudFinding:
@@ -123,6 +129,34 @@ def graph_findings(records: list[tuple[str, InvoiceObservation]], current_id: st
                     )
                 )
                 break
+    if current.amount is not None and current.supplier_token and current.buyer_token:
+        prior = [
+            (oid, record)
+            for oid, record in records
+            if oid != current_id
+            and record.doc_hash != current.doc_hash
+            and record.supplier_token == current.supplier_token
+            and record.buyer_token == current.buyer_token
+            and record.currency == current.currency
+            and record.amount is not None
+            and record.amount > 0
+        ]
+        if len(prior) >= OUTLIER_MIN_HISTORY:
+            typical = median(record.amount for _, record in prior)
+            if current.amount >= OUTLIER_RATIO * typical:
+                signals.append(
+                    finding(
+                        "amount_outlier",
+                        f"Amount is at least {OUTLIER_RATIO}x the median of {len(prior)} prior invoices "
+                        "between the same scoped supplier and buyer; confirm the order independently",
+                        [
+                            *current.evidence_refs,
+                            *(ref for _, record in prior[-3:] for ref in record.evidence_refs),
+                        ],
+                        entities=[current.supplier_token, current.buyer_token],
+                        path=[current_id, *(oid for oid, _ in prior[-3:])],
+                    )
+                )
     return signals
 
 
