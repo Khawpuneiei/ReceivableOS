@@ -132,6 +132,14 @@ class WalletService:
         cutoff = self.clock() - timedelta(hours=24)
         return sum((amount for at, amount in self.store.spends if at >= cutoff), Decimal(0))
 
+    def seed_spend(self, amount: Decimal) -> None:
+        """Counts what the chain already spent in the last 24h, read at startup. The store is in memory, so
+        without this the off-chain cap starts at zero after a restart. The entry is dated now, so the whole
+        amount counts for 24h from startup. That is never looser than the chain's sliding window, which the
+        chain still enforces exactly."""
+        if amount > 0:
+            self.store.spends.append((self.clock(), amount))
+
     def _context(self) -> GuardContext:
         return GuardContext(
             now=self.clock(),
@@ -243,11 +251,28 @@ class WalletService:
         key = req.idempotency_key
         return self._run("register", req.invoice_id, key, lambda: self._register(req))
 
+    def _seller_kyc(self, seller_address: str | None) -> bool:
+        """The KYC flag of the payee at this address, while its credential has not expired.
+        An address not in the registry, or an expired credential, is not verified."""
+        today = self._today()
+        return any(
+            p.kyc_verified
+            and p.address.lower() == (seller_address or "").lower()
+            and (p.kyc_expiry is None or today <= p.kyc_expiry)
+            for p in self.payees.values()
+        )
+
+    def _context_for(self, fact: ReceivableFact | None) -> GuardContext:
+        seller_ok = self._seller_kyc(fact.seller_address) if fact else True
+        return replace(self._context(), seller_kyc_verified=seller_ok)
+
     def _register(self, req: WalletRegisterRequest) -> WalletResult:
         seller_id = req.seller or self._default_seller_id() or ""
         seller = self._payee_address(seller_id)
         if seller is None:
             return self._offchain_block("PayeeNotAllowed", "L3")
+        if not self._seller_kyc(seller):
+            return self._offchain_block("KycNotVerified", "L3")
         try:
             intent = RegisterIntent(
                 invoice_id=req.invoice_id,
@@ -362,7 +387,8 @@ class WalletService:
         if req.skip_offchain_checks and self.demo_mode:  # DEMO_MODE only: the chain alone has to refuse
             guard_checks = [GuardCheck(layer="DEMO", code="OffchainBypassed", passed=True)]
         else:
-            guard = check_draw(intent, req, fact, self._context(), payee_resolved=resolved is not None)
+            ctx = self._context_for(fact)
+            guard = check_draw(intent, req, fact, ctx, payee_resolved=resolved is not None)
             if any(not c.passed and c.layer != "HOLD" for c in guard.checks):
                 return self._blocked(guard.checks)
             if any(not c.passed and c.layer == "HOLD" for c in guard.checks):
@@ -416,7 +442,7 @@ class WalletService:
         # The approver overrides the classifier flag only. Every hard check runs again, because the wallet
         # may have changed (paused, mandate expired, receivable drawn) since the draft was held.
         fact = self.store.receivables.get(hold.intent.invoice_fingerprint)
-        ctx = replace(self._context(), classifier_action="log")
+        ctx = replace(self._context_for(fact), classifier_action="log")
         guard = check_draw(hold.intent, hold.request, fact, ctx, payee_resolved=True)
         if not guard.passed:
             return self._blocked(guard.checks)
@@ -492,7 +518,8 @@ class WalletService:
         missing = [p for p in mandate.payee_allowlist if p not in self.payees]
         if missing:
             raise ValueError(f"payees not in the registry: {missing}")
-        addresses = [self.payees[p].address for p in mandate.payee_allowlist]
+        # Only KYC-verified payees go on chain, so an unverified seller cannot be bound on chain either.
+        addresses = [self.payees[p].address for p in mandate.payee_allowlist if self.payees[p].kyc_verified]
         targets = [TARGET_NAMES[t] for t in mandate.allowed_targets if t in TARGET_NAMES]
         res = self.ledger.set_mandate(mandate, addresses, targets)
         if not res.ok:

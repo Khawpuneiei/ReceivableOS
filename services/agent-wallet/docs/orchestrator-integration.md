@@ -30,7 +30,9 @@ POST /wallet/register
 }
 ```
 
-`seller` is the registry id. Never send an address: the payee registry is the only source of payees.
+`seller` is the registry id. Never send an address: the payee registry is the only source of payees. Send the header
+`X-Agent-Token` on this call, and on the execute and settle calls below. Without it the wallet returns 403. A seller
+that is not KYC-verified in the payee registry is refused here (`KycNotVerified`).
 
 **2. Policy decision → approve (TX-2)**, only when `decision == "approve"`. Send the header `X-Risk-Oracle-Token`. The
 wallet refuses the approval unless `decision` is the decision it names, its hash recomputes, and `limit` and
@@ -96,7 +98,8 @@ POST /wallet/settle
 
 - **Policy-ai:** `decision_id` (a string) and `decision_hash` on every decision. The stub returns both as `null`.
 - **OCR:** `invoice_fingerprint` and `doc_hash`. The stub already sends both.
-- **Orchestrator:** steps 1 to 6 and the lender selection, using `mdt_001`.
+- **Orchestrator:** steps 1 to 6 and the lender selection, using `mdt_001`. It sends `X-Agent-Token` on register,
+  execute and settle, and `X-Risk-Oracle-Token` on approve (the risk oracle's token, not the agent's).
 
 ## Decision-hash recipe (the wallet recomputes this)
 

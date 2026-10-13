@@ -103,6 +103,7 @@ def env(monkeypatch):
     monkeypatch.setenv("WALLET_OWNER_TOKEN", "owner-test-token")
     monkeypatch.setenv("WALLET_APPROVER_TOKEN", "approver-test-token")
     monkeypatch.setenv("WALLET_RISK_ORACLE_TOKEN", "risk-oracle-test-token")
+    monkeypatch.setenv("WALLET_AGENT_TOKEN", "agent-test-token")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -113,7 +114,7 @@ def wallet(env):
     clock = Clock(NOW)
     service = build_service(clock=clock)
     bootstrap_demo(service)
-    return TestClient(create_app(service)), service, clock
+    return TestClient(create_app(service), headers={"X-Agent-Token": "agent-test-token"}), service, clock
 
 
 def open_receivable(client: TestClient) -> None:
@@ -186,7 +187,7 @@ def test_a_draw_before_the_mandate_starts_is_blocked(env):
     before_start = datetime(2026, 10, 9, 9, 0, tzinfo=UTC)  # the demo mandate is valid from 10 Oct, Bangkok
     service = build_service(clock=Clock(before_start))
     bootstrap_demo(service)
-    client = TestClient(create_app(service))
+    client = TestClient(create_app(service), headers={"X-Agent-Token": "agent-test-token"})
     open_receivable(client)
     assert client.post("/wallet/approve", json=approve_body(decision()), headers=ORACLE).json()["status"] == (
         "executed"
@@ -197,7 +198,9 @@ def test_a_draw_before_the_mandate_starts_is_blocked(env):
 
 def test_the_app_starts_with_the_demo_mandate_and_liquidity(env):
     service = build_service(clock=Clock(NOW))
-    with TestClient(create_app(service)) as client:  # the context manager runs the startup hook
+    with TestClient(
+        create_app(service), headers={"X-Agent-Token": "agent-test-token"}
+    ) as client:  # the context manager runs the startup hook
         mandate = client.get("/wallet/mandate").json()
     assert mandate["mandate_id"] == "mdt_001"
     assert service.ledger.balances["vault"] == 1_000_000_000  # two lenders at 5,000,000.00 THB, in satang

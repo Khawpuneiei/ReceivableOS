@@ -23,10 +23,10 @@ def test_demo_mandate_fits_the_default_platform_ceilings(monkeypatch):
 
 
 def test_settings_default_to_mock_and_no_secrets(monkeypatch):
-    for name in ("CHAIN_MODE", "DEMO_MODE", "WALLET_MAX_TX_AMOUNT"):
+    for name in ("CHAIN_MODE", "LEDGER_MODE", "DEMO_MODE", "WALLET_MAX_TX_AMOUNT"):
         monkeypatch.delenv(name, raising=False)
     s = Settings(_env_file=None)
-    assert s.chain_mode == "mock"
+    assert s.ledger_mode == "mock"
     assert s.demo_mode is False
     assert s.wallet_max_tx_amount == Decimal("1500000.00")
     assert s.chain_account_key_path is None

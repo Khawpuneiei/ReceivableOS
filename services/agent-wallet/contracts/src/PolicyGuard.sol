@@ -19,6 +19,9 @@ contract PolicyGuard {
     uint256 public humanReviewAbove; // inclusive: amount >= this needs a human approval
     uint64 public expiresAt; // 0 means no expiry
     bytes32 public mandateHash;
+    /// @notice Clock unit of block.timestamp: 1 on the EVM (seconds), 1000 on FISCO BCOS (milliseconds).
+    /// Time in this contract is always seconds, so expiresAt and the 24h window mean the same on both chains.
+    uint256 public immutable timeScale;
 
     mapping(address => mapping(bytes4 => bool)) public allowedCall;
     mapping(address => bool) public payeeAllowed;
@@ -34,7 +37,9 @@ contract PolicyGuard {
     event CallSet(address target, bytes4 selector, bool allowed);
     event PayeeSet(address payee, bool allowed);
 
-    constructor() {
+    constructor(uint256 timeScale_) {
+        require(timeScale_ > 0, "TimeScale");
+        timeScale = timeScale_;
         owner = msg.sender;
     }
 
@@ -103,16 +108,16 @@ contract PolicyGuard {
 
     /// @notice Charges an action to the rolling 24h window. Called before the wallet acts, including pending ones.
     function record(uint256 amount) external onlyWallet {
-        uint256 cutoff = block.timestamp > DAY ? block.timestamp - DAY : 0;
+        uint256 cutoff = _now() > DAY ? _now() - DAY : 0;
         while (firstLive < spends.length && spends[firstLive].at < cutoff) {
             firstLive++;
         }
-        spends.push(Spend(uint64(block.timestamp), amount));
+        spends.push(Spend(uint64(_now()), amount));
     }
 
     /// @notice Amount charged in the last 24 hours. Matches the mock: entries at or after now minus one day.
     function rollingSpend() public view returns (uint256 total) {
-        uint256 cutoff = block.timestamp > DAY ? block.timestamp - DAY : 0;
+        uint256 cutoff = _now() > DAY ? _now() - DAY : 0;
         for (uint256 i = firstLive; i < spends.length; i++) {
             if (spends[i].at >= cutoff) {
                 total += spends[i].amount;
@@ -120,12 +125,17 @@ contract PolicyGuard {
         }
     }
 
+    /// @dev Seconds since the epoch, whatever unit the chain's block.timestamp uses.
+    function _now() internal view returns (uint256) {
+        return block.timestamp / timeScale;
+    }
+
     function _validate(address target, bytes4 selector, uint256 amount, uint16 aprBps, bool dailyCheck)
         internal
         view
     {
         require(allowedCall[target][selector], "TargetNotAllowed");
-        require(expiresAt == 0 || block.timestamp < expiresAt, "MandateExpired");
+        require(expiresAt == 0 || _now() < expiresAt, "MandateExpired");
         require(amount <= maxPerTx, "AmountAboveTxCap");
         if (dailyCheck) {
             require(rollingSpend() + amount <= dailyCap, "DailyCapExceeded");

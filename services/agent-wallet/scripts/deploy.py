@@ -51,7 +51,7 @@ def main() -> int:
     owner = args.deployer
 
     token = chain.deploy("src/MockStable.sol:MockStable", owner)
-    guard = chain.deploy("src/PolicyGuard.sol:PolicyGuard", owner)
+    guard = chain.deploy("src/PolicyGuard.sol:PolicyGuard", owner, [1])  # seconds on the EVM
     registry = chain.deploy("src/ReceivableRegistry.sol:ReceivableRegistry", owner, [args.risk_oracle])
     vault = chain.deploy(
         "src/FinancingVault.sol:FinancingVault", owner, [token, payees["PLATFORM:fee"].address]
@@ -82,7 +82,8 @@ def main() -> int:
     for target, sig in [(registry, REGISTER_SIG), (vault, DRAW_SIG), (vault, REPAY_SIG)]:
         chain.send(guard, "setCall(address,bytes4,bool)", [target, selector(sig), "true"], owner)
     for party in ["SELLER:siam-fresh-pack", "LENDER:lender_a", "LENDER:lender_b", "PLATFORM:fee"]:
-        chain.send(guard, "setPayee(address,bool)", [payees[party].address, "true"], owner)
+        if payees[party].kyc_verified:  # only KYC-verified payees are allowlisted on chain
+            chain.send(guard, "setPayee(address,bool)", [payees[party].address, "true"], owner)
 
     # TX-3 stand-in: the deployer deposits liquidity. The buyer approves the vault for settlement.
     chain.send(token, "mint(address,uint256)", [owner, LIQUIDITY], owner)

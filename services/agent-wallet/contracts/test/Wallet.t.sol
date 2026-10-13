@@ -49,7 +49,7 @@ contract WalletTest {
     function setUp() public {
         vm.warp(START);
         token = new MockStable();
-        guard = new PolicyGuard();
+        guard = new PolicyGuard(1);
         registry = new ReceivableRegistry(RISK_ORACLE);
         vault = new FinancingVault(token, PLATFORM);
         wallet = new AgentWallet(AGENT, APPROVER, guard);
@@ -298,5 +298,113 @@ contract WalletTest {
         vm.prank(APPROVER);
         wallet.confirm(1, false);
         require(token.balanceOf(SELLER) == 0, "declined: no transfer");
+    }
+
+    // ----- one test for each revert string the tests above do not reach (CLAUDE.md 11) -----
+
+    function testAllowanceExceededReverts() public {
+        vm.expectRevert(bytes("AllowanceExceeded"));
+        vm.prank(STRANGER);
+        token.transferFrom(BUYER, STRANGER, 1); // BUYER approved the vault only
+    }
+
+    function testInsufficientBalanceReverts() public {
+        vm.expectRevert(bytes("InsufficientBalance"));
+        vm.prank(STRANGER);
+        token.transfer(BUYER, 1); // STRANGER holds nothing
+    }
+
+    function testOnlyTheWalletRecordsSpend() public {
+        vm.expectRevert(bytes("NotWallet"));
+        guard.record(1);
+    }
+
+    function testOnlyTheWalletRegistersReceivables() public {
+        vm.expectRevert(bytes("NotWallet"));
+        registry.register(FP, bytes32(uint256(1)), SELLER, FACE, uint64(START + 30 days));
+    }
+
+    function testOnlyTheWalletDraws() public {
+        vm.expectRevert(bytes("NotWallet"));
+        vault.draw(FP, LIMIT, 1095, LENDER_A, LENDER_FEE, PLATFORM_FEE);
+    }
+
+    function testOnlyTheWalletOrVaultChangesStatus() public {
+        vm.expectRevert(bytes("NotWalletOrVault"));
+        registry.setStatus(FP, ReceivableRegistry.Status.Settled);
+    }
+
+    function testEachContractIsWiredOnce() public {
+        vm.expectRevert(bytes("AlreadyWired"));
+        guard.wire(address(wallet));
+        vm.expectRevert(bytes("AlreadyWired"));
+        registry.wire(address(wallet), address(vault), guard);
+        vm.expectRevert(bytes("AlreadyWired"));
+        vault.wire(address(wallet), registry, guard);
+    }
+
+    function testMandateBoundsAreHard() public {
+        vm.expectRevert(bytes("MandateOutOfBounds"));
+        guard.setMandate(150000000, 300000000, 9001, 1200, 83750000, uint64(EXPIRY), keccak256("mandate-x"));
+        vm.expectRevert(bytes("MandateOutOfBounds"));
+        guard.setMandate(150000000, 300000000, 7000, 3001, 83750000, uint64(EXPIRY), keccak256("mandate-x"));
+    }
+
+    function testFeesCannotTakeTheWholeDraw() public {
+        _register(FP, FACE, SELLER);
+        _approve(FP, LIMIT, 1095);
+        vm.expectRevert(bytes("FeesExceedAmount"));
+        _draw(FP, 10000, 1095, 10000, 0); // the lender's fee alone equals the draw
+    }
+
+    function testTheVaultCannotPayOutMoreThanItHolds() public {
+        _register(FP, 1000000000, SELLER); // 10,000,000.00 face, so the advance rule is not the constraint
+        _approve(FP, 600000000, 1095);
+        vm.expectRevert(bytes("InsufficientLiquidity"));
+        vm.prank(address(wallet));
+        vault.draw(FP, 500000100, 1095, LENDER_A, 0, 0); // 5,000,001.00 against 5,000,000.00 held
+    }
+
+    function testOnlyTheRiskOracleApproves() public {
+        _register(FP, FACE, SELLER);
+        vm.expectRevert(bytes("NotRiskOracle"));
+        vm.prank(STRANGER);
+        registry.approve(FP, LIMIT, 1095, DH);
+    }
+
+    function testAnApprovalIsGivenOnce() public {
+        _register(FP, FACE, SELLER);
+        _approve(FP, LIMIT, 1095);
+        vm.expectRevert(bytes("AlreadyApproved"));
+        _approve(FP, LIMIT, 1095);
+    }
+
+    function testAStrangerCannotPause() public {
+        vm.expectRevert(bytes("Unauthorized"));
+        vm.prank(STRANGER);
+        wallet.pause();
+    }
+
+    function testEmptyCallDataIsRefused() public {
+        bytes memory empty = new bytes(0);
+        vm.expectRevert(bytes("SchemaInvalid"));
+        _exec(address(vault), empty, 0, 0, FP);
+    }
+
+    function testConfirmNeedsAPendingDraw() public {
+        vm.expectRevert(bytes("NotPending"));
+        vm.prank(APPROVER);
+        wallet.confirm(99, true);
+    }
+
+    function testTimeScaleMustBePositive() public {
+        vm.expectRevert(bytes("TimeScale"));
+        new PolicyGuard(0);
+    }
+
+    function testNothingToClaimWithoutFees() public {
+        vm.expectRevert(bytes("NothingToClaim"));
+        vm.prank(LENDER_A);
+        vault.claimFees();
     }
 }

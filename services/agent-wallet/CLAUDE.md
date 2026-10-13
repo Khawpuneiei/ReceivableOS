@@ -17,7 +17,7 @@ You own the only component that holds keys and moves money, plus all Solidity. T
 
 1. **Five contracts** on FISCO BCOS (solc 0.8.11): `MockStable` (tTHB), `ReceivableRegistry`, `FinancingVault`,
    `PolicyGuard`, `AgentWallet`. Foundry tests for every revert.
-2. **A ledger interface** (`CHAIN_MODE=mock|fisco`, optional `evm`) so the demo never blocks on the chain.
+2. **A ledger interface** (`LEDGER_MODE=mock|fisco`, optional `evm`) so the demo never blocks on the chain.
 3. **Wallet endpoints** producing the five demo transactions: `register` (TX‑1), `approve` (TX‑2), `execute`
    (TX‑4 draw), `settle` (TX‑5), `mandate/activate` (sets the on-chain guard). TX‑3 (lender deposit) is a setup script.
 4. **A deterministic guard pipeline** in front of every write: schema → decision provenance → injection scan →
@@ -128,7 +128,7 @@ classifier, the orchestrator, lender quote generation, the UI.
                │                       ▼                                                               │
                │               signer (owner / agent / riskOracle keys, never in any prompt)           │
                └───────────────────────┬───────────────────────────────────────────────────────────────┘
-                                       ▼ LedgerAdapter (CHAIN_MODE)
+                                       ▼ LedgerAdapter (LEDGER_MODE)
               ┌────────────────────────┴───────────────────────┐
               ▼ fisco                                           ▼ mock
   AgentWallet.execute ─▶ PolicyGuard.check (L5) ─▶ FinancingVault.draw/repay      same rules in Python,
@@ -345,20 +345,23 @@ Notes:
 
 ```python
 class LedgerAdapter(Protocol):
-    name: str                                                    # "fisco" | "mock" | "evm"
-    def register(self, r: RegisterIntent) -> ChainResult: ...    # TX-1
-    def approve(self, a: ApproveIntent) -> ChainResult: ...      # TX-2 (riskOracle key)
-    def execute(self, d: DrawIntent) -> ChainResult: ...         # TX-4 via AgentWallet.execute
-    def confirm(self, pending_id: int) -> ChainResult: ...       # owner confirms a pending draw
-    def settle(self, s: SettleIntent) -> ChainResult: ...        # TX-5 via AgentWallet.execute → Vault.repay
+    name: str  # "fisco" | "mock" | "evm"
+
+    def register(self, r: RegisterIntent) -> ChainResult: ...  # TX-1
+    def approve(self, a: ApproveIntent) -> ChainResult: ...  # TX-2 (riskOracle key)
+    def execute(self, d: DrawIntent) -> ChainResult: ...  # TX-4 via AgentWallet.execute
+    def confirm(self, pending_id: int) -> ChainResult: ...  # owner confirms a pending draw
+    def settle(self, s: SettleIntent) -> ChainResult: ...  # TX-5 via AgentWallet.execute → Vault.repay
     def set_mandate(self, m: Mandate) -> ChainResult: ...
     def pause(self, on: bool) -> ChainResult: ...
     def anchor_audit(self, root: str, entries: int) -> ChainResult: ...
     def health(self) -> bool: ...
+
+
 # ChainResult: ok, tx_hash, block_number, revert_reason, events(dict), pending_id
 ```
 
-- `CHAIN_MODE=mock` (default) | `fisco` | `evm` (only if P picks Base Sepolia). `chain_ref` = tx hash string;
+- `LEDGER_MODE=mock` (default) | `fisco` | `evm` (only if P picks Base Sepolia). `chain_ref` = tx hash string;
   mock hashes are prefixed `mock:`; the response's `chain` field says which. Never present a mock hash as on-chain.
 - **MockLedger**: in-memory (or sqlite) state mirroring all five contracts with the same revert strings;
   `tx_hash = "mock:0x" + sha256(prev + canonical payload)`.
@@ -635,7 +638,7 @@ for the timeline; WeBASE block-browser link in `explorer_url` if WeBASE runs; la
 
 ### 8.3 Env (root `.env.example` is PM-owned: propose one-line additions in your PR)
 
-Existing (`main` + PR #9): `WALLET_URL`, `SETTLEMENT_TOKEN=tTHB`, `CHAIN_MODE=mock|fisco`, `CHAIN_RPC_URL`, `CHAIN_GROUP_ID`,
+Existing (`main` + PR #9): `WALLET_URL`, `SETTLEMENT_TOKEN=tTHB`, `LEDGER_MODE=mock|fisco`, `CHAIN_RPC_URL`, `CHAIN_GROUP_ID`,
 `CHAIN_ACCOUNT_KEY_PATH` (agent key), `CHAIN_DEPLOYMENTS_FILE` (contract addresses), `WALLET_CURRENCY=THB`,
 `WALLET_AMOUNT_DECIMALS=2`, `WALLET_MAX_TX_AMOUNT`, `WALLET_HUMAN_REVIEW_ABOVE`, `WALLET_PAYEE_ALLOWLIST`,
 `FINGERPRINT_HMAC_KEY` (same value as ocr-ai), `LLM_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`.
@@ -690,7 +693,7 @@ Guard pipeline, mandate, audit, eval and API stay identical.
 ## 11. Acceptance criteria
 
 The root `CLAUDE.md` definition of done applies (schemas match, `/health` ok, `pytest` + `ruff check` clean,
-`services/orchestrator/run_demo.py` still runs, works with `CHAIN_MODE=mock` and no LLM key, README updated, PR reviewed).
+`services/orchestrator/run_demo.py` still runs, works with `LEDGER_MODE=mock` and no LLM key, README updated, PR reviewed).
 Plus (aligned with architecture Part 8):
 
 - [ ] `forge test` covers every revert string in 5.4/5.6 (one test each).

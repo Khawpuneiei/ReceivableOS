@@ -16,7 +16,7 @@ from typing import Any
 
 from app.models import ApproveIntent, DrawIntent, Mandate, RegisterIntent, SettleIntent, canonical_json
 from ledger.base import ChainResult
-from shared.money import to_units
+from shared.money import from_units, to_units
 
 TOKEN_DECIMALS = 2
 BPS = 10_000
@@ -284,6 +284,9 @@ class MockLedger:
             return {"root": root, "entries": entries}
 
         return self._tx("anchorAudit", {"root": root, "entries": entries}, op)
+
+    def rolling_spend(self) -> Decimal:
+        return from_units(self._rolling_spend(), TOKEN_DECIMALS)
 
     def health(self) -> bool:
         return True

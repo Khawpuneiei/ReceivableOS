@@ -53,11 +53,12 @@ def client(monkeypatch):
     monkeypatch.setenv("WALLET_OWNER_TOKEN", "owner-test-token")
     monkeypatch.setenv("WALLET_APPROVER_TOKEN", "approver-test-token")
     monkeypatch.setenv("WALLET_RISK_ORACLE_TOKEN", "risk-oracle-test-token")
+    monkeypatch.setenv("WALLET_AGENT_TOKEN", "agent-test-token")
     monkeypatch.setenv("AGENT_CANARY", CANARY)
     get_settings.cache_clear()
     service = build_service(clock=Clock(NOW))
     bootstrap_demo(service)
-    yield TestClient(create_app(service))
+    yield TestClient(create_app(service), headers={"X-Agent-Token": "agent-test-token"})
     get_settings.cache_clear()
 
 

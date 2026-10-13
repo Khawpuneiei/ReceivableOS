@@ -4,6 +4,7 @@ Owner: Agent AI engineer. Endpoints follow CLAUDE.md 6.1; models come from share
 """
 
 import hmac
+import json
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -34,10 +35,38 @@ def _now() -> datetime:
     return datetime.now().astimezone()
 
 
+def build_ledger(settings, payees: dict, clock: Callable[[], datetime]):
+    """The ledger behind CHAIN_MODE: the mock, or the FISCO BCOS adapter on the deployed contracts."""
+    if settings.ledger_mode == "mock":
+        return MockLedger(clock=clock)
+    from ledger.fisco import FiscoLedger
+
+    deployment = json.loads(Path(settings.chain_deployments_file).read_text(encoding="utf-8"))["fisco"]
+    keys = {
+        "agent": settings.chain_account_key_path,
+        "owner": settings.chain_owner_key_path,
+        "approver": settings.chain_approver_key_path,
+        "risk_oracle": settings.chain_risk_oracle_key_path,
+    }
+    missing = [role for role, path in keys.items() if not path]
+    if missing or not settings.fisco_sdk_dir or not settings.fisco_config_dir:
+        raise RuntimeError(
+            f"CHAIN_MODE=fisco needs key paths for {missing} and FISCO_SDK_DIR, FISCO_CONFIG_DIR"
+        )
+    return FiscoLedger(
+        deployment,
+        keys,
+        {party: entry.address for party, entry in payees.items()},
+        settings.fisco_sdk_dir,
+        settings.fisco_config_dir,
+        settings.fisco_receipts_dir,
+    )
+
+
 def build_service(clock: Callable[[], datetime] = _now) -> WalletService:
     settings = get_settings()
-    ledger = MockLedger(clock=clock)  # CHAIN_MODE=fisco adds the FISCO adapter behind the same interface
     payees = load_payees(CONFIG / "payees.json")
+    ledger = build_ledger(settings, payees, clock)
     classifier = load_classifier(settings.injection_model_dir) if settings.injection_model_dir else None
     return WalletService(
         ledger,
@@ -53,8 +82,21 @@ def build_service(clock: Callable[[], datetime] = _now) -> WalletService:
 
 
 def bootstrap_demo(service: WalletService) -> None:
-    """Mock-only setup (TX-3 and the demo mandate), so the app runs end to end out of the box."""
+    """Startup setup for the demo mandate. The mock also seeds lender liquidity (TX-3). On FISCO the deploy
+    script has already set the mandate and funded the vault, so startup only checks the chain agrees."""
     settings = get_settings()
+    if service.ledger.name == "fisco":
+        mandate = load_mandate(CONFIG / "mandate.demo.json")
+        onchain = service.ledger.mandate_hash_onchain()
+        if onchain.lower() != mandate.mandate_hash.lower():
+            raise RuntimeError(
+                f"the chain's mandate {onchain} is not the demo mandate {mandate.mandate_hash}"
+            )
+        service.mandate = mandate
+        # A restart starts with an empty store. Count what the chain has already spent, or the off-chain cap
+        # would restart from zero. A failed read raises, so the wallet does not start without the cap.
+        service.seed_spend(service.ledger.rolling_spend())
+        return
     service.activate_mandate(
         load_mandate(CONFIG / "mandate.demo.json").model_dump(mode="json", by_alias=False),
         settings.wallet_max_tx_amount,
@@ -75,8 +117,8 @@ def create_app(service: WalletService | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        # Mock mode starts with the demo mandate and lender liquidity, so `uvicorn app.main:app` runs as is.
-        if settings.chain_mode == "mock" and svc.mandate is None:
+        # Starts with the demo mandate (and the mock's liquidity), so `uvicorn app.main:app` runs as is.
+        if svc.mandate is None:
             bootstrap_demo(svc)
         yield
 
@@ -87,13 +129,17 @@ def create_app(service: WalletService | None = None) -> FastAPI:
         return {"status": "ok", "service": "agent-wallet", "ledger": svc.ledger.name}
 
     @app.post("/wallet/execute", response_model=WalletResult)
-    def execute(req: ExecuteRequest) -> WalletResult:
+    def execute(req: ExecuteRequest, x_agent_token: str | None = Header(default=None)) -> WalletResult:
+        _check_token(settings.wallet_agent_token, x_agent_token)  # the agent's calls need the agent token
         if req.skip_offchain_checks and not settings.demo_mode:
             return svc._offchain_block("SchemaInvalid", "L0")  # the bypass exists only with DEMO_MODE=1
         return svc.execute(req)
 
     @app.post("/wallet/register", response_model=WalletResult)
-    def register(req: WalletRegisterRequest) -> WalletResult:
+    def register(
+        req: WalletRegisterRequest, x_agent_token: str | None = Header(default=None)
+    ) -> WalletResult:
+        _check_token(settings.wallet_agent_token, x_agent_token)
         return svc.register(req)
 
     @app.post("/wallet/approve", response_model=WalletResult)
@@ -104,7 +150,8 @@ def create_app(service: WalletService | None = None) -> FastAPI:
         return svc.approve(req)
 
     @app.post("/wallet/settle", response_model=WalletResult)
-    def settle(req: WalletSettleRequest) -> WalletResult:
+    def settle(req: WalletSettleRequest, x_agent_token: str | None = Header(default=None)) -> WalletResult:
+        _check_token(settings.wallet_agent_token, x_agent_token)
         return svc.settle(req)
 
     @app.post("/wallet/confirm/{tx_id}", response_model=WalletResult)
