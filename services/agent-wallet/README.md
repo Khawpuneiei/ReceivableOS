@@ -12,7 +12,7 @@ Build brief for the service: [`CLAUDE.md`](CLAUDE.md). Request and response mode
   against them with `CHAIN_MODE=fisco`, and the demo's on-chain transactions are checked on chain. The records are in
   [`eval/fisco-deployment.md`](eval/fisco-deployment.md) and [`eval/demo_tx_hashes_fisco.md`](eval/demo_tx_hashes_fisco.md).
 - **Local Anvil:** `scripts/deploy.py` and `scripts/evm_smoke.py` pass 7 of 7 checks.
-- **Tests:** `pytest` 141 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
+- **Tests:** `pytest` 152 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
 - **Orchestrator:** the integration isn't finished. See `docs/orchestrator-integration.md`.
 
 Per-item status is in the table in [`docs/03-agent-wallet.md`](../../docs/03-agent-wallet.md) section 8.
@@ -97,7 +97,7 @@ This needs Docker Desktop. The chain runs in an Ubuntu 22.04 container. Its data
    `eval/fisco-receipts-demo/`. The check's output is in `eval/fisco-verification-demo.txt`.
 
 The daily cap is a rolling 24h total that every run adds to. The demo mandate allows THB 3,000,000. One full run draws
-THB 1,504,300 (524,300 and 980,000), so a second run within 24 hours fails its large-draw step with `DailyCapExceeded`.
+THB 2,028,600 (524,300, 980,000 and the session-key draw of 524,300), so a second run within 24 hours fails its large-draw step with `DailyCapExceeded`.
 That refusal happens in the wallet, before any transaction, and the wallet reads the chain's total when it starts, so
 restarting does not reset it. Use `--fresh` before a rehearsal or a recording. A fresh deployment also rewrites
 `eval/fisco-deployment.md` from `eval/fisco-receipts/`, so that record matches the contracts the demo runs on.
@@ -135,8 +135,31 @@ The red-team eval: `python services/agent-wallet/eval/run_eval.py` (default case
 | GET | `/wallet/audit/{invoice_id}` | none | Audit entries for one invoice, plus `verified` |
 | GET | `/wallet/audit/ref/{audit_ref}` | none | Audit entries for one action, plus `verified` |
 | GET | `/wallet/tx/{tx_id}` | none | The result of one transaction |
+| POST | `/wallet/session` | owner token | Issue a scoped, expiring agent session key (token shown once) |
+| GET | `/wallet/sessions` | owner or approver token | Sessions with budget, spend and expiry |
+| POST | `/wallet/session/{session_id}/revoke` | owner or approver token | Revoke a session key at once |
 
 A missing or wrong token gets HTTP 403. A malformed body gets 422 before the token check runs.
+### Session keys (`app/wallet/sessions.py`)
+
+The static `X-Agent-Token` is one long-lived credential with the agent's full power, up to the daily cap. A session
+key narrows it, in the spirit of ERC-7715 and ERC-4337 session-key permissions. The owner grants
+`{actions, budget, max_per_tx, ttl_minutes (max 24h), invoice_fingerprints?}`, and the agent sends the returned
+token as `X-Agent-Session` on register, execute and settle. Only a SHA-256 of the token is stored. A session is bound
+to the mandate hash it was issued under. Refusals come back `blocked`, layer `SK`, and are audited with the session id
+as actor; the guard and the chain still run in full after a session check passes:
+
+| Code | When |
+|---|---|
+| `SessionRevoked` / `SessionExpired` | the owner or approver revoked it, or its time ran out |
+| `SessionMandateChanged` | a new mandate was activated after the session was issued |
+| `SessionActionNotAllowed` | the action is not in the grant |
+| `SessionInvoiceNotAllowed` | the grant names invoices and this is not one of them |
+| `SessionTxCapExceeded` / `SessionBudgetExceeded` | the draw is above the per-draw cap, or would take total spend over the budget (an idempotent replay is not charged again) |
+
+The static agent token still works, so the orchestrator is unchanged. The sessions live in memory and are off-chain;
+on a production chain they map to a session-key validator module on the smart account.
+
 Not built: `GET /wallet/registry/{invoice_fingerprint}` and the optional `POST /agent/run`.
 
 ## Settings

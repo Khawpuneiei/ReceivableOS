@@ -293,6 +293,22 @@ def run(url: str, owner: str, approver: str, risk_oracle: str, agent: str) -> in
     events = [e["event"] for e in audit["entries"]]
     print(f"  entries {len(events)}  verified {audit['verified']}  last event {events[-1]}")
 
+    demo.say("9. Session key: a 30-minute agent key with a THB 600,000 budget, then revoked")
+    grant = {"label": "demo", "actions": ["execute"], "budget": "600000.00", "max_per_tx": "600000.00"}
+    session = demo.http.post("/wallet/session", json={**grant, "ttl_minutes": 30}, headers=demo.owner).json()
+    print(f"  {session['session_id']}  budget {session['budget']}  expires {session['expires_at']}")
+    demo.register("inv_sk1", "749000.00")
+    demo.approve("inv_sk1", "524300.00")
+    demo.register("inv_sk2", "749000.00")
+    demo.approve("inv_sk2", "524300.00")
+    static, demo.agent = demo.agent, {"X-Agent-Session": session["token"]}
+    demo.show("draw 524,300 with the session key", demo.draw("inv_sk1", "524300.00"))
+    demo.show("second draw 524,300, over budget", demo.draw("inv_sk2", "524300.00"))
+    sid = session["session_id"]
+    demo.http.post(f"/wallet/session/{sid}/revoke", headers=demo.approver)
+    demo.show("draw after the approver revoked the key", demo.draw("inv_sk2", "100000.00", key="sk2:small"))
+    demo.agent = static
+
     out = write_report()
     print(f"\nwrote {out.relative_to(SERVICE.parents[1]).as_posix()}")
     return 0
