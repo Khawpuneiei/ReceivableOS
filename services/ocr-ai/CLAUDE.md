@@ -51,6 +51,7 @@ The parser and OCR run in child processes with a restricted environment. The ser
 |---|---|
 | `app/main.py` | FastAPI endpoints, request admission and safe HTTP errors |
 | `app/ingest.py`, `app/worker.py` | Upload checks, PDF/image parsing, bounded rendering and isolated Paddle worker |
+| `app/injection.py` | Normalizing multilingual instruction detector (NFKC, zero-width, Cyrillic/Greek look-alikes, leetspeak, letter spacing, base64; English/Thai/Chinese rules) run per span, per joined row and across wrapped lines |
 | `app/layout.py`, `app/extract.py` | Spatial rows, explicit role labels, supported line-table shape, evidence-grounded partial extraction and injection patterns |
 | `app/normalize.py`, `app/validate.py` | Locale-aware Decimal/date/currency normalization and deterministic validation |
 | `app/qwen.py` | Strict local Qwen-VL candidate schema and loopback-only HTTP call |
@@ -100,6 +101,8 @@ Numeric grouping and decimal separators require sufficient locale evidence. Mone
 PDF text/layout is preferred because it is fast, preserves original text evidence, and avoids OCR errors. PaddleOCR is the local scan engine and runs only for unreadable pages when enabled. Use the staged v5 detector plus the language-matched recognizer; recognition scores are not calibrated extraction accuracy.
 
 Qwen3-VL is an optional local experiment, not the primary OCR engine. Both vision readers return nullable candidates under a strict schema and cannot populate missing fields or execute tools. Disagreement, invalid/unavailable output, or an instruction alert routes to review. Qwen reads page one; hosted reads the bounded rendered page set (16 MiB encoded budget). Successful candidates are cached by model/provider/prompt/schema/images, with hosted account identity included without retaining its key. Per-key single-flight deduplicates concurrent identical misses; unrelated network calls proceed independently. Failures are not cached. Qwen can raise benign false alerts; do not promote it as a dependable injection detector. Keep local engines disabled by default; stage model assets explicitly before use.
+
+Instruction detection (`app/injection.py`) recognizes, and never follows, text addressed to an automated reviewer in seven categories: role override, decision coercion, score tampering, payee redirect, tool invocation, exfiltration and obfuscated variants. It adds `OBFUSCATED_INSTRUCTION`, `ENCODED_INSTRUCTION` and `SPLIT_INSTRUCTION` to the existing flags, and the response carries optional `injection_details` (category, technique, channel, evidence refs). `scripts/injection_eval.py` scores it on 190 development attacks / 58 benign texts and a separate 60 / 20 holdout written after the rules were frozen; do not tune rules on the holdout. Regex rules generalize only partly to unseen paraphrases (holdout 30/60), so hidden-channel and model-candidate checks stay in place.
 
 QR decoding uses zxing-cpp in the restricted parser; payloads remain private and never populate invoice fields or trigger link fetches. PDF text extraction uses an infinite clip to inspect off-page content. White text is flagged when rendered background samples are light; ordinary white text on dark headers remains usable. This is a heuristic, not visual tamper or signature verification.
 

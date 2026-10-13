@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from app.config import FIELD_CONFIDENCE
 from app.ingest import ParsedDocument, Span
+from app.injection import InstructionPattern, detect, split_hits
 from app.layout import anchored_rows, compact, segments, source_rows, table_rows
 from app.models import DocumentExtraction, EvidenceReference, FieldValue, LineExtraction
 from app.normalize import normalize_country, normalize_currency, normalize_date, normalize_number
@@ -60,11 +61,8 @@ EMBEDDED_LABEL = re.compile(
     r"(?:^|\s)(?:" + "|".join(re.escape(label) for labels in LABELS.values() for label in labels) + r")\s*:",
     re.IGNORECASE,
 )
-INSTRUCTION = re.compile(
-    r"ignore.{0,25}(instructions|rules)|\b(system|assistant|developer)\s*:|advance[_ ]rate|"
-    r"approve.{0,25}(invoice|transaction|100%)|ไม่ต้องตรวจ|อนุมัติทันที|忽略.{0,8}指令",
-    re.IGNORECASE,
-)
+# Instruction-like text is recognized (never followed) by the normalizing detector.
+INSTRUCTION = InstructionPattern()
 REVISION_MARKER = re.compile(
     r"\b(?:revised|corrected|amended|replacement|substitute|cancelled|canceled|voided)\s+"
     r"(?:tax\s+)?invoice\b|\b(?:credit|debit)\s+(?:note|memo)\b|"
@@ -105,6 +103,7 @@ class Extraction:
     injection_flags: list[str]
     injection_refs: list[str]
     model_checks: list[dict[str, str]] = field(default_factory=list)
+    injection_details: list[dict] = field(default_factory=list)
 
 
 def reference_id(parsed: ParsedDocument, span: Span) -> str:
@@ -234,22 +233,42 @@ def extract_document(parsed: ParsedDocument, document_type: str) -> Extraction:
         extractor=parsed.engine,
         evidence=references,
     )
-    injection_flags, injection_refs = [], []
+    injection_flags, injection_refs, injection_details = [], [], []
+
+    def record(hit, channel: str, refs: list[str]) -> None:
+        if hit.technique == "encoded":
+            injection_flags.append("ENCODED_INSTRUCTION")
+        elif hit.technique not in {"plain", "normalized"}:
+            injection_flags.append("OBFUSCATED_INSTRUCTION")
+        injection_details.append(
+            {"category": hit.category, "technique": hit.technique, "channel": channel, "evidence_refs": refs}
+        )
+
     for span in parsed.spans:
         invisible = any(unicodedata.category(char) == "Cf" for char in span.text)
+        hit = detect(span.text)
         if span.hidden:
             injection_flags.append("HIDDEN_TEXT")
         if invisible:
             injection_flags.append("UNICODE_OBFUSCATION")
-        if INSTRUCTION.search(span.text):
+        if hit:
             injection_flags.append("VISIBLE_INSTRUCTION" if not span.hidden else "HIDDEN_TEXT")
-        if span.hidden or invisible or INSTRUCTION.search(span.text):
+            record(hit, "hidden_text" if span.hidden else "page_text", [reference_id(parsed, span)])
+        if span.hidden or invisible or hit:
             injection_refs.append(reference_id(parsed, span))
-    if any(INSTRUCTION.search(text) for text in parsed.metadata_text):
-        injection_flags.append("METADATA_INJECTION")
+    for hit, group in split_hits(parsed.spans):
+        refs = [reference_id(parsed, span) for span in group]
+        injection_flags.append("SPLIT_INSTRUCTION")
+        record(hit, "split_text", refs)
+        injection_refs.extend(refs)
+    for text in parsed.metadata_text:
+        if hit := detect(text):
+            injection_flags.append("METADATA_INJECTION")
+            record(hit, "metadata", [])
     for text in parsed.qr_payloads:
-        if INSTRUCTION.search(text):
+        if hit := detect(text):
             injection_flags.append("QR_INJECTION")
+            record(hit, "qr", [])
         if any(unicodedata.category(char) == "Cf" for char in text):
             injection_flags.extend(["QR_INJECTION", "UNICODE_OBFUSCATION"])
     if any(any(unicodedata.category(char) == "Cf" for char in text) for text in parsed.metadata_text):
@@ -461,4 +480,5 @@ def extract_document(parsed: ParsedDocument, document_type: str) -> Extraction:
         private_bank,
         list(dict.fromkeys(injection_flags)),
         list(dict.fromkeys(injection_refs)),
+        injection_details=injection_details[:64],
     )
