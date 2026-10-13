@@ -33,7 +33,8 @@ class AttackServices(Services):
 def client(monkeypatch):
     monkeypatch.setattr(main, "WALLET_AGENT_TOKEN", "agent")
     monkeypatch.setattr(main, "WALLET_RISK_ORACLE_TOKEN", "oracle")
-    return TestClient(app)
+    monkeypatch.setattr(main, "ORCHESTRATOR_TOKEN", "caller")
+    return TestClient(app, headers={"X-Orchestrator-Token": "caller"})
 
 
 def attack(client, case: str) -> dict:
@@ -111,3 +112,10 @@ def test_an_attack_that_is_not_stopped_is_reported_as_such(client, monkeypatch):
 
 def test_unknown_attack_is_404(client):
     assert client.post("/flow/attack/A9").status_code == 404
+
+
+def test_an_attack_without_the_caller_token_is_refused(client, monkeypatch):
+    monkeypatch.setattr(main, "_client", lambda: pytest.fail("no service may be called"))
+    assert TestClient(app).post("/flow/attack/A1").status_code == 403
+    wrong = {"X-Orchestrator-Token": "wrong"}
+    assert TestClient(app).post("/flow/attack/A1", headers=wrong).status_code == 403

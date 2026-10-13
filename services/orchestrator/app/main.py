@@ -267,7 +267,7 @@ def _stopped_by(result: dict) -> str:
     return f"Wallet guard {failed[0]['layer']}" if failed and failed[0].get("layer") else "Wallet guard"
 
 
-@app.post("/flow/attack/{case}")
+@app.post("/flow/attack/{case}", dependencies=[Depends(check_caller)])
 async def flow_attack(case: str, mandate_id: str = Form(DEFAULT_MANDATE_ID)) -> dict:
     case = case.upper()
     if case not in ATTACKS:
