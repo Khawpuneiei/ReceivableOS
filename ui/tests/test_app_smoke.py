@@ -145,3 +145,15 @@ def test_cases_without_a_saved_run_or_pdf_are_not_offered():
     at = AppTest.from_file(APP, default_timeout=30).run()
     keys = {b.key for b in at.button if b.key and b.key.startswith("case_")}
     assert {"case_happy", "case_duplicate"} <= keys and "case_qr_swap" not in keys  # no saved QR-swap run yet
+
+
+def test_judge_mode_runs_every_case_and_lists_one_verdict_each():
+    at = AppTest.from_file(APP, default_timeout=60).run()
+    at.button(key="run_all").click().run()
+    assert not at.exception
+    text = _text(at)
+    saved = len(list((UI / "fixtures" / "runs").glob("*.json")))
+    assert f"Judge mode: {saved} invoices, 1 funded" in text
+    assert "Stopped: duplicate invoice (saved demo)" in text
+    at.button(key="show_happy").click().run()
+    assert not at.exception and "Funded inside the rules" in _text(at)

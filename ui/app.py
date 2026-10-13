@@ -69,6 +69,7 @@ html, body, [class*="css"], .stMarkdown p, .stMarkdown li { font-size: 18px; }
 .badge { display:inline-block; padding:4px 14px; border-radius:6px; color:#fff; font-weight:700; }
 .big { font-size: 34px; padding: 8px 28px; }
 .chip { display:inline-block; padding:2px 10px; margin:2px; border-radius:12px; color:#fff; font-size:15px; }
+.why { font-size:15px; color:#555; }
 .row { padding:8px 12px; margin:4px 0; border-left:6px solid; border-radius:4px;
        background:rgba(127,127,127,.08); }
 .gauge { position:relative; height:22px; background:rgba(127,127,127,.18); border-radius:4px; }
@@ -179,6 +180,68 @@ def run_case(case: str, filename: str) -> None:
         st.session_state.notice = error
 
 
+def run_all() -> None:
+    """Judge mode: every available case in order (Happy first, so Duplicate has something to repeat)."""
+    board = []
+    for case, label, filename, _ in [c for c in DEMO_CASES if case_available(c[0], c[2])]:
+        run_case(case, filename)
+        view = load_view()
+        if st.session_state.case != case:  # it failed and there is no saved run to show instead
+            board.append(
+                {
+                    "case": case,
+                    "label": label,
+                    "state": story.STOPPED,
+                    "headline": "Could not run",
+                    "sentence": st.session_state.notice or "",
+                    "saved": False,
+                    "view": None,
+                }
+            )
+            continue
+        state, headline, sentence = story.verdict(view)
+        saved = view.get("source") in ("fixtures", "saved")
+        board.append(
+            {
+                "case": case,
+                "label": label,
+                "state": state,
+                "headline": headline,
+                "sentence": sentence,
+                "saved": saved,
+                "view": view,
+            }
+        )
+    st.session_state.scoreboard = board
+
+
+def section_scoreboard() -> None:
+    """One line per case after judge mode, each with a button to open that run below."""
+    board = st.session_state.scoreboard
+    if not board:
+        return
+    funded = sum(r["state"] == story.DONE for r in board)
+    held = sum(r["state"] == story.REVIEW for r in board)
+    summary = f"**Judge mode: {len(board)} invoices, {funded} funded, {held} sent to a person, "
+    summary += f"{len(board) - funded - held} stopped.**"
+    if funded == 1 and board[0]["case"] == "happy" and board[0]["state"] == story.DONE:
+        summary += " Only one invoice moved money; every forged one was held or stopped."
+    st.markdown(summary)
+    for r in board:
+        colour = story.STATE_COLOUR[r["state"]]
+        tag = " (saved demo)" if r["saved"] else ""
+        left, right = st.columns([6, 1], vertical_alignment="center")
+        left.markdown(
+            f'<div class="row" style="border-color:{colour}"><b>{esc(r["label"])}</b> · '
+            f'<span class="chip" style="background:{colour}">{esc(r["headline"] + tag)}</span>'
+            f'<br><span class="why">{esc(r["sentence"])}</span></div>',
+            unsafe_allow_html=True,
+        )
+        if r["view"] and right.button("Show", key=f"show_{r['case']}", width="stretch"):
+            st.session_state.update(view=r["view"], case=r["case"], paid=False, approved=False, extra_tx=[])
+            st.rerun()
+
+
 def run_controls() -> None:
     """One click per demo case: live through the orchestrator, or the saved run in fixture mode."""
     title = "Run a demo invoice through the live flow" if live() else "Show a recorded run of a demo invoice"
@@ -193,6 +256,10 @@ def run_controls() -> None:
                 run_case(case, filename)
                 st.rerun()
             col.caption(hint)
+    if st.button("Judge mode: run every case in order", key="run_all", type="primary"):
+        with st.spinner("Running every demo invoice through the flow..."):
+            run_all()
+        st.rerun()
     if not live():
         return
     st.caption(
@@ -218,6 +285,7 @@ def init_state() -> None:
         "extra_tx": [],
         "ran": set(),
         "case": None,
+        "scoreboard": [],
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
@@ -521,6 +589,7 @@ def main() -> None:
     view = load_view()
     header(view)
     run_controls()
+    section_scoreboard()
     section_flow(view)
     section_mandate(view)
     section_invoice(view)

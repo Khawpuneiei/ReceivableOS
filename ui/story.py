@@ -118,6 +118,16 @@ INJECTION_CATEGORY = {
 VALIDATION_PLAIN = {
     "AMOUNT_WORDS_MISMATCH": "the total written in words does not match the digits",
     "DUE_DATE_TERMS_MISMATCH": "the due date does not match the invoice's own payment terms",
+    "DOCUMENT_INJECTION_ALERT": "the document carries instructions aimed at the AI",
+    "HIDDEN_TEXT": "the document has hidden text",
+    "TOTAL_MISMATCH": "subtotal plus tax does not equal the total",
+    "LINE_MATH_MISMATCH": "a line's quantity times price does not equal its total",
+    "LINE_SUM_MISMATCH": "the line items do not add up to the subtotal",
+    "DUE_BEFORE_ISSUE": "the due date is before the issue date",
+    "ISSUE_IN_FUTURE": "the issue date is in the future",
+    "NON_POSITIVE_INVOICE_AMOUNT": "the invoice amount is zero or negative",
+    "LOW_FIELD_CONFIDENCE": "some fields could not be read confidently",
+    "NO_READABLE_TEXT": "the document has no readable text",
 }
 INJECTION_TECHNIQUE = {
     "plain": "plain",
