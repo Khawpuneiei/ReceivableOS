@@ -63,19 +63,69 @@ def normalize_number(raw: str, locale: str | None) -> Decimal:
     return result
 
 
+THAI_MONTHS = {
+    "มกราคม": 1, "กุมภาพันธ์": 2, "มีนาคม": 3, "เมษายน": 4, "พฤษภาคม": 5, "มิถุนายน": 6,
+    "กรกฎาคม": 7, "สิงหาคม": 8, "กันยายน": 9, "ตุลาคม": 10, "พฤศจิกายน": 11, "ธันวาคม": 12,
+    "ม.ค.": 1, "ก.พ.": 2, "มี.ค.": 3, "เม.ย.": 4, "พ.ค.": 5, "มิ.ย.": 6,
+    "ก.ค.": 7, "ส.ค.": 8, "ก.ย.": 9, "ต.ค.": 10, "พ.ย.": 11, "ธ.ค.": 12,
+}  # fmt: skip
+ENGLISH_MONTHS = {
+    name: index
+    for index, names in enumerate(
+        (
+            ("january", "jan"), ("february", "feb"), ("march", "mar"), ("april", "apr"), ("may",),
+            ("june", "jun"), ("july", "jul"), ("august", "aug"), ("september", "sep", "sept"),
+            ("october", "oct"), ("november", "nov"), ("december", "dec"),
+        ),
+        start=1,
+    )
+    for name in names
+}  # fmt: skip
+BUDDHIST_ERA = re.compile(r"พ\.\s?ศ\.|\bB\.?\s?E\.?(?=\s|$)", re.IGNORECASE)
+COMMON_ERA = re.compile(r"ค\.\s?ศ\.|\bA\.?\s?D\.?(?=\s|$)|\bC\.?\s?E\.?(?=\s|$)", re.IGNORECASE)
+BE_OFFSET = 543
+
+
+def _year(value: int, era: str | None) -> int:
+    """Resolve a four-digit year; Buddhist Era years (Thai invoices) are converted to CE."""
+    if era == "BE" or (era is None and 2400 <= value <= 2700):
+        if not 2400 <= value <= 2700:
+            raise ValueError("Buddhist Era year is out of range")
+        return value - BE_OFFSET
+    if value > 2200:
+        raise ValueError("Year is neither a plausible CE nor a Buddhist Era year")
+    return value
+
+
 def normalize_date(raw: str, locale: str | None) -> date:
-    text = raw.strip()
-    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
-        return date.fromisoformat(text)
-    match = re.fullmatch(r"(\d{1,2})[/-](\d{1,2})[/-](\d{4})", text)
-    if not match:
-        raise ValueError("Date format is not supported")
-    first, second, year = map(int, match.groups())
-    if first > 12 or locale in {"en-GB", "th-TH", "de-DE", "fr-FR"}:
-        return date(year, second, first)
-    if second > 12 or locale == "en-US":
-        return date(year, first, second)
-    raise ValueError("Ambiguous day/month order")
+    text = unicodedata.normalize("NFKC", raw).strip()
+    # Thai digits (๐-๙) and other decimal scripts become ASCII; separators stay as printed.
+    text = "".join(str(unicodedata.decimal(char)) if char.isdecimal() else char for char in text)
+    era = "BE" if BUDDHIST_ERA.search(text) else "CE" if COMMON_ERA.search(text) else None
+    text = re.sub(r"\s+", " ", COMMON_ERA.sub(" ", BUDDHIST_ERA.sub(" ", text))).strip()
+    if match := re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", text):
+        year, month, day = map(int, match.groups())
+        return date(_year(year, era), month, day)
+    if match := re.fullmatch(r"(\d{1,2})[/-](\d{1,2})[/-](\d{4})", text):
+        first, second, year = map(int, match.groups())
+        year = _year(year, era)
+        if first > 12 or locale in {"en-GB", "th-TH", "de-DE", "fr-FR"}:
+            return date(year, second, first)
+        if second > 12 or locale == "en-US":
+            return date(year, first, second)
+        raise ValueError("Ambiguous day/month order")
+    # Named months carry no day/month ambiguity: "1 ตุลาคม 2569", "1 ต.ค. 2569", "1 Oct 2026", "Oct 1, 2026".
+    if match := re.fullmatch(r"(\d{1,2}) ?(\D+?) ?(\d{4})", text):
+        day, name, year = match.groups()
+        name = name.strip().replace(" ", "")
+        month = THAI_MONTHS.get(name) or ENGLISH_MONTHS.get(name.rstrip(".,").casefold())
+        if month:
+            return date(_year(int(year), era), month, int(day))
+    if match := re.fullmatch(r"([A-Za-z]+)\.? (\d{1,2}),? (\d{4})", text):
+        name, day, year = match.groups()
+        if month := ENGLISH_MONTHS.get(name.casefold()):
+            return date(_year(int(year), era), month, int(day))
+    raise ValueError("Date format is not supported")
 
 
 def normalize_reference(value: str) -> str:
