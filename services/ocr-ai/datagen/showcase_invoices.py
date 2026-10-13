@@ -449,6 +449,8 @@ def _tampered() -> bytes:
     from datagen.tamper_corpus import forge
 
     return forge("redact_retype", "SFP-INV-2026-0145")
+
+
 def _qr_swap() -> bytes:
     """Genuine-looking invoice whose PromptPay QR pays a different tax ID (QR-swap scam)."""
     from datagen.thai_qr import case_pdf
