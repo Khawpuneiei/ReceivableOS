@@ -78,3 +78,8 @@ def test_live_mode_says_what_it_will_call_before_any_run(monkeypatch):
     monkeypatch.setenv("ORCHESTRATOR_URL", "http://127.0.0.1:9")
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert "SAVED DEMO" in at.info[0].value and "127.0.0.1:9" in at.info[0].value
+
+
+def test_the_verdict_says_saved_demo_when_nothing_ran_live():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    assert "Funded inside the rules (saved demo)" in _text(at)
