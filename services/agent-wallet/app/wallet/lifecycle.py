@@ -7,6 +7,12 @@ service still cannot pay outside the mandate.
 Hold path: when the classifier flags a draft and INJECTION_CLASSIFIER_ACTION=hold, the draft is stored and
 nothing is sent to the ledger. An approver releases it (every hard check runs again first) or rejects it.
 Holds expire after 24 hours, as CLAUDE.md 2.4 requires for pending approvals.
+
+Chain-pending draws (amount at or above the review threshold) follow the same 24 hour rule. The off-chain
+record of a queued draw is dropped only when the ledger drops it, so a confirm that reverts (for example while
+the wallet is paused) can be retried. A declined or expired draw is declined on the ledger too. While a draw
+on a receivable waits for a human, no other draw on it is accepted, so the agent cannot route around the
+approver by resubmitting a smaller amount.
 """
 
 import hashlib
@@ -23,6 +29,8 @@ from pydantic import ValidationError
 from app.audit.log import AuditLog
 from app.guard.injection import Classifier, scan_payload
 from app.guard.pipeline import GuardContext, check_draw
+from app.guard.signatures import DecisionSigners
+from app.guard.tripwire import Tripwire
 from app.models import (
     ApproveIntent,
     DrawIntent,
@@ -34,7 +42,7 @@ from app.models import (
     canonical_json,
 )
 from app.money import apr_to_bps
-from app.wallet.store import Hold, ReceivableFact, Store
+from app.wallet.store import ChainPending, Hold, ReceivableFact, Store
 from shared.money import fee_rate_30d_to_apr
 from shared.schemas import Decision as DecisionKind
 from shared.schemas import (
@@ -66,6 +74,8 @@ class WalletService:
         canary: str | None = None,
         classifier: Classifier | None = None,
         classifier_action: str = "log",
+        decision_signers: DecisionSigners | None = None,
+        tripwire: Tripwire | None = None,
     ) -> None:
         self.ledger = ledger
         self.store = store
@@ -79,6 +89,9 @@ class WalletService:
         self.mandate: Mandate | None = None
         self.paused = False
         self.audit = AuditLog()
+        self.decision_signers = decision_signers or DecisionSigners()
+        self.anchors: list[dict[str, Any]] = []  # Merkle roots written on chain, oldest first
+        self.tripwire = tripwire or Tripwire(honeytokens=set(), threshold=0)
 
     # ----- helpers -----
 
@@ -151,7 +164,9 @@ class WalletService:
             classifier_action=self.classifier_action,
         )
 
-    def _finish(self, res: ChainResult, extra: list[GuardCheck] | None = None) -> WalletResult:
+    def _finish(
+        self, res: ChainResult, extra: list[GuardCheck] | None = None, intent: DrawIntent | None = None
+    ) -> WalletResult:
         """Maps a ledger result to the API result (CLAUDE.md 6.2)."""
         tx_id = f"tx_{uuid.uuid4().hex[:16]}"
         common = {
@@ -162,7 +177,7 @@ class WalletService:
         }
         checks = list(extra or [])
         if res.pending_id is not None:
-            self.store.pending[tx_id] = res.pending_id
+            self.store.pending[tx_id] = ChainPending(res.pending_id, intent, self.clock())
             checks.append(GuardCheck(layer="L4", code="NeedsHumanApproval", passed=False))
             return WalletResult(
                 status=TxStatus.pending_approval, approvals_required=1, checks=checks, **common
@@ -173,17 +188,35 @@ class WalletService:
         checks.append(GuardCheck(layer="L5", code=code, passed=False))
         return WalletResult(status=TxStatus.blocked, block_reason=code, checks=checks, **common)
 
-    def _run(self, action: str, invoice_id: str, key: str, run: Callable[[], WalletResult]) -> WalletResult:
-        """Idempotent write. A repeat returns the stored result, sends nothing, and is audited."""
+    def _run(
+        self,
+        action: str,
+        invoice_id: str,
+        key: str,
+        run: Callable[[], WalletResult],
+        request: Any = None,
+        fingerprint: str = "",
+    ) -> WalletResult:
+        """Idempotent write. A repeat returns the stored result, sends nothing, and is audited.
+        The tripwire runs first (honeytoken, quarantine) and learns from every blocked result."""
         if key in self.store.results:
             stored = self.store.results[key]
             replay = GuardCheck(layer="IDEM", code="IdempotentReplay", passed=True)
             result = stored.model_copy(update={"checks": [*stored.checks, replay]})
             self._audit(invoice_id, action, result, event="REPLAY")
             return result
-        result = run()
+        if self.tripwire.honeytoken_in(request.model_dump(mode="json") if request else None):
+            result = self._offchain_block("HoneytokenTouched", "TRIP")
+        elif action != "settle" and self.tripwire.is_quarantined(fingerprint):  # repayment is never held
+            result = self._offchain_block("InvoiceQuarantined", "TRIP")
+        else:
+            result = run()
         self.store.results[key] = result
         self._audit(invoice_id, action, result)
+        if result.status == TxStatus.blocked:
+            codes = {result.block_reason} | {c.code for c in result.checks if not c.passed}
+            if self.tripwire.observe(self.clock(), fingerprint, {c for c in codes if c}) and not self.paused:
+                self.pause(True, actor="tripwire")
         return result
 
     def _audit(
@@ -222,17 +255,47 @@ class WalletService:
             data=data,
         )
         if action == "settle" and result.status == TxStatus.executed:
-            head = self.audit.head
-            anchor = self.ledger.anchor_audit(head, len(self.audit.entries))
-            self.audit.record(
-                invoice_id=invoice_id,
-                audit_ref=ref,
-                action="anchor",
-                event="ANCHORED",
-                actor=actor,
-                tx_id=result.tx_id,
-                data={"head": head, "entries": len(self.audit.entries), "chain_ref": anchor.tx_hash},
-            )
+            self.anchor_audit(invoice_id, actor, result.tx_id, ref)
+
+    def anchor_audit(
+        self, invoice_id: str = "wallet", actor: str = "agent", tx_id: str | None = None, ref: str = ""
+    ) -> dict[str, Any]:
+        """Writes the Merkle root of the log so far on chain, then records that it did. The ANCHORED entry
+        itself falls in the next anchor, so every entry is eventually covered."""
+        size = len(self.audit.entries)
+        root, head = self.audit.merkle_root(size), self.audit.head
+        res = self.ledger.anchor_audit(root, size)
+        anchor = {"root": root, "entries": size, "head": head, "chain_ref": res.tx_hash, "ok": res.ok}
+        if res.ok:
+            self.anchors.append(anchor)
+        self.audit.record(
+            invoice_id=invoice_id,
+            audit_ref=ref or f"anc_{size}",
+            action="anchor",
+            event="ANCHORED" if res.ok else "ANCHOR_FAILED",
+            actor=actor,
+            tx_id=tx_id,
+            data=anchor,
+        )
+        return anchor
+
+    def audit_proof(self, seq: int) -> dict[str, Any]:
+        """Inclusion proof for entry `seq` against the first anchor that covers it, or against the current
+        root (anchored: False) when no anchor covers it yet. KeyError when there is no such entry."""
+        if not 1 <= seq <= len(self.audit.entries):
+            raise KeyError(seq)
+        anchor = next((a for a in self.anchors if a["entries"] >= seq), None)
+        size = anchor["entries"] if anchor else len(self.audit.entries)
+        entry = self.audit.entries[seq - 1]
+        return {
+            "entry": entry,
+            "leaf_index": seq - 1,
+            "tree_size": size,
+            "proof": self.audit.inclusion_proof(seq, size),
+            "root": anchor["root"] if anchor else self.audit.merkle_root(size),
+            "anchored": anchor is not None,
+            "chain_ref": anchor["chain_ref"] if anchor else None,
+        }
 
     def _invoice_of(self, fingerprint: str) -> str:
         fact = self.store.receivables.get(fingerprint)
@@ -249,7 +312,9 @@ class WalletService:
 
     def register(self, req: WalletRegisterRequest) -> WalletResult:
         key = req.idempotency_key
-        return self._run("register", req.invoice_id, key, lambda: self._register(req))
+        return self._run(
+            "register", req.invoice_id, key, lambda: self._register(req), req, req.invoice_fingerprint
+        )
 
     def _seller_kyc(self, seller_address: str | None) -> bool:
         """The KYC flag of the payee at this address, while its credential has not expired.
@@ -301,12 +366,14 @@ class WalletService:
 
     # ----- TX-2: credit approval (risk oracle) -----
 
-    def approve(self, req: WalletApproveRequest) -> WalletResult:
+    def approve(self, req: WalletApproveRequest, signature: str | None = None) -> WalletResult:
         key = req.idempotency_key
         invoice_id = self._invoice_of(req.invoice_fingerprint)
-        return self._run("approve", invoice_id, key, lambda: self._approve(req))
+        return self._run(
+            "approve", invoice_id, key, lambda: self._approve(req, signature), req, req.invoice_fingerprint
+        )
 
-    def _approve(self, req: WalletApproveRequest) -> WalletResult:
+    def _approve(self, req: WalletApproveRequest, signature: str | None = None) -> WalletResult:
         # The approval must name an approve decision and match it: the hash covers the decision, and the limit
         # and fee are separate fields, so they are compared with it too.
         decision = req.decision
@@ -324,6 +391,15 @@ class WalletService:
             GuardCheck(layer="L1", code="NotApproved", passed=decision.decision == DecisionKind.approve),
             GuardCheck(layer="L1", code="DecisionTampered", passed=matches),
         ]
+        # PD is not on chain, so it is bound here: a decision above the mandate's PD ceiling gets no TX-2, and
+        # a draw on it then reverts NotApproved on chain even with every off-chain check bypassed.
+        if self.mandate is not None:
+            pd_ok = Decimal(str(decision.risk_score)) <= self.mandate.max_predicted_default
+            checks.append(GuardCheck(layer="L3", code="PdAboveMandate", passed=pd_ok))
+        # The signature is over the decision hash the approval names and the invoice it is for.
+        if signature or self.decision_signers.enforce:
+            signed = self.decision_signers.check(signature, req.decision_hash, req.invoice_fingerprint)
+            checks.append(GuardCheck(layer="L1", code=signed or "DecisionSigned", passed=signed is None))
         if not all(c.passed for c in checks):
             return self._blocked(checks)
         max_apr_bps = apr_to_bps(fee_rate_30d_to_apr(req.fee_rate))
@@ -342,14 +418,17 @@ class WalletService:
         fact = self.store.receivables.get(req.invoice_fingerprint)
         if res.ok and fact is not None:
             fact.limit, fact.fee_rate, fact.decision_hash = req.limit, req.fee_rate, req.decision_hash
-        return self._finish(res)
+            fact.approved_at = self.clock()
+        return self._finish(res, extra=[c for c in checks if c.code == "DecisionSigned"])
 
     # ----- TX-4: draw -----
 
     def execute(self, req: WalletRequest) -> WalletResult:
         fingerprint = req.invoice_fingerprint or ""
         key = req.idempotency_key or self._request_key(req)
-        return self._run("draw", req.invoice_id, key, lambda: self._execute(req, fingerprint))
+        return self._run(
+            "draw", req.invoice_id, key, lambda: self._execute(req, fingerprint), req, fingerprint
+        )
 
     def _execute(self, req: WalletRequest, fingerprint: str) -> WalletResult:
         resolved = self._payee_address(req.payee)
@@ -386,6 +465,8 @@ class WalletService:
             return self._offchain_block("SchemaInvalid", "L0")
         if req.skip_offchain_checks and self.demo_mode:  # DEMO_MODE only: the chain alone has to refuse
             guard_checks = [GuardCheck(layer="DEMO", code="OffchainBypassed", passed=True)]
+        elif self._awaiting_approval(req.invoice_fingerprint):
+            return self._offchain_block("ApprovalPending", "L4")
         else:
             ctx = self._context_for(fact)
             guard = check_draw(intent, req, fact, ctx, payee_resolved=resolved is not None)
@@ -395,11 +476,11 @@ class WalletService:
                 return self._hold(intent, req, guard.checks)  # classifier-only flag: a human decides
             guard_checks = guard.checks
         res = self.ledger.execute(intent)
-        if res.ok and fact is not None:
+        if res.ok and res.pending_id is None and fact is not None:  # a queued draw is not drawn yet
             fact.drawn_amount = req.amount
         if res.ok or res.pending_id is not None:
             self.store.spends.append((self.clock(), req.amount))
-        return self._finish(res, extra=guard_checks)
+        return self._finish(res, extra=guard_checks, intent=intent)
 
     def _hold(self, intent: DrawIntent, req: WalletRequest, checks: list[GuardCheck]) -> WalletResult:
         """Stores the draft and returns pending. The ledger is not called until an approver releases it."""
@@ -415,10 +496,36 @@ class WalletService:
             checks=[*checks, GuardCheck(layer="L4", code="NeedsHumanApproval", passed=False)],
         )
 
+    def _awaiting_approval(self, fingerprint: str) -> bool:
+        """True while a draw on this receivable is held or queued on the ledger for the approver."""
+        fp = fingerprint.lower()
+        held = [h.intent for h in self.store.holds.values()]
+        queued = [p.intent for p in self.store.pending.values() if p.intent is not None]
+        return any(i.invoice_fingerprint.lower() == fp for i in held + queued)
+
     def list_holds(self) -> list[dict[str, Any]]:
-        """Open holds for the approver: ids, amounts and codes only. Invoice text is not shown."""
-        return [
+        """What waits for the approver: ids, amounts and codes only. Invoice text is not shown.
+
+        kind "hold" is a draft the classifier flagged (nothing sent to the ledger); kind "chain_pending" is a
+        draw the ledger queued because the amount is at or above the review threshold.
+        """
+        queued = [
             {
+                "kind": "chain_pending",
+                "tx_id": tx_id,
+                "invoice_id": p.intent.invoice_id if p.intent else None,
+                "amount": str(p.intent.amount) if p.intent else None,
+                "apr_bps": p.intent.apr_bps if p.intent else None,
+                "payee_address": p.intent.payee_address if p.intent else None,
+                "held_at": p.queued_at.isoformat(),
+                "expires_at": (p.queued_at + HOLD_TTL).isoformat(),
+                "flags": ["NeedsHumanApproval"],
+            }
+            for tx_id, p in self.store.pending.items()
+        ]
+        return queued + [
+            {
+                "kind": "hold",
                 "tx_id": h.tx_id,
                 "invoice_id": h.intent.invoice_id,
                 "amount": str(h.intent.amount),
@@ -443,22 +550,27 @@ class WalletService:
         # may have changed (paused, mandate expired, receivable drawn) since the draft was held.
         fact = self.store.receivables.get(hold.intent.invoice_fingerprint)
         ctx = replace(self._context_for(fact), classifier_action="log")
-        guard = check_draw(hold.intent, hold.request, fact, ctx, payee_resolved=True)
+        # The decision's age counts to when the draft was proposed, not to the approver's release.
+        guard = check_draw(
+            hold.intent, hold.request, fact, ctx, payee_resolved=True, proposed_at=hold.held_at
+        )
         if not guard.passed:
             return self._blocked(guard.checks)
         res = self.ledger.execute(hold.intent)
-        if res.ok and fact is not None:
+        if res.ok and res.pending_id is None and fact is not None:
             fact.drawn_amount = hold.request.amount
         if res.ok or res.pending_id is not None:
             self.store.spends.append((self.clock(), hold.intent.amount))
         approved = GuardCheck(layer="L4", code="HumanApproved", passed=True)
-        return self._finish(res, extra=[*guard.checks, approved])
+        return self._finish(res, extra=[*guard.checks, approved], intent=hold.intent)
 
     # ----- TX-5: settlement waterfall -----
 
     def settle(self, req: WalletSettleRequest) -> WalletResult:
         key = req.idempotency_key
-        return self._run("settle", req.invoice_id, key, lambda: self._settle(req))
+        return self._run(
+            "settle", req.invoice_id, key, lambda: self._settle(req), req, req.invoice_fingerprint
+        )
 
     def _settle(self, req: WalletSettleRequest) -> WalletResult:
         try:
@@ -494,21 +606,42 @@ class WalletService:
             self._audit(hold.intent.invoice_id, "draw", result, actor="approver")
             return result
         invoice_id = self.store.txs.get(tx_id, ("unknown", None))[0]
-        pending_id = self.store.pending.pop(tx_id, None)
-        if pending_id is None:
+        item = self.store.pending.get(tx_id)
+        if item is None:
             result = self._offchain_block("NotPending", "L4")
         elif not approve:
-            result = self._offchain_block("ApprovalDeclined", "L4")
+            result = self._decline(tx_id, item, "ApprovalDeclined")
+        elif self.clock() - item.queued_at > HOLD_TTL:
+            result = self._decline(tx_id, item, "ApprovalExpired")
         else:
-            result = self._finish(self.ledger.confirm(pending_id))
+            res = self.ledger.confirm(item.pending_id)
+            if res.ok or res.revert_reason == "NotPending":
+                del self.store.pending[tx_id]  # the ledger no longer holds it either
+            fact = self.store.receivables.get(item.intent.invoice_fingerprint) if item.intent else None
+            if res.ok and fact is not None and item.intent is not None:
+                fact.drawn_amount = item.intent.amount
+            result = self._finish(res, extra=[GuardCheck(layer="L4", code="HumanApproved", passed=True)])
         self._audit(invoice_id, "draw", result, actor="approver")
         return result
 
-    def pause(self, on: bool) -> WalletResult:
+    def _decline(self, tx_id: str, item: ChainPending, code: str) -> WalletResult:
+        """Declines the queued draw on the ledger as well, so it cannot be released later."""
+        res = self.ledger.confirm(item.pending_id, approve=False)
+        if res.ok or res.revert_reason == "NotPending":
+            del self.store.pending[tx_id]
+        checks = [GuardCheck(layer="L4", code=code, passed=False)]
+        if not res.ok and res.revert_reason != "NotPending":  # e.g. Paused: still queued, decline again later
+            checks.append(GuardCheck(layer="L5", code=res.revert_reason or "Unknown", passed=False))
+        result = self._blocked(checks, reason=code)
+        return result.model_copy(update={"chain": self.ledger.name, "chain_ref": res.tx_hash})
+
+    def pause(self, on: bool, actor: str = "operator") -> WalletResult:
         result = self._finish(self.ledger.pause(on))
         if result.status == TxStatus.executed:
             self.paused = on
-        self._audit("wallet", "pause" if on else "unpause", result, actor="operator")
+            if not on:
+                self.tripwire.reset()  # the owner unpaused: the breaker re-arms
+        self._audit("wallet", "pause" if on else "unpause", result, actor=actor)
         return result
 
     def activate_mandate(self, mandate_dict: dict, max_tx: Decimal, daily_cap: Decimal) -> Mandate:

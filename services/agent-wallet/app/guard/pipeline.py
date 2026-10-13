@@ -6,7 +6,7 @@ compromised service still cannot pay outside the mandate. L4 escalates; it does 
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from app.guard.injection import Classifier, scan_payload
@@ -18,6 +18,7 @@ from shared.schemas import Decision as DecisionKind
 from shared.schemas import GuardCheck, WalletRequest
 
 BPS = Decimal(10_000)
+DECISION_MAX_AGE = timedelta(minutes=15)  # no valid_until: draw within 15 min of TX-2 (5.4)
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,7 @@ def check_draw(
     fact: ReceivableFact | None,
     ctx: GuardContext,
     payee_resolved: bool = True,
+    proposed_at: datetime | None = None,
 ) -> GuardResult:
     checks: list[GuardCheck] = []
 
@@ -55,7 +57,14 @@ def check_draw(
     add("L1", "NotApproved", decision.decision == DecisionKind.approve and approved_by_oracle)
     recomputed = canonical_hash(decision.model_dump(mode="json", exclude={"decision_hash", "valid_until"}))
     valid_until = getattr(decision, "valid_until", None)
-    add("L1", "DecisionStale", valid_until is None or ctx.now <= valid_until)
+    # Fresh = before its valid_until; without one, drawn within 15 minutes of the TX-2 approval.
+    approved_at = fact.approved_at if fact else None
+    when = proposed_at or ctx.now
+    if valid_until is not None:
+        fresh = ctx.now <= valid_until
+    else:
+        fresh = approved_at is None or when - approved_at <= DECISION_MAX_AGE
+    add("L1", "DecisionStale", fresh)
     approved_hash = fact.decision_hash.lower() if fact and fact.decision_hash else None
     tampered = recomputed != intent.decision_hash.lower() or (
         approved_hash is not None and approved_hash != intent.decision_hash.lower()

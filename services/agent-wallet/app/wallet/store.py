@@ -19,6 +19,7 @@ class ReceivableFact:
     limit: Decimal | None = None
     decision_hash: str | None = None
     drawn_amount: Decimal | None = None
+    approved_at: datetime | None = None  # when TX-2 succeeded; bounds the decision's age at draw
 
 
 @dataclass
@@ -32,11 +33,20 @@ class Hold:
     held_at: datetime
 
 
+@dataclass
+class ChainPending:
+    """A draw the ledger queued for the approver (ApprovalRequired). Kept until the ledger drops it."""
+
+    pending_id: int
+    intent: DrawIntent | None
+    queued_at: datetime
+
+
 class Store:
     def __init__(self) -> None:
         self.results: dict[str, WalletResult] = {}  # idempotency_key -> first result
         self.receivables: dict[str, ReceivableFact] = {}  # invoice_fingerprint -> fact
-        self.pending: dict[str, int] = {}  # wallet tx_id -> ledger pending id
+        self.pending: dict[str, ChainPending] = {}  # wallet tx_id -> draw queued on the ledger
         self.spends: list[tuple[datetime, Decimal]] = []  # draws and pending draws, for the 24h cap
         # tx_id -> (invoice_id, result), for GET /wallet/tx
         self.txs: dict[str, tuple[str, WalletResult]] = {}

@@ -131,8 +131,8 @@ teammate. The submission rules need someone else to do it.
    are English directives with no override verb, and phrasings in several non-English languages. The classifier is
    English-only, does not detect jailbreaks, and is audit-only by default. Blocking mode raises benign false blocks, so
    it is not enabled. The held-out sets are now measured, not tuned on: a rule change must be measured on a new set.
-6. **Decision freshness** uses a wallet-side `valid_until` stopgap. The 15-minute approval-age rule from CLAUDE.md §5.4
-   is not implemented.
+6. **Decision freshness** uses a wallet-side `valid_until` stopgap; without it, a draw must come within 15 minutes of
+   the TX-2 approval (CLAUDE.md §5.4). The approval time is in memory only, so a restart drops the age check.
 7. **Settlement payer is one account** in the demo. A production system needs the actual buyer's authorisation.
 8. **V8 mismatch.** For an 80% advance against an approved limit that is also below the amount, the on-chain layer reports
    `AmountAboveLimit` and the off-chain layer reports `AdvanceAboveMandate`. The outcome is the same: the draw is refused.

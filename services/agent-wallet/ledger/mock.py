@@ -239,13 +239,18 @@ class MockLedger:
 
     # ----- human approval (AgentWallet.confirm, approver) -----
 
-    def confirm(self, pending_id: int) -> ChainResult:
-        payload = {"pending_id": pending_id}
+    def confirm(self, pending_id: int, approve: bool = True) -> ChainResult:
+        payload = {"pending_id": pending_id, "approve": approve}
 
         def op() -> dict[str, Any]:
+            if self.paused:  # AgentWallet.confirm checks pause before anything else, for a decline too
+                raise MockRevert("Paused")
             item = self.pending.get(pending_id)
             if item is None:
                 raise MockRevert("NotPending")
+            if not approve:  # ApprovalDeclined; the amount stays in the 24h window, as on chain
+                del self.pending[pending_id]
+                return {"declined": pending_id}
             events = self._draw(item.intent, confirmed=True)  # raises -> the pending draw stays queued
             del self.pending[pending_id]
             return events
