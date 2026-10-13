@@ -6,6 +6,7 @@ import base64
 import io
 import json
 import os
+import re
 import sys
 import warnings
 from contextlib import redirect_stdout
@@ -35,10 +36,110 @@ def white_on_light_background(image: pymupdf.Pixmap, box: tuple) -> bool:
     return not pixels or sum(min(pixel[:3]) >= 245 for pixel in pixels) / len(pixels) >= 0.75
 
 
+MONEY = re.compile(r"\d{1,3}(?:[,.\s]\d{3})+[.,]\d{2}\b|\b\d+[.,]\d{2}\b")
+
+
+def covered_boxes(page: pymupdf.Page) -> list[tuple[pymupdf.Rect, str]]:
+    """Text boxes painted over by a later opaque, page-local filled shape (cover-and-retype edits)."""
+    area = abs(page.rect)
+    shapes = [
+        (drawing["seqno"], pymupdf.Rect(drawing["rect"]))
+        for drawing in page.get_drawings()
+        if drawing.get("fill") is not None
+        and (drawing.get("fill_opacity") or 1) >= 0.95
+        and 0 < abs(pymupdf.Rect(drawing["rect"])) < 0.25 * area
+    ]
+    boxes = []
+    for trace in page.get_texttrace():
+        box = pymupdf.Rect(trace["bbox"])
+        if box.is_empty:
+            continue
+        for seqno, shape in shapes:
+            if seqno > trace["seqno"] and abs(box & shape) >= 0.6 * abs(box):
+                boxes.append((box, "".join(chr(char[0]) for char in trace["chars"])))
+                break
+    return boxes
+
+
+def appended_boxes(content: bytes, page_index: int, document: pymupdf.Document) -> list[pymupdf.Rect]:
+    """Text from a secondary content stream that sits on an opaque patch also added outside the main stream.
+
+    Generators that write one stream per text call are not flagged on their own; the
+    edit trace is new text drawn over a freshly painted background patch.
+    """
+    xrefs = document[page_index].get_contents()
+    if len(xrefs) < 2:
+        return []
+    main = max(xrefs, key=lambda xref: len(document.xref_stream(xref) or b""))
+    texts, patches = [], []
+    with pymupdf.open(stream=content, filetype="pdf") as copy:
+        page = copy[page_index]
+        area = abs(page.rect)
+        for xref in xrefs:
+            if xref == main:
+                continue
+            page.set_contents(xref)
+            if b"BT" in (document.xref_stream(xref) or b""):
+                texts.extend(pymupdf.Rect(word[:4]) for word in page.get_text("words"))
+            patches.extend(
+                pymupdf.Rect(drawing["rect"])
+                for drawing in page.get_drawings()
+                if drawing.get("fill") is not None
+                and (drawing.get("fill_opacity") or 1) >= 0.95
+                and 0 < abs(pymupdf.Rect(drawing["rect"])) < 0.25 * area
+            )
+    return [box for box in texts if any(abs(box & patch) >= 0.5 * max(abs(box), 1e-6) for patch in patches)]
+
+
+def page_revisions(content: bytes, document: pymupdf.Document) -> int:
+    """Count revisions appended after the first save that redefine a page or its content stream.
+
+    Metadata-only or form/signature-only incremental saves are ignored.
+    """
+    ends = [match.end() for match in re.finditer(rb"%%EOF", content)]
+    if document.is_fast_webaccess:
+        ends = ends[1:]  # A linearized file carries an extra first-page trailer.
+    if len(ends) < 2:
+        return 0
+    page_objects = {page.xref for page in document} | {
+        xref for page in document for xref in page.get_contents()
+    }
+    revisions = 0
+    for start, end in zip(ends, ends[1:], strict=False):
+        defined = {int(number) for number in re.findall(rb"(\d+)\s+0\s+obj\b", content[start:end])}
+        revisions += bool(defined & page_objects)
+    return revisions
+
+
+def mark_forensics(spans: list[Span], covered, appended) -> list[Span]:
+    def inside(box, boxes):
+        rect = pymupdf.Rect(box)
+        return any(abs(rect & other) >= 0.5 * max(abs(rect), 1e-6) for other in boxes)
+
+    for span in spans:
+        # Match text too: retyped text sits on the same spot but was painted after the cover.
+        if inside(span.bbox, [box for box, text in covered if text.strip() == span.text.strip()]):
+            span.forensic.append("covered")
+            span.hidden = True  # Not visible on the rendered page; never a field source.
+        if inside(span.bbox, appended):
+            span.forensic.append("appended")
+    return spans
+
+
+def mark_font_anomalies(spans: list[Span], fonts: list[str]) -> None:
+    counts: dict[str, int] = {}
+    for font in fonts:
+        counts[font] = counts.get(font, 0) + 1
+    for span, font in zip(spans, fonts, strict=True):
+        if not span.hidden and counts[font] == 1 and MONEY.search(span.text):
+            span.forensic.append("font_anomaly")
+
+
 def parse(content: bytes) -> ParsedDocument:
     if len(content) > MAX_UPLOAD_BYTES:
         raise LimitExceeded()
-    spans, images, metadata = [], [], []
+    spans, images, metadata, fonts = [], [], [], []
+    incremental_updates = 0
     if detect_format(content) == "pdf":
         with pymupdf.open(stream=content, filetype="pdf") as document:
             if document.needs_pass:
@@ -46,6 +147,7 @@ def parse(content: bytes) -> ParsedDocument:
             if len(document) > MAX_PAGES:
                 raise LimitExceeded()
             metadata = [value for value in document.metadata.values() if isinstance(value, str)]
+            incremental_updates = page_revisions(content, document)
             for page_index, page in enumerate(document):
                 pixel_count = page.rect.width * page.rect.height * (RENDER_DPI / 72) ** 2
                 if pixel_count > MAX_IMAGE_PIXELS:
@@ -57,6 +159,8 @@ def parse(content: bytes) -> ParsedDocument:
                     for trace in page.get_texttrace()
                     if trace.get("type") == 3 or trace.get("opacity", 1) < 0.05
                 ]
+                covered, appended = covered_boxes(page), appended_boxes(content, page_index, document)
+                page_start = len(spans)
                 image = page.get_pixmap(dpi=RENDER_DPI, alpha=False, colorspace=pymupdf.csRGB)
                 images.append(base64.b64encode(image.tobytes("png")).decode())
                 for block in page.get_text(
@@ -91,6 +195,8 @@ def parse(content: bytes) -> ParsedDocument:
                                     hidden=hidden,
                                 )
                             )
+                            fonts.append(raw.get("font", ""))
+                mark_forensics(spans[page_start:], covered, appended)
                 for annotation in page.annots() or []:
                     metadata.append(annotation.info.get("content", ""))
     else:
@@ -106,6 +212,8 @@ def parse(content: bytes) -> ParsedDocument:
                 buffer = io.BytesIO()
                 image.convert("RGB").save(buffer, format="PNG")
                 images.append(base64.b64encode(buffer.getvalue()).decode())
+    if fonts:
+        mark_font_anomalies(spans, fonts)
     qr_payloads = []
     for encoded in images:
         with Image.open(io.BytesIO(base64.b64decode(encoded))) as image:
@@ -124,6 +232,7 @@ def parse(content: bytes) -> ParsedDocument:
         metadata_text=metadata,
         qr_payloads=qr_payloads,
         engine="pdf-text" if spans else "image",
+        incremental_updates=incremental_updates,
     )
 
 

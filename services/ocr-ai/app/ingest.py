@@ -25,6 +25,9 @@ class Span(LocalModel):
     size: float | None = None
     color: int | None = None
     hidden: bool = False
+    # PDF edit traces from the parser: "covered" (painted over by a later opaque shape),
+    # "appended" (drawn by a minority content stream), "font_anomaly" (money value in a one-off font).
+    forensic: list[str] = Field(default_factory=list)
 
 
 class ParsedDocument(LocalModel):
@@ -34,6 +37,7 @@ class ParsedDocument(LocalModel):
     metadata_text: list[str] = Field(default_factory=list)
     qr_payloads: list[str] = Field(default_factory=list)  # Private, untrusted; never used to fill fields.
     engine: str
+    incremental_updates: int = 0  # PDF revisions appended after the original save
 
 
 async def read_upload(upload: UploadFile, *, allow_legacy_demo: bool = False) -> bytes:

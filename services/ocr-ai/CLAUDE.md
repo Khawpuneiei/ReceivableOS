@@ -59,6 +59,7 @@ The parser and OCR run in child processes with a restricted environment. The ser
 | `app/supporting.py` | English supporting-template fields, case relationships and non-authoritative declared balances |
 | `app/compare.py` | Evidence-backed invoice/PO checks (`invoice-po-rules-v3`) |
 | `app/fingerprint.py`, `app/history.py` | Registry-v1 fingerprint, local scoped HMAC tokens and bounded atomic observation history |
+| `app/forensics.py` | PDF edit-trace findings (`pdf-forensics-v1`) from parser marks in `app/worker.py`: covered text, text on a fresh patch in a secondary content stream, one-off font on a money value, incremental revisions that redefine page content |
 | `app/fraud.py`, `app/graph.py` | Rule findings, uncalibrated noisy-OR score and finding-scoped graph (`graph-rules-v2`, including same-supplier bank-account change candidates) |
 | `app/pipeline.py` | Extraction, compatibility projection, comparison, observation, fraud graph and handoff orchestration |
 
@@ -113,6 +114,8 @@ A scanned-document Paddle worker currently starts per request and initializes it
 ## Fraud and data-protection boundaries
 
 Current rule weights are defined in `app/config.py`: exact/semantic duplicate 0.80, near duplicate 0.15, arithmetic mismatch 0.40, PO amount/party/currency mismatch 0.50, shared bank token 0.15, suspicious cluster 0.15. `app/fraud.py` combines unique codes with noisy-OR. These values are not calibrated to real fraud outcomes and must not be mapped to approve/reject thresholds without Policy-owner review.
+
+PDF edit traces (`app/forensics.py`) add `pdf_text_covered` 0.15, `pdf_appended_text_layer` 0.05, `pdf_font_anomaly` 0.05 and `pdf_incremental_update` 0.05; all four together score 0.271, below Policy's 0.30 reject line, so an edit trace alone routes to review via `REVIEW.FRAUD_FLAGS`. Text painted over by a later opaque shape is marked hidden and never fills a field. These are heuristics: stamps and signatures also add content streams, and a forger who regenerates the whole PDF leaves none of these traces. `scripts/tamper_eval.py` reports five forgery styles and four benign edits; `data/invoices/demo/05_tampered.pdf` is the redact-and-retype demo file (amounts raised to THB 856,000 with consistent arithmetic).
 
 Bank accounts are transient private extraction values. Graph links use institution/country/scheme-scoped HMAC tokens; unknown scope or low confidence requires review. Raw bank values and document text must not enter SQLite, graph node IDs, logs, metrics, or public evidence. A shared token is a correlation signal, not proof of common ownership or fraud. Graph export is bounded to the current observation and finding-related evidence.
 

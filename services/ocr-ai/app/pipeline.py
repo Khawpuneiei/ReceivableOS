@@ -17,6 +17,7 @@ from app.fingerprint import (
     legacy_fingerprint,
     semantic_fingerprint,
 )
+from app.forensics import forensic_findings
 from app.fraud import FraudFinding, finding, graph_findings, score
 from app.graph import export_graph
 from app.history import (
@@ -85,6 +86,7 @@ def extract(content: bytes, document_type: str, settings: Settings) -> Extractio
                 any(span.page == page and span.text.strip() for span in added) for page in unreadable_pages
             )
     result = extract_document(parsed, document_type)
+    result.forensic_findings = forensic_findings(parsed)
     doc = result.document
     if missing_page_review:
         doc.review_reasons.append("UNREADABLE_PAGES_REQUIRE_OCR")
@@ -349,7 +351,7 @@ def extract_invoice(content: bytes, settings: Settings, idempotency_key: str | N
         settings,
         digest(b"extract-v1\0" + content),
         idempotency_key,
-        validation_findings(result.document),
+        [*validation_findings(result.document), *result.forensic_findings],
     )
     response.invoice_id = observation_id
     response.fraud_details, response.fraud_flags = (
@@ -375,7 +377,7 @@ def verify(
     invoice_result = extract(invoice_bytes, "invoice", settings)
     po_result = extract(po_bytes, "purchase_order", settings)
     checks = compare_documents(invoice_result.document, po_result.document)
-    findings = validation_findings(invoice_result.document)
+    findings = [*validation_findings(invoice_result.document), *invoice_result.forensic_findings]
     for check in checks:
         if check.status != "mismatch":
             continue
