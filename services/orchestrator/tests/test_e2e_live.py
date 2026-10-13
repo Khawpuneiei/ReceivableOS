@@ -109,3 +109,23 @@ def test_a_file_ocr_cannot_read_is_a_4xx_not_an_outage(http):
 
 def test_repay_of_an_invoice_that_never_ran_is_404(http):
     assert http.post("/flow/repay", data={"invoice_id": "obs_never_ran"}).status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("name", "decision"),
+    [
+        ("05_tampered.pdf", "review"),  # PDF edit traces (ocr-ai forensics) score below 0.30: review
+        ("06_qr_swap.pdf", "reject"),  # PromptPay QR pays another tax ID: qr_payee_mismatch 0.40, reject
+    ],
+)
+def test_forged_invoices_never_reach_the_wallet(http, matrix, name, decision):
+    if not (DEMO / name).exists():
+        pytest.skip(f"{name} lands with the OCR forensics PRs")
+    with (DEMO / name).open("rb") as f:
+        r = http.post("/flow/run", files={"file": (name, f, "application/pdf")})
+    assert r.status_code == 200, r.text
+    steps = r.json()
+    assert steps["ocr"]["fraud_flags"]
+    assert steps["policy"]["decision"] == decision
+    assert "approve" not in steps and "wallet" not in steps
+    assert steps["outcome"] == f"{decision}: wallet not called"
