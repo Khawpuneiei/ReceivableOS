@@ -29,6 +29,8 @@ from pydantic import ValidationError
 from app.audit.log import AuditLog
 from app.guard.injection import Classifier, scan_payload
 from app.guard.pipeline import GuardContext, check_draw
+from app.guard.signatures import DecisionSigners
+from app.guard.tripwire import Tripwire
 from app.models import (
     ApproveIntent,
     DrawIntent,
@@ -72,6 +74,8 @@ class WalletService:
         canary: str | None = None,
         classifier: Classifier | None = None,
         classifier_action: str = "log",
+        decision_signers: DecisionSigners | None = None,
+        tripwire: Tripwire | None = None,
     ) -> None:
         self.ledger = ledger
         self.store = store
@@ -85,6 +89,9 @@ class WalletService:
         self.mandate: Mandate | None = None
         self.paused = False
         self.audit = AuditLog()
+        self.decision_signers = decision_signers or DecisionSigners()
+        self.anchors: list[dict[str, Any]] = []  # Merkle roots written on chain, oldest first
+        self.tripwire = tripwire or Tripwire(honeytokens=set(), threshold=0)
 
     # ----- helpers -----
 
@@ -181,17 +188,35 @@ class WalletService:
         checks.append(GuardCheck(layer="L5", code=code, passed=False))
         return WalletResult(status=TxStatus.blocked, block_reason=code, checks=checks, **common)
 
-    def _run(self, action: str, invoice_id: str, key: str, run: Callable[[], WalletResult]) -> WalletResult:
-        """Idempotent write. A repeat returns the stored result, sends nothing, and is audited."""
+    def _run(
+        self,
+        action: str,
+        invoice_id: str,
+        key: str,
+        run: Callable[[], WalletResult],
+        request: Any = None,
+        fingerprint: str = "",
+    ) -> WalletResult:
+        """Idempotent write. A repeat returns the stored result, sends nothing, and is audited.
+        The tripwire runs first (honeytoken, quarantine) and learns from every blocked result."""
         if key in self.store.results:
             stored = self.store.results[key]
             replay = GuardCheck(layer="IDEM", code="IdempotentReplay", passed=True)
             result = stored.model_copy(update={"checks": [*stored.checks, replay]})
             self._audit(invoice_id, action, result, event="REPLAY")
             return result
-        result = run()
+        if self.tripwire.honeytoken_in(request.model_dump(mode="json") if request else None):
+            result = self._offchain_block("HoneytokenTouched", "TRIP")
+        elif action != "settle" and self.tripwire.is_quarantined(fingerprint):  # repayment is never held
+            result = self._offchain_block("InvoiceQuarantined", "TRIP")
+        else:
+            result = run()
         self.store.results[key] = result
         self._audit(invoice_id, action, result)
+        if result.status == TxStatus.blocked:
+            codes = {result.block_reason} | {c.code for c in result.checks if not c.passed}
+            if self.tripwire.observe(self.clock(), fingerprint, {c for c in codes if c}) and not self.paused:
+                self.pause(True, actor="tripwire")
         return result
 
     def _audit(
@@ -230,17 +255,47 @@ class WalletService:
             data=data,
         )
         if action == "settle" and result.status == TxStatus.executed:
-            head = self.audit.head
-            anchor = self.ledger.anchor_audit(head, len(self.audit.entries))
-            self.audit.record(
-                invoice_id=invoice_id,
-                audit_ref=ref,
-                action="anchor",
-                event="ANCHORED",
-                actor=actor,
-                tx_id=result.tx_id,
-                data={"head": head, "entries": len(self.audit.entries), "chain_ref": anchor.tx_hash},
-            )
+            self.anchor_audit(invoice_id, actor, result.tx_id, ref)
+
+    def anchor_audit(
+        self, invoice_id: str = "wallet", actor: str = "agent", tx_id: str | None = None, ref: str = ""
+    ) -> dict[str, Any]:
+        """Writes the Merkle root of the log so far on chain, then records that it did. The ANCHORED entry
+        itself falls in the next anchor, so every entry is eventually covered."""
+        size = len(self.audit.entries)
+        root, head = self.audit.merkle_root(size), self.audit.head
+        res = self.ledger.anchor_audit(root, size)
+        anchor = {"root": root, "entries": size, "head": head, "chain_ref": res.tx_hash, "ok": res.ok}
+        if res.ok:
+            self.anchors.append(anchor)
+        self.audit.record(
+            invoice_id=invoice_id,
+            audit_ref=ref or f"anc_{size}",
+            action="anchor",
+            event="ANCHORED" if res.ok else "ANCHOR_FAILED",
+            actor=actor,
+            tx_id=tx_id,
+            data=anchor,
+        )
+        return anchor
+
+    def audit_proof(self, seq: int) -> dict[str, Any]:
+        """Inclusion proof for entry `seq` against the first anchor that covers it, or against the current
+        root (anchored: False) when no anchor covers it yet. KeyError when there is no such entry."""
+        if not 1 <= seq <= len(self.audit.entries):
+            raise KeyError(seq)
+        anchor = next((a for a in self.anchors if a["entries"] >= seq), None)
+        size = anchor["entries"] if anchor else len(self.audit.entries)
+        entry = self.audit.entries[seq - 1]
+        return {
+            "entry": entry,
+            "leaf_index": seq - 1,
+            "tree_size": size,
+            "proof": self.audit.inclusion_proof(seq, size),
+            "root": anchor["root"] if anchor else self.audit.merkle_root(size),
+            "anchored": anchor is not None,
+            "chain_ref": anchor["chain_ref"] if anchor else None,
+        }
 
     def _invoice_of(self, fingerprint: str) -> str:
         fact = self.store.receivables.get(fingerprint)
@@ -257,7 +312,9 @@ class WalletService:
 
     def register(self, req: WalletRegisterRequest) -> WalletResult:
         key = req.idempotency_key
-        return self._run("register", req.invoice_id, key, lambda: self._register(req))
+        return self._run(
+            "register", req.invoice_id, key, lambda: self._register(req), req, req.invoice_fingerprint
+        )
 
     def _seller_kyc(self, seller_address: str | None) -> bool:
         """The KYC flag of the payee at this address, while its credential has not expired.
@@ -309,12 +366,14 @@ class WalletService:
 
     # ----- TX-2: credit approval (risk oracle) -----
 
-    def approve(self, req: WalletApproveRequest) -> WalletResult:
+    def approve(self, req: WalletApproveRequest, signature: str | None = None) -> WalletResult:
         key = req.idempotency_key
         invoice_id = self._invoice_of(req.invoice_fingerprint)
-        return self._run("approve", invoice_id, key, lambda: self._approve(req))
+        return self._run(
+            "approve", invoice_id, key, lambda: self._approve(req, signature), req, req.invoice_fingerprint
+        )
 
-    def _approve(self, req: WalletApproveRequest) -> WalletResult:
+    def _approve(self, req: WalletApproveRequest, signature: str | None = None) -> WalletResult:
         # The approval must name an approve decision and match it: the hash covers the decision, and the limit
         # and fee are separate fields, so they are compared with it too.
         decision = req.decision
@@ -332,6 +391,10 @@ class WalletService:
             GuardCheck(layer="L1", code="NotApproved", passed=decision.decision == DecisionKind.approve),
             GuardCheck(layer="L1", code="DecisionTampered", passed=matches),
         ]
+        # The signature is over the decision hash the approval names and the invoice it is for.
+        if signature or self.decision_signers.enforce:
+            signed = self.decision_signers.check(signature, req.decision_hash, req.invoice_fingerprint)
+            checks.append(GuardCheck(layer="L1", code=signed or "DecisionSigned", passed=signed is None))
         if not all(c.passed for c in checks):
             return self._blocked(checks)
         max_apr_bps = apr_to_bps(fee_rate_30d_to_apr(req.fee_rate))
@@ -350,14 +413,16 @@ class WalletService:
         fact = self.store.receivables.get(req.invoice_fingerprint)
         if res.ok and fact is not None:
             fact.limit, fact.fee_rate, fact.decision_hash = req.limit, req.fee_rate, req.decision_hash
-        return self._finish(res)
+        return self._finish(res, extra=[c for c in checks if c.code == "DecisionSigned"])
 
     # ----- TX-4: draw -----
 
     def execute(self, req: WalletRequest) -> WalletResult:
         fingerprint = req.invoice_fingerprint or ""
         key = req.idempotency_key or self._request_key(req)
-        return self._run("draw", req.invoice_id, key, lambda: self._execute(req, fingerprint))
+        return self._run(
+            "draw", req.invoice_id, key, lambda: self._execute(req, fingerprint), req, fingerprint
+        )
 
     def _execute(self, req: WalletRequest, fingerprint: str) -> WalletResult:
         resolved = self._payee_address(req.payee)
@@ -494,7 +559,9 @@ class WalletService:
 
     def settle(self, req: WalletSettleRequest) -> WalletResult:
         key = req.idempotency_key
-        return self._run("settle", req.invoice_id, key, lambda: self._settle(req))
+        return self._run(
+            "settle", req.invoice_id, key, lambda: self._settle(req), req, req.invoice_fingerprint
+        )
 
     def _settle(self, req: WalletSettleRequest) -> WalletResult:
         try:
@@ -559,11 +626,13 @@ class WalletService:
         result = self._blocked(checks, reason=code)
         return result.model_copy(update={"chain": self.ledger.name, "chain_ref": res.tx_hash})
 
-    def pause(self, on: bool) -> WalletResult:
+    def pause(self, on: bool, actor: str = "operator") -> WalletResult:
         result = self._finish(self.ledger.pause(on))
         if result.status == TxStatus.executed:
             self.paused = on
-        self._audit("wallet", "pause" if on else "unpause", result, actor="operator")
+            if not on:
+                self.tripwire.reset()  # the owner unpaused: the breaker re-arms
+        self._audit("wallet", "pause" if on else "unpause", result, actor=actor)
         return result
 
     def activate_mandate(self, mandate_dict: dict, max_tx: Decimal, daily_cap: Decimal) -> Mandate:
