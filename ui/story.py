@@ -109,6 +109,7 @@ FINDING_PLAIN = {
     "qr_crc_invalid": "the payment QR is corrupted",
     "qr_payee_unverified": "the payment QR's payee could not be checked",
     "amount_outlier": "the amount is at least 3x what this supplier usually bills this buyer",
+    "circular_invoicing": "the buyer billed this supplier back for a similar amount within 90 days",
 }
 INJECTION_CATEGORY = {
     "role_override": "tries to take over the AI's role",
@@ -133,6 +134,7 @@ VALIDATION_PLAIN = {
     "NON_POSITIVE_INVOICE_AMOUNT": "the invoice amount is zero or negative",
     "LOW_FIELD_CONFIDENCE": "some fields could not be read confidently",
     "NO_READABLE_TEXT": "the document has no readable text",
+    "SUPPLIER_IS_BUYER": "the buyer has the supplier's own tax ID, a company billing itself",
 }
 INJECTION_TECHNIQUE = {
     "plain": "plain",
