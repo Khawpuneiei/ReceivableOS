@@ -1,8 +1,9 @@
 # Agent wallet: guardrail and architecture upgrades (13 Oct 2026)
 
-For P and the pitch. These are five upgrades, each in its own PR, each measured in this repo. The numbers are from
+For P and the pitch. These are six upgrades, each in its own PR, each measured in this repo. The numbers are from
 `pytest`, `eval/run_eval.py` and a local full-stack run on the mock ledger (`CHAIN_MODE=mock`, no LLM). The PRs are
-independent and each is based on `main` at `4f4dbd6`. Where a claim depends on a step outside the wallet folder, the
+stacked on `main` at `4f4dbd6`: merge them in the order #49, #53, #56, #58, #60, #63, #68 (each branch already contains
+the ones before it). With all seven merged: 209 passed, 2 skipped. Where a claim depends on a step outside the wallet folder, the
 section says so.
 
 The design rule is still the one in docs/03: **a fully hijacked model still cannot move money outside the mandate**. Each upgrade either
@@ -17,6 +18,7 @@ closes a gap on the known-limits list or turns a detector miss into a stop.
 | #56 | Scoped, expiring agent session keys | One static agent token with full power up to the daily cap | A stolen key is worth at most its remaining budget until it expires; revocable at once |
 | #58 | Merkle-root audit anchoring with per-entry proofs | Proving one entry needed the whole log, including other borrowers' entries | One entry proves with about log2(n) hashes against the on-chain root; edited entries fail |
 | #60 | Ed25519-signed credit decisions at approval | Known limit 1: "the decision is checked by hash, not signed" | A stolen risk-oracle token can't approve a self-written decision; no replay onto another invoice |
+| #68 | Hardened human approval for large draws | Queued draws never expired, a decline stayed queued on the ledger, a declined invoice could never be redrawn | `eval/approval_cases.jsonl`: main 3/4 attacks caught, 1/3 benign completed → **4/4, 3/3** |
 
 ## How each maps to the state of the art
 
@@ -32,6 +34,7 @@ closes a gap on the known-limits list or turns a detector miss into a stop.
 | Session keys | ERC-4337 session keys, ERC-7715 permissions, AP2 intent mandates | Actions, budget, per-tx cap, TTL ≤ 24h, optional invoice list, bound to the mandate hash, revocable |
 | Transparency-log proofs | RFC 9162 (Certificate Transparency v2) | Merkle root anchored via `AgentWallet.anchorAudit`; offline verifier `scripts/verify_audit_proof.py` |
 | Signed decisions | Separation of duties; AP2's signed mandates | Ed25519 over `decision_hash|invoice_fingerprint`; the key lives in policy-ai |
+| Bounded human approval | Safe transaction queue (nonce, expiry); CLAUDE.md 5.5 (24h) | `ApprovalExpired`, decline sent on chain, `ApprovalPending` while a human decides |
 | Adaptive-attacker evaluation | AgentDojo (2024) | `run_eval.py --probe-first` |
 
 ## Demo moments (all on the mock ledger, `scripts/demo.py` unless noted)
@@ -40,11 +43,13 @@ closes a gap on the known-limits list or turns a detector miss into a stop.
    `payee` argument. The firewall answers `ToolArgNotAllowed` and nothing is drawn.
 2. **Honeytoken** (#53, demo section 9): a draw to "SELLER:siam-fresh-pack-old" gets `HoneytokenTouched` and the
    wallet pauses itself. The clean-looking retry gets `InvoiceQuarantined`.
-3. **Session key** (#56, demo section 9): a 30-minute key with a THB 600,000 budget draws 524,300. The next draw
+3. **Session key** (#56, demo section 10): a 30-minute key with a THB 600,000 budget draws 524,300. The next draw
    gets `SessionBudgetExceeded`, and after the approver revokes the key, `SessionRevoked`.
 4. **Audit proof** (#58, demo section 8): `draw entry 25: 3-hash Merkle proof to anchored root … VERIFIED`.
 5. **Forged approval** (#60, test `test_risk_oracle_token_alone_cannot_approve_its_own_decision`): a stolen risk-oracle
    token plus a self-made decision with a bigger limit gets `DecisionSignatureInvalid`.
+6. **Stale approval** (#68, eval case AP01): the approver releases a 980,000 draw 24 hours and a minute after it was
+   queued. On main it pays; with #68 it gets `ApprovalExpired` and the draw is declined on the ledger.
 
 Slide line: *"We attacked our own agent like a real attacker would: probe, learn, retry. On the held-out sets, the
 retry that slips past the scanner is stopped by quarantine, so 0 of 54 held-out attacks reach execute, and the scanner's
@@ -62,5 +67,6 @@ own recall (14 of 24, 10 of 27) is reported as it is."*
   forward the header (other owners' folders), then `enforce: true`.
 - The agent loop is not on the orchestrator path. It calls a model only when `LLM_PROVIDER` is set, and the alignment
   check means the model adds explanation, not authority.
-- The PRs overlap in `app/main.py`, the README and `scripts/demo.py` (two add a section 9). Whichever merges later needs
-  a small conflict fix.
+- The approval expiry is enforced by the wallet service, which holds the approver key in the MVP. The deployed
+  `AgentWallet.confirm` has no expiry of its own; adding one needs a contract change and a redeploy.
+- The PRs are stacked, so merging one out of order pulls in the ones before it.
