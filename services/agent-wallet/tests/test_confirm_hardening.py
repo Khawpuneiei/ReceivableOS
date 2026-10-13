@@ -1,5 +1,6 @@
 """Human-approval path for draws the ledger queued (amount at or above the review threshold)."""
 
+import json
 from datetime import timedelta
 from decimal import Decimal
 
@@ -145,3 +146,17 @@ def test_mock_ledger_decline_drops_the_pending_draw_like_agentwallet_confirm_fal
     ledger.pause(False)
     assert ledger.confirm(pending.pending_id, approve=False).ok
     assert ledger.confirm(pending.pending_id).revert_reason == "NotPending"
+
+
+def test_approval_eval_cases_all_pass():
+    """eval/approval_cases.jsonl: every approval-path attack is caught and every benign case completes."""
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "eval"))
+    from run_eval import evaluate, run_case
+
+    path = Path(__file__).resolve().parents[1] / "eval" / "approval_cases.jsonl"
+    cases = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    failures = [(c["id"], evaluate(c, run_case(c, CANARY, False))[1]) for c in cases]
+    assert [f for f in failures if f[1] != "ok"] == []
