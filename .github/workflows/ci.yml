@@ -1,0 +1,103 @@
+name: CI
+
+# Lint, every service's tests, then the end-to-end demo on the mock ledger, so a red PR shows before review.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  # Offline: no hosted OCR or LLM calls anywhere in CI.
+  OCR_PADDLE_ENABLED: "0"
+  OCR_QWEN_ENABLED: "0"
+  OCR_HOSTED_VISION_ENABLED: "0"
+  LLM_API_KEY: ""
+
+jobs:
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: python -m pip install "ruff==0.17.0"
+      - run: ruff check .
+      - run: ruff format --check .
+
+  test:
+    name: pytest ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false  # one red service should not hide the others
+      matrix:
+        service: [shared, services/ocr-ai, services/policy-ai, services/agent-wallet, services/orchestrator, ui]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            services/*/requirements*.txt
+            ui/requirements.txt
+      - name: Install
+        run: python -m pip install -r requirements-dev.txt -r services/ocr-ai/requirements-dev.txt -r ui/requirements.txt
+      - name: pytest
+        run: python -m pytest -q -p no:cacheprovider ${{ matrix.service }}
+
+  e2e:
+    name: end-to-end demo (mock ledger)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            services/*/requirements*.txt
+      - name: Install
+        run: python -m pip install -r requirements-dev.txt
+      - name: Write a test-only .env
+        run: scripts/ci_env.sh
+      - name: Demo matrix (live)
+        run: |
+          if [ -f services/orchestrator/tests/test_e2e_live.py ]; then
+            scripts/stack.sh start
+            E2E_LIVE=1 python -m pytest -q -p no:cacheprovider services/orchestrator/tests/test_e2e_live.py
+            scripts/stack.sh stop
+          else
+            echo "no live matrix on this branch yet"
+          fi
+      - name: run_demo.py (definition of done)
+        run: |
+          scripts/stack.sh restart
+          python services/orchestrator/run_demo.py | tee demo.out
+          grep -q "outcome   executed" demo.out
+          grep -q "settle    TX-5 executed" demo.out
+      - name: Service logs
+        if: always()
+        run: scripts/stack.sh logs || true

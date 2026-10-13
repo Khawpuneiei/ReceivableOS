@@ -65,6 +65,14 @@ python -m uvicorn app.main:app --app-dir services/orchestrator --port 8000 --rel
 python services/orchestrator/run_demo.py
 ```
 
+Or start all four at once with fresh OCR state (logs in `.stack/`), then stop them:
+
+```bash
+scripts/stack.sh start && python services/orchestrator/run_demo.py; scripts/stack.sh stop
+```
+
+`scripts/ci_env.sh` writes a `.env` with test-only secrets (mock ledger, no LLM key), the one CI uses.
+
 Tests and lint (run tests one service at a time):
 
 ```bash
@@ -72,6 +80,9 @@ pytest shared
 for s in ocr-ai policy-ai agent-wallet orchestrator; do pytest services/$s; done
 ruff check . && ruff format --check .
 ```
+
+CI (`.github/workflows/ci.yml`) runs the same on every PR and on `main`: ruff, pytest per service, then the
+end-to-end demo on the mock ledger.
 
 Every service answers `GET /health`. Until a service implements its main endpoint it returns a stub response that still matches the contract, so the end-to-end flow runs from day one.
 
