@@ -58,7 +58,7 @@ The parser and OCR run in child processes with a restricted environment. The ser
 | `app/supporting.py` | English supporting-template fields, case relationships and non-authoritative declared balances |
 | `app/compare.py` | Evidence-backed invoice/PO checks (`invoice-po-rules-v3`) |
 | `app/fingerprint.py`, `app/history.py` | Registry-v1 fingerprint, local scoped HMAC tokens and bounded atomic observation history |
-| `app/fraud.py`, `app/graph.py` | Rule findings, uncalibrated noisy-OR score and finding-scoped graph (`graph-rules-v2`, including same-supplier bank-account change candidates) |
+| `app/fraud.py`, `app/graph.py` | Rule findings, uncalibrated noisy-OR score and finding-scoped graph (`graph-rules-v2`, including same-supplier bank-account change candidates and `amount_outlier`: an amount at least 3x the median of 3+ prior invoices for the same scoped supplier, buyer and currency, weight 0.15 so review only) |
 | `app/pipeline.py` | Extraction, compatibility projection, comparison, observation, fraud graph and handoff orchestration |
 
 ## API and configuration
