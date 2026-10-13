@@ -105,6 +105,7 @@ class Extraction:
     injection_flags: list[str]
     injection_refs: list[str]
     model_checks: list[dict[str, str]] = field(default_factory=list)
+    forensic_findings: list = field(default_factory=list)
 
 
 def reference_id(parsed: ParsedDocument, span: Span) -> str:
