@@ -37,6 +37,8 @@ FRAUD_WEIGHTS = {
     "shared_bank_token": 0.15,
     "bank_account_changed": 0.25,
     "suspicious_cluster": 0.15,
+    # A billed B and B billed A back for about the same amount within weeks (app/fraud.py); review only.
+    "circular_invoicing": 0.15,
 }
 
 
