@@ -19,6 +19,7 @@ class ReceivableFact:
     limit: Decimal | None = None
     decision_hash: str | None = None
     drawn_amount: Decimal | None = None
+    approved_at: datetime | None = None  # when TX-2 succeeded; bounds the decision's age at draw
 
 
 @dataclass

@@ -12,7 +12,7 @@ Build brief for the service: [`CLAUDE.md`](CLAUDE.md). Request and response mode
   against them with `CHAIN_MODE=fisco`, and the demo's on-chain transactions are checked on chain. The records are in
   [`eval/fisco-deployment.md`](eval/fisco-deployment.md) and [`eval/demo_tx_hashes_fisco.md`](eval/demo_tx_hashes_fisco.md).
 - **Local Anvil:** `scripts/deploy.py` and `scripts/evm_smoke.py` pass 7 of 7 checks.
-- **Tests:** `pytest` 209 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
+- **Tests:** `pytest` 216 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
 - **Orchestrator:** the integration isn't finished. See `docs/orchestrator-integration.md`.
 
 Per-item status is in the table in [`docs/03-agent-wallet.md`](../../docs/03-agent-wallet.md) section 8.
@@ -275,7 +275,9 @@ Money is THB with two decimals.
 - **Audit.** Each action writes a hash-chained entry per check and per outcome. Reads return `verified`, which
   is false if any entry has been changed or removed.
 - **Decision freshness.** `valid_until` is read through a wallet-side request subclass (`DecisionFreshness`). The
-  proper fix is a `contract:` PR that adds the field to shared `PolicyDecision`.
+  proper fix is a `contract:` PR that adds the field to shared `PolicyDecision`. Without `valid_until`, a draw more
+  than 15 minutes after the decision's TX-2 approval is `DecisionStale` (CLAUDE.md §5.4); a held draft is aged to
+  when it was proposed, not to the approver's release.
 - **Approval binds the decision.** `/wallet/approve` needs the decision it names. The wallet recomputes its hash, and
   refuses unless it says `approve` and the request's `limit` and `fee_rate` equal the decision's. The draw re-checks
   the decision hash against the approved one.
@@ -298,7 +300,7 @@ Money is THB with two decimals.
 - Holds and pending approvals are kept in memory. A restart loses them, and a confirm for a draw sent before the
   restart returns `NotPending`. The chain still holds the pending call.
 - The FISCO adapter does not retry a transaction that fails at the RPC level; such a failure raises an exception.
-- The 15-minute approval-age rule from CLAUDE.md §5.4 is not implemented.
+- The 15-minute decision age is kept in memory: after a restart, a receivable approved before it has no age check.
 - The agent loop calls a model only when `LLM_PROVIDER` is set; the alignment check then requires the model to agree
   with the deterministic rule, so the model adds explanation, not authority. The loop is not on the orchestrator path yet.
 - Console or python-sdk screenshots for the submission are not in the repo. The verification output and the receipts are.

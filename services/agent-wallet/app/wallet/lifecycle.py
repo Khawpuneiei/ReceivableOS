@@ -418,6 +418,7 @@ class WalletService:
         fact = self.store.receivables.get(req.invoice_fingerprint)
         if res.ok and fact is not None:
             fact.limit, fact.fee_rate, fact.decision_hash = req.limit, req.fee_rate, req.decision_hash
+            fact.approved_at = self.clock()
         return self._finish(res, extra=[c for c in checks if c.code == "DecisionSigned"])
 
     # ----- TX-4: draw -----
@@ -549,7 +550,10 @@ class WalletService:
         # may have changed (paused, mandate expired, receivable drawn) since the draft was held.
         fact = self.store.receivables.get(hold.intent.invoice_fingerprint)
         ctx = replace(self._context_for(fact), classifier_action="log")
-        guard = check_draw(hold.intent, hold.request, fact, ctx, payee_resolved=True)
+        # The decision's age counts to when the draft was proposed, not to the approver's release.
+        guard = check_draw(
+            hold.intent, hold.request, fact, ctx, payee_resolved=True, proposed_at=hold.held_at
+        )
         if not guard.passed:
             return self._blocked(guard.checks)
         res = self.ledger.execute(hold.intent)
