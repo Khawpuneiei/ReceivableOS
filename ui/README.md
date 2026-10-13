@@ -59,7 +59,7 @@ screen. A live attack response that was **not** stopped is shown with its real s
 change only when the policy service changes. Registry, quotes and wallet parts stand in for the orchestrator until
 it serves them; they are labelled as fixtures and use mock ledger refs, never real-looking chain hashes.
 
-Design rules: state colours only (green executed / approve, amber review / pending, red blocked / reject), body
+Projector and laptop: buttons are navy (`primaryColor` in `ui/.streamlit/config.toml`) so green, amber and red mean only states; the Deploy toolbar is hidden; OCR confidence is a green / amber bar with the 80% minimum marked; the fee shows the APR as the headline and the per-30-day rate under it; known reason codes get plain words next to the code; the mandate is a two-column grid; the step strip fits six steps from 1024 px. Design rules: state colours only (green executed / approve, amber review / pending, red blocked / reject), body
 text 18 px, money with thousands separators, rates in both the per-30-day and APR forms. Invoice text is untrusted
 and is HTML-escaped before display. No personal data beyond company names.
 
