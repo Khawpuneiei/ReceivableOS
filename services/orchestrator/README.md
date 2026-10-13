@@ -3,7 +3,9 @@
 Owner: PM. Scope: the end-to-end flow and demo glue (scope doc section 4.4).
 
 Endpoints on port 8000: `GET /health`, `POST /flow/run` (multipart `file`, optional form `mandate_id`, default
-`mdt_001`), `POST /flow/repay` (form `invoice_id`, optional `amount_paid` and `paid_at`).
+`mdt_001`), `POST /flow/repay` (form `invoice_id`, optional `amount_paid` and `paid_at`),
+`GET /flow/audit/{audit_ref}/proof` (the wallet's Merkle inclusion proof for the latest audit entry behind a
+wallet result's `audit_ref`; 501 when agent-wallet has no `/wallet/audit/proof` route, 404 for an unknown ref).
 
 Status: wired end to end on the mock ledger. `/flow/run` calls ocr-ai, then the agent wallet's `register` (TX-1:
 the on-chain `ReceivableRegistry` is the duplicate check, so a re-saved PDF with the same fingerprint comes back

@@ -203,3 +203,24 @@ async def flow_repay(
             },
         )
     return {"invoice_id": invoice_id, "amount_paid": str(paid), **result}
+
+
+@app.get("/flow/audit/{audit_ref}/proof")
+async def flow_audit_proof(audit_ref: str) -> dict:
+    """Merkle inclusion proof for the latest audit entry behind a wallet result's audit_ref, so the demo
+    screen can check it itself (RFC 9162). Passes through agent-wallet's GET /wallet/audit/proof/{seq};
+    a wallet without that route gives 501, so callers can say the feature is not there yet."""
+    async with _client() as client:
+        found = await client.get(f"{WALLET_URL}/wallet/audit/ref/{audit_ref}")
+        entries = found.json().get("entries", []) if found.status_code == 200 else []
+        if not entries:
+            raise HTTPException(status_code=404, detail=f"no audit entry for {audit_ref}")
+        seq = entries[-1]["seq"]
+        r = await client.get(f"{WALLET_URL}/wallet/audit/proof/{seq}")
+    if r.status_code == 404 and r.json().get("detail") == "Not Found":  # route absent, not an unknown entry
+        raise HTTPException(status_code=501, detail="agent-wallet has no Merkle audit proofs yet")
+    if r.status_code >= 400:
+        raise HTTPException(
+            status_code=502, detail=f"{WALLET_URL}/wallet/audit/proof answered {r.status_code}"
+        )
+    return {"audit_ref": audit_ref, "seq": seq, **r.json()}
