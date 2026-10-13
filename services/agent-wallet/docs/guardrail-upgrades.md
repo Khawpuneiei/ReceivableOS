@@ -2,7 +2,7 @@
 
 For P and the pitch. These are six upgrades, each in its own PR, each measured in this repo. The numbers are from
 `pytest`, `eval/run_eval.py` and a local full-stack run on the mock ledger (`CHAIN_MODE=mock`, no LLM). The PRs are
-stacked on `main` at `4f4dbd6`: merge them in the order #49, #53, #56, #58, #60, #63, #68, #77 (each branch already contains
+stacked on `main` at `4f4dbd6`: merge them in the order #49, #53, #56, #58, #60, #63, #68, #77, #79 (each branch already contains
 the ones before it). With all seven merged: 209 passed, 2 skipped. Where a claim depends on a step outside the wallet folder, the
 section says so.
 
@@ -74,7 +74,6 @@ own recall (14 of 24, 10 of 27) is reported as it is."*
   check means the model adds explanation, not authority.
 - The approval expiry is enforced by the wallet service, which holds the approver key in the MVP. The deployed
   `AgentWallet.confirm` has no expiry of its own; adding one needs a contract change and a redeploy.
-- PD (the buyer's default probability) is checked only off-chain. With the guard bypassed, three red-team cases
-  (W07, S15, S16) pay out on a high-PD decision that the risk oracle had approved. Moving PD on chain needs a
-  contract change and a redeploy.
+- PD (the buyer's default probability) is not on chain. #79 binds it at the TX-2 approval instead, so the three
+  red-team cases that paid out with the guard bypassed (W07, S15, S16) now revert `NotApproved` on chain.
 - The PRs are stacked, so merging one out of order pulls in the ones before it.
