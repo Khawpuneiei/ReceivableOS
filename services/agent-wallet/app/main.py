@@ -14,6 +14,7 @@ from pathlib import Path
 from fastapi import FastAPI, Header, HTTPException
 from ledger.mock import MockLedger
 
+from app.agent.loop import AgentLoop, AgentRunRequest, AgentRunResult
 from app.guard.classifier import load_classifier
 from app.models import ExecuteRequest, load_mandate, load_payees
 from app.settings import get_settings
@@ -123,6 +124,7 @@ def create_app(service: WalletService | None = None) -> FastAPI:
         yield
 
     app = FastAPI(title="agent-wallet", lifespan=lifespan)
+    app.state.wallet = svc
 
     @app.get("/health")
     def health() -> dict:
@@ -134,6 +136,27 @@ def create_app(service: WalletService | None = None) -> FastAPI:
         if req.skip_offchain_checks and not settings.demo_mode:
             return svc._offchain_block("SchemaInvalid", "L0")  # the bypass exists only with DEMO_MODE=1
         return svc.execute(req)
+
+    @app.post("/agent/run", response_model=AgentRunResult)
+    def agent_run(req: AgentRunRequest, x_agent_token: str | None = Header(default=None)) -> AgentRunResult:
+        _check_token(settings.wallet_agent_token, x_agent_token)
+        result = AgentLoop(svc).run(req)
+        svc.audit.record(
+            invoice_id=req.invoice_id,
+            audit_ref=f"agt_{len(svc.audit.entries) + 1}",
+            action="agent_run",
+            event="AGENT_RUN",
+            actor="agent",
+            tx_id=result.wallet.tx_id if result.wallet else None,
+            data={
+                "planner": result.planner,
+                "selected": result.selected_lender,
+                "status": result.status,
+                "block_reason": result.block_reason,
+                "tools": [[c.tool, c.allowed, c.code] for c in result.trace],
+            },
+        )
+        return result
 
     @app.post("/wallet/register", response_model=WalletResult)
     def register(
