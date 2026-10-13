@@ -7,21 +7,26 @@ POST /flow/repay: "buyer paid" -> agent-wallet settle (TX-5).
 A decision that is not `approve` stops after policy-ai: the wallet is never asked to approve or pay it.
 The wallet's tokens come from env: the agent token signs register, execute and settle; the risk oracle's token
 signs approve. Lender quotes are the mock market in data/agent/lender_quotes.json.
+
+Both POST endpoints need the caller's X-Orchestrator-Token. This service holds the wallet tokens, so
+without it anyone who can reach the port could run a draw or record a settlement.
 """
 
+import hmac
 import json
 import os
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 
 from shared.money import fee_rate_30d_to_apr
 
 OCR_URL = os.getenv("OCR_URL", "http://localhost:8001")
 POLICY_URL = os.getenv("POLICY_URL", "http://localhost:8002")
 WALLET_URL = os.getenv("WALLET_URL", "http://localhost:8003")
+ORCHESTRATOR_TOKEN = os.getenv("ORCHESTRATOR_TOKEN", "")  # X-Orchestrator-Token: callers of /flow/*
 WALLET_AGENT_TOKEN = os.getenv("WALLET_AGENT_TOKEN", "")  # X-Agent-Token: register, execute, settle
 WALLET_RISK_ORACLE_TOKEN = os.getenv("WALLET_RISK_ORACLE_TOKEN", "")  # X-Risk-Oracle-Token: approve
 # Payee registry id of the demo seller (services/agent-wallet/config/payees.json). Never an address from text.
@@ -36,13 +41,40 @@ app = FastAPI(title="orchestrator")
 _flows: dict[str, dict] = {}  # invoice_id -> what /flow/repay needs to settle (fingerprint, doc_hash, face)
 
 
+def check_caller(x_orchestrator_token: str | None = Header(default=None)) -> None:
+    """Fails closed: with no ORCHESTRATOR_TOKEN configured, every caller is refused."""
+    if not ORCHESTRATOR_TOKEN or not x_orchestrator_token:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if not hmac.compare_digest(ORCHESTRATOR_TOKEN, x_orchestrator_token):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+
+def parse_amount_paid(raw: str | None, face: str) -> Decimal:
+    """The buyer's payment. Absent means the full face value. It must be above 0, at most the face value,
+    and have at most two decimals. A short payment is allowed: the wallet's waterfall flags it."""
+    if not raw:
+        return Decimal(face).quantize(CENT)
+    try:
+        amount = Decimal(raw)
+    except InvalidOperation:
+        raise HTTPException(status_code=422, detail="amount_paid must be a decimal amount") from None
+    if not amount.is_finite() or amount <= 0 or amount > Decimal(face):
+        raise HTTPException(status_code=422, detail=f"amount_paid must be above 0 and at most {face}")
+    if amount != amount.quantize(CENT):
+        raise HTTPException(status_code=422, detail="amount_paid has more than 2 decimals")
+    return amount.quantize(CENT)
+
+
 def _client() -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=60)
 
 
 async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> dict:
-    """POST to a service; a 4xx/5xx from it becomes a 502 that names the service and its reason."""
-    r = await client.post(url, **kwargs)
+    """POST to a service; a 4xx/5xx from it, or no answer at all, becomes a 502 that names it."""
+    try:
+        r = await client.post(url, **kwargs)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"{url} unreachable: {type(exc).__name__}") from None
     if r.status_code >= 400:
         raise HTTPException(status_code=502, detail=f"{url} answered {r.status_code}: {r.text[:300]}")
     return r.json()
@@ -78,7 +110,7 @@ def health() -> dict:
     return {"status": "ok", "service": "orchestrator"}
 
 
-@app.post("/flow/run")
+@app.post("/flow/run", dependencies=[Depends(check_caller)])
 async def flow_run(file: UploadFile = File(...), mandate_id: str = Form(DEFAULT_MANDATE_ID)) -> dict:
     content = await file.read()
     steps: dict = {"mandate_id": mandate_id}
@@ -177,7 +209,7 @@ async def flow_run(file: UploadFile = File(...), mandate_id: str = Form(DEFAULT_
     return steps
 
 
-@app.post("/flow/repay")
+@app.post("/flow/repay", dependencies=[Depends(check_caller)])
 async def flow_repay(
     invoice_id: str = Form(...), amount_paid: str | None = Form(None), paid_at: str | None = Form(None)
 ) -> dict:
@@ -185,9 +217,7 @@ async def flow_repay(
     flow = _flows.get(invoice_id)
     if flow is None:
         raise HTTPException(status_code=404, detail=f"unknown invoice_id {invoice_id}: run /flow/run first")
-    paid = (Decimal(amount_paid) if amount_paid else Decimal(flow["face_value"])).quantize(
-        CENT, ROUND_HALF_UP
-    )
+    paid = parse_amount_paid(amount_paid, flow["face_value"])
     async with _client() as client:
         result = await _post(
             client,
