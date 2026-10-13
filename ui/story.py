@@ -80,6 +80,11 @@ PLAIN = {
     "ApprovalDeclined": "a person declined the payment",
     "ApprovalExpired": "the person's approval window ran out",
     "SchemaInvalid": "the request was malformed and refused before any check",
+    "MandateMismatch": "the draw names a different mandate than the active one",
+    "NoMandate": "the SME has no active mandate, so the wallet will not pay",
+    "ToolNotAllowed": "the agent tried to call a tool it is not allowed to use",
+    "ApprovalPending": "the payment is waiting for a person to confirm it",
+    "NotPending": "there is no payment waiting for confirmation",
 }
 
 
