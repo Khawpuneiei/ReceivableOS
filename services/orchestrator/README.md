@@ -65,7 +65,7 @@ E2E_LIVE=1 pytest services/orchestrator/tests/test_e2e_live.py
 | `02_injected.pdf` | `injection_flags` set, review, wallet not called |
 | `03_inflated.pdf` | fraud score at or above 0.30, reject, wallet not called |
 | `04_duplicate.pdf`, `01_happy.pdf` again | same fingerprint, TX-1 blocked `DuplicateReceivable`, policy not called |
-| `05_tampered.pdf`, `06_qr_swap.pdf`, `07_words_mismatch.pdf`, `08_terms_mismatch.pdf` (once OCR's PRs land) | review / reject / review / review (fraud flags or failed cross-checks), wallet not called |
+| `05_tampered.pdf`, `06_qr_swap.pdf`, `07_words_mismatch.pdf`, `08_terms_mismatch.pdf`, `09_self_invoice.pdf` (once OCR's PRs land) | review / reject / review / review / review (fraud flags or failed cross-checks), wallet not called |
 | `/flow/attack/A1` to `A5` (once the attack-panel PR lands) | all blocked: `NotApproved` (L1), `DuplicateReceivable` (registry), `AprAboveMandate` (L3), `AmountAboveLimit` (L3), `NotApproved` (L1) |
 | the draw's audit proof (once the Merkle-audit PRs land) | the entry hash recomputes, the RFC 9162 inclusion proof checks against the anchored root, and an edited entry fails |
 | a `.txt` upload | 415 from ocr-ai, passed through (an upload the OCR refuses is the caller's fault, not a 502) |

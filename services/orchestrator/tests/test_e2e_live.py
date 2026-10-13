@@ -120,6 +120,7 @@ def test_repay_of_an_invoice_that_never_ran_is_404(http):
         ("06_qr_swap.pdf", "reject"),  # PromptPay QR pays another tax ID: qr_payee_mismatch 0.40, reject
         ("07_words_mismatch.pdf", "review"),  # amount in words disagrees with the digits: confidence < 0.80
         ("08_terms_mismatch.pdf", "review"),  # payment terms disagree with the due date: confidence < 0.80
+        ("09_self_invoice.pdf", "review"),  # supplier and buyer share a tax ID (SUPPLIER_IS_BUYER)
     ],
 )
 def test_forged_invoices_never_reach_the_wallet(http, matrix, name, decision):
