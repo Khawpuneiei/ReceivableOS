@@ -201,7 +201,7 @@ def steps(view: dict, paid: bool = False) -> list[dict]:
     inv, policy = view.get("ocr") or {}, view.get("policy")
     wallet = view.get("wallet") or {}
     timeline = {t["step"]: t for t in view.get("timeline", [])}
-    flags = len(inv.get("injection_flags", [])) + len(inv.get("fraud_flags", []))
+    flags = sum(len(inv.get(k) or []) for k in ("injection_flags", "fraud_flags", "validation_flags"))
     out = [
         {"name": "Upload", "state": DONE, "detail": f"invoice {inv.get('invoice_no', '-')}"},
         {

@@ -34,10 +34,14 @@ DEMO_CASES = (
         "04_duplicate.pdf",
         "the happy invoice, re-saved as a new file",
     ),
-    # Shown only once ocr-ai's tamper and QR checks land with their demo PDFs (see case_available).
+    # Shown only once ocr-ai's tamper, QR, amount-in-words and terms checks land with their demo PDFs
+    # (see case_available).
     ("tampered", "Tampered PDF", "05_tampered.pdf", "text was added to the PDF after it was made"),
     ("qr_swap", "QR swap", "06_qr_swap.pdf", "the payment QR pays someone other than the supplier"),
+    ("words", "Amount in words", "07_words_mismatch.pdf", "the total in words disagrees with the digits"),
+    ("terms", "Payment terms", "08_terms_mismatch.pdf", "the due date breaks the invoice's own terms"),
 )
+CASES_PER_ROW = 4
 FIXTURES = HERE / "fixtures"
 ATTACKS = ("a1", "a2", "a3", "a4", "a5", "a6")
 ATTACK_LABELS = {
@@ -180,12 +184,15 @@ def run_controls() -> None:
     title = "Run a demo invoice through the live flow" if live() else "Show a recorded run of a demo invoice"
     st.markdown(f"**{title}**")
     cases = [c for c in DEMO_CASES if case_available(c[0], c[2])]
-    cols = st.columns(len(cases))
-    for col, (case, label, filename, hint) in zip(cols, cases, strict=True):
-        if col.button(label, key=f"case_{case}", type="primary" if case == "happy" else "secondary"):
-            run_case(case, filename)
-            st.rerun()
-        col.caption(hint)
+    for start in range(0, len(cases), CASES_PER_ROW):
+        cols = st.columns(CASES_PER_ROW)
+        row = cases[start : start + CASES_PER_ROW]
+        for col, (case, label, filename, hint) in zip(cols, row, strict=False):
+            kind = "primary" if case == "happy" else "secondary"
+            if col.button(label, key=f"case_{case}", type=kind, width="stretch"):
+                run_case(case, filename)
+                st.rerun()
+            col.caption(hint)
     if not live():
         return
     st.caption(
