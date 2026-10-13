@@ -272,6 +272,30 @@ def test_a_wallet_refusal_is_reported_as_502_with_its_reason(client, monkeypatch
     assert "Unauthorized" in r.json()["detail"]
 
 
+def test_an_upload_ocr_refuses_keeps_its_4xx_and_reaches_nothing_else(client, monkeypatch):
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.url.path)
+        return httpx.Response(415, json={"detail": "Only signature-verified PDF, JPEG, and PNG uploads"})
+
+    monkeypatch.setattr(main, "_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    r = client.post("/flow/run", files={"file": ("notes.txt", b"not an invoice", "text/plain")})
+    assert r.status_code == 415  # the caller's file is at fault, not a service: no 502
+    assert "/ocr/extract answered 415" in r.json()["detail"]
+    assert seen == ["/ocr/extract"]
+
+
+def test_an_ocr_outage_is_still_a_502(client, monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, json={"detail": "FINGERPRINT_HMAC_KEY is not configured"})
+
+    monkeypatch.setattr(main, "_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    r = client.post("/flow/run", files={"file": ("01_happy.pdf", b"%PDF-1.4 test", "application/pdf")})
+    assert r.status_code == 502
+    assert "/ocr/extract answered 503" in r.json()["detail"]
+
+
 def test_select_quote_prefers_the_highest_advance_within_the_approved_apr():
     chosen, offers = main.select_quote(decision())
     assert chosen["lender_id"] == "lender_a"  # 70% at 10.95% beats 65% at 9.13%

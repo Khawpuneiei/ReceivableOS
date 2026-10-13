@@ -40,11 +40,14 @@ def _client() -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=60)
 
 
-async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> dict:
-    """POST to a service; a 4xx/5xx from it becomes a 502 that names the service and its reason."""
+async def _post(client: httpx.AsyncClient, url: str, keep_4xx: bool = False, **kwargs) -> dict:
+    """POST to a service; a 4xx/5xx from it becomes a 502 that names the service and its reason.
+    With keep_4xx, a 4xx keeps its status: ocr-ai's 4xx means the caller's upload is at fault (wrong type,
+    too big), not that a service is down."""
     r = await client.post(url, **kwargs)
     if r.status_code >= 400:
-        raise HTTPException(status_code=502, detail=f"{url} answered {r.status_code}: {r.text[:300]}")
+        status = r.status_code if keep_4xx and r.status_code < 500 else 502
+        raise HTTPException(status_code=status, detail=f"{url} answered {r.status_code}: {r.text[:300]}")
     return r.json()
 
 
@@ -85,7 +88,10 @@ async def flow_run(file: UploadFile = File(...), mandate_id: str = Form(DEFAULT_
     agent = {"X-Agent-Token": WALLET_AGENT_TOKEN}
     async with _client() as client:
         invoice = steps["ocr"] = await _post(
-            client, f"{OCR_URL}/ocr/extract", files={"file": (file.filename, content, file.content_type)}
+            client,
+            f"{OCR_URL}/ocr/extract",
+            keep_4xx=True,
+            files={"file": (file.filename, content, file.content_type)},
         )
         invoice_id, fingerprint = invoice["invoice_id"], invoice["invoice_fingerprint"]
 

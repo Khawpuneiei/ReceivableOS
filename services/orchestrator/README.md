@@ -50,3 +50,19 @@ pytest services/orchestrator
 
 `tests/test_flow.py` runs the flow against fake services (`httpx.MockTransport`) and checks the call order, the
 token header on each wallet route and the fields the wallet's guard binds to.
+
+`tests/test_e2e_live.py` is the demo matrix against the real stack, skipped unless `E2E_LIVE=1`. Start all four
+services with fresh state (a new `OCR_STATE_PATH`, a freshly started wallet), then:
+
+```bash
+E2E_LIVE=1 pytest services/orchestrator/tests/test_e2e_live.py
+```
+
+| Invoice | Expected |
+|---|---|
+| `01_happy.pdf` | approve, 70% advance, THB 524,300 limit, 0.9% / 30 days (10.95% APR), lender_a; TX-1, TX-2, TX-4 executed |
+| `/flow/repay` on it, twice | TX-5 executed once; the replay returns the same `tx_id` (`IdempotentReplay`) |
+| `02_injected.pdf` | `injection_flags` set, review, wallet not called |
+| `03_inflated.pdf` | fraud score at or above 0.30, reject, wallet not called |
+| `04_duplicate.pdf`, `01_happy.pdf` again | same fingerprint, TX-1 blocked `DuplicateReceivable`, policy not called |
+| a `.txt` upload | 415 from ocr-ai, passed through (an upload the OCR refuses is the caller's fault, not a 502) |
