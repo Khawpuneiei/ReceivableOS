@@ -10,10 +10,22 @@ from pydantic import Field
 from app.compare import compare_documents
 from app.config import MAX_OBSERVATIONS, REVIEW_CONFIDENCE, Settings
 from app.extract import Extraction, extract_document
-from app.fingerprint import bank_token, entity_token, legacy_fingerprint, semantic_fingerprint
+from app.fingerprint import (
+    bank_token,
+    entity_token,
+    history_context,
+    legacy_fingerprint,
+    semantic_fingerprint,
+)
 from app.fraud import FraudFinding, finding, graph_findings, score
 from app.graph import export_graph
-from app.history import HistoryCapacityError, HistoryConflictError, InvoiceObservation, ObservationStore
+from app.history import (
+    HistoryCapacityError,
+    HistoryConflictError,
+    HistoryContextError,
+    InvoiceObservation,
+    ObservationStore,
+)
 from app.ingest import detect_format, digest, run_worker
 from app.llm_client import configured, read_hosted_candidates
 from app.models import (
@@ -247,9 +259,18 @@ def observe(
         evidence=[evidence_by_id[ref] for ref in observation_refs if ref in evidence_by_id],
         anomaly_codes=[item.code for item in initial_findings],
     )
-    store = ObservationStore(settings.state_path, max_observations=MAX_OBSERVATIONS)
+    store = ObservationStore(
+        settings.state_path,
+        max_observations=MAX_OBSERVATIONS,
+        context_digest=history_context(settings.fingerprint_key, settings.bank_key),
+    )
     try:
         history = store.observe(observation, request_digest=request_digest, idempotency_key=idempotency_key)
+        records = store.observations()
+    except HistoryContextError as exc:
+        raise HTTPException(
+            503, "OCR history identity context changed or is unversioned; operator migration is required"
+        ) from exc
     except ValueError as exc:
         if not isinstance(exc, (HistoryConflictError, HistoryCapacityError)):
             raise HTTPException(422, "Invalid observation or idempotency metadata") from exc
@@ -272,7 +293,6 @@ def observe(
                 path=[history.observation_id, duplicate.previous_observation_id],
             )
         )
-    records = store.observations()
     index = next(index for index, (oid, _) in enumerate(records) if oid == history.observation_id)
     findings.extend(graph_findings(records[: index + 1], history.observation_id))
     for _, record in records[: index + 1]:
