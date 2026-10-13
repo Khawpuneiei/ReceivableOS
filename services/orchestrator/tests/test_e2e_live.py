@@ -20,12 +20,13 @@ import pytest
 pytestmark = pytest.mark.skipif(os.getenv("E2E_LIVE") != "1", reason="needs the live stack; set E2E_LIVE=1")
 
 ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "http://localhost:8000")
+CALLER = {"X-Orchestrator-Token": os.getenv("ORCHESTRATOR_TOKEN", "")}  # /flow/* fails closed without it
 DEMO = Path(__file__).resolve().parents[3] / "data" / "invoices" / "demo"
 
 
 @pytest.fixture(scope="module")
 def http():
-    with httpx.Client(base_url=ORCHESTRATOR_URL, timeout=120) as client:
+    with httpx.Client(base_url=ORCHESTRATOR_URL, headers=CALLER, timeout=120) as client:
         yield client
 
 
