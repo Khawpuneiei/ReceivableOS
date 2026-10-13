@@ -13,6 +13,7 @@ from app.ingest import ParsedDocument, Span
 from app.layout import anchored_rows, compact, segments, source_rows, table_rows
 from app.models import DocumentExtraction, EvidenceReference, FieldValue, LineExtraction
 from app.normalize import normalize_country, normalize_currency, normalize_date, normalize_number
+from app.payment_terms import payment_terms_reason
 
 LABELS = {
     "document_number": ("Invoice No", "Invoice Number", "Invoice", "เลขที่ใบแจ้งหนี้"),
@@ -434,6 +435,9 @@ def extract_document(parsed: ParsedDocument, document_type: str) -> Extraction:
                         redact(child)
 
         redact(doc)
+    terms_text = [span.text for row in source_rows(parsed.spans, INSTRUCTION) for span in row]
+    if terms_reason := payment_terms_reason([" ".join(terms_text)], doc.issue_date.value, doc.due_date.value):
+        doc.review_reasons.append(terms_reason)
     # Script claims require observed script support; declared metadata cannot grant support.
     letters = [
         char
