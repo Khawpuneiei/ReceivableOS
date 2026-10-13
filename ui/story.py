@@ -79,6 +79,7 @@ FINDING_PLAIN = {
     "qr_amount_mismatch": "the payment QR asks for a different amount",
     "qr_crc_invalid": "the payment QR is corrupted",
     "qr_payee_unverified": "the payment QR's payee could not be checked",
+    "amount_outlier": "the amount is at least 3x what this supplier usually bills this buyer",
 }
 INJECTION_CATEGORY = {
     "role_override": "tries to take over the AI's role",
@@ -92,6 +93,7 @@ INJECTION_CATEGORY = {
 # OCR validation_flags (newer ocr-ai): checks that the invoice agrees with itself.
 VALIDATION_PLAIN = {
     "AMOUNT_WORDS_MISMATCH": "the total written in words does not match the digits",
+    "DUE_DATE_TERMS_MISMATCH": "the due date does not match the invoice's own payment terms",
 }
 INJECTION_TECHNIQUE = {
     "plain": "plain",
