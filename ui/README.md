@@ -41,7 +41,7 @@ Nothing crashes when the orchestrator is missing something:
 
 A service that fails behind the orchestrator is named in plain words ("the OCR service refused the request (HTTP 415): …"). [Buyer paid] appears only after a draw executed. If a demo case fails live (orchestrator down, a service error), the screen shows the **saved run of that same
 case** from `ui/fixtures/runs/` with a SAVED RUN banner and "(saved demo)" on the verdict, so the story still
-makes sense on stage. In fixture mode the same four buttons show those saved runs. They are real `/flow/run`
+makes sense on stage. In fixture mode the same buttons show those saved runs (all eight cases, so judge mode works with no stack running). They are real `/flow/run`
 responses recorded on the mock ledger (OCR evidence and wallet check lists trimmed); re-record them by running
 each case live on fresh state and saving the response. An unreachable orchestrator gives an amber "Orchestrator unavailable … showing fixtures" banner and the fixture
 screen. A live attack response that was **not** stopped is shown with its real status, never relabelled BLOCKED.
