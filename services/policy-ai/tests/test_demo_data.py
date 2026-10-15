@@ -56,9 +56,9 @@ def test_demo_parties_match_the_rest_of_the_repo():
         (REPO / "services" / "orchestrator" / "samples" / "profiles.json").read_text(encoding="utf-8")
     )
     assert samples == {"supplier_profile": seller, "buyer_profile": buyer}
-    ocr = (REPO / "services" / "ocr-ai" / "app" / "main.py").read_text(encoding="utf-8")
-    for party in (seller, buyer):
-        assert f'name="{party["name"]}", tax_id="{party["tax_id"]}"' in ocr
+    ocr = (REPO / "services" / "ocr-ai" / "datagen" / "generate.py").read_text(encoding="utf-8")
+    for text in (seller["name"], seller["tax_id"], buyer["name"], buyer["tax_id"]):
+        assert text in ocr  # the parties printed on OCR's generated demo invoices
     finance = (REPO / "docs" / "02-finance-domain.md").read_text(encoding="utf-8")
     for text in (
         seller["name"],
