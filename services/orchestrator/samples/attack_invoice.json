@@ -1,0 +1,27 @@
+{
+  "supplier": {
+    "name": "Siam Fresh Pack",
+    "tax_id": "0105559000000"
+  },
+  "buyer": {
+    "name": "Mekong Basket Retail PCL",
+    "tax_id": "0107559000001"
+  },
+  "invoice_no": "ATTACK-SAMPLE-0001",
+  "issue_date": "2026-10-01",
+  "due_date": "2026-11-15",
+  "amount": "749000.00",
+  "currency": "THB",
+  "line_items": [
+    {
+      "description": "Food trays",
+      "qty": "50000",
+      "unit_price": "14.00",
+      "total": "700000.00"
+    }
+  ],
+  "confidence": 0.97,
+  "injection_flags": [],
+  "fraud_score": 0.0,
+  "fraud_flags": []
+}

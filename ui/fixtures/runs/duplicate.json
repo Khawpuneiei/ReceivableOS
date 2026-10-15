@@ -1,0 +1,8 @@
+{
+ "mandate_id": "mdt_001",
+ "ocr": {"amount": "749000.00", "buyer": {"name": "Mekong Basket Retail PCL", "tax_id": "0107559000001"}, "confidence": 0.79, "currency": "THB", "doc_hash": "sha256:ac1bb6f0fcb1ca0d390927adb096a8cf9bf3a2454fcb1665a3fd5223056d4a33", "due_date": "2026-11-15", "fraud_flags": ["duplicate_fingerprint"], "fraud_score": 0.8, "injection_flags": [], "invoice_fingerprint": "0x3e672037c477c02f0d3aa40416a0f2bfccdc9bf26775d1edc65a2c2b3fe5d46f", "invoice_id": "obs_645115727b924fd1b8e102c4d24c1a90", "invoice_no": "SFP-INV-2026-0142", "issue_date": "2026-10-01", "line_items": [{"description": "Food trays", "qty": "50000", "total": "700000.00", "unit_price": "14.00"}], "supplier": {"name": "Siam Fresh Pack", "tax_id": "0105559000000"}},
+ "outcome": "blocked: DuplicateReceivable",
+ "recorded": "live /flow/run on the mock ledger, 2026-10-13; rebuild by re-running the case live",
+ "register": {"approvals_required": 0, "audit_ref": "aud_acb52ed6a6e6", "block_reason": "DuplicateReceivable", "chain": "mock", "chain_ref": "mock:0x1596cc09f9393e44170afaba1349b76454d7dc632671fc8fc15fdc57936dfae1", "explorer_url": null, "schema_version": "1", "status": "blocked", "tx_id": "tx_acb52ed6a6e64101"},
+ "registry": {"duplicate": true, "invoice_fingerprint": "0x3e672037c477c02f0d3aa40416a0f2bfccdc9bf26775d1edc65a2c2b3fe5d46f"}
+}
