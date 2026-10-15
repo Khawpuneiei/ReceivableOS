@@ -121,6 +121,10 @@ def test_the_verdict_says_saved_demo_when_nothing_ran_live():
         ("injected", "Sent to a person"),
         ("inflated", "Rejected"),
         ("duplicate", "Stopped: duplicate invoice"),
+        ("tampered", "Sent to a person"),
+        ("qr_swap", "Rejected"),
+        ("words", "Sent to a person"),
+        ("terms", "Sent to a person"),
     ],
 )
 def test_fixture_mode_shows_the_saved_run_of_each_case(case, headline):
@@ -142,9 +146,12 @@ def test_live_failure_falls_back_to_the_saved_run_of_the_same_case(monkeypatch):
 
 
 def test_cases_without_a_saved_run_or_pdf_are_not_offered():
+    import app as ui_app
+
     at = AppTest.from_file(APP, default_timeout=30).run()
     keys = {b.key for b in at.button if b.key and b.key.startswith("case_")}
-    assert {"case_happy", "case_duplicate"} <= keys and "case_qr_swap" not in keys  # no saved QR-swap run yet
+    assert {f"case_{c[0]}" for c in ui_app.DEMO_CASES} == keys  # every case has a saved run
+    assert not ui_app.case_available("not_recorded", "99_none.pdf")
 
 
 def test_judge_mode_runs_every_case_and_lists_one_verdict_each():
