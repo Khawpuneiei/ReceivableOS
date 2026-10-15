@@ -69,14 +69,20 @@ def _client() -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=60)
 
 
-async def _post(client: httpx.AsyncClient, url: str, **kwargs) -> dict:
-    """POST to a service; a 4xx/5xx from it, or no answer at all, becomes a 502 that names it."""
+UPLOAD_FAULTS = (413, 415, 422)  # ocr-ai refusing the upload itself: too big, wrong type, unreadable
+
+
+async def _post(client: httpx.AsyncClient, url: str, keep_4xx: bool = False, **kwargs) -> dict:
+    """POST to a service; a 4xx/5xx from it, or no answer at all, becomes a 502 that names it.
+    With keep_4xx, ocr-ai's 413, 415 and 422 keep their status: the caller's upload is at fault, not a
+    service. Any other 4xx (a missing token, a wrong route) is still the stack's fault, so still a 502."""
     try:
         r = await client.post(url, **kwargs)
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=f"{url} unreachable: {type(exc).__name__}") from None
     if r.status_code >= 400:
-        raise HTTPException(status_code=502, detail=f"{url} answered {r.status_code}: {r.text[:300]}")
+        status = r.status_code if keep_4xx and r.status_code in UPLOAD_FAULTS else 502
+        raise HTTPException(status_code=status, detail=f"{url} answered {r.status_code}: {r.text[:300]}")
     return r.json()
 
 
@@ -117,7 +123,10 @@ async def flow_run(file: UploadFile = File(...), mandate_id: str = Form(DEFAULT_
     agent = {"X-Agent-Token": WALLET_AGENT_TOKEN}
     async with _client() as client:
         invoice = steps["ocr"] = await _post(
-            client, f"{OCR_URL}/ocr/extract", files={"file": (file.filename, content, file.content_type)}
+            client,
+            f"{OCR_URL}/ocr/extract",
+            keep_4xx=True,
+            files={"file": (file.filename, content, file.content_type)},
         )
         invoice_id, fingerprint = invoice["invoice_id"], invoice["invoice_fingerprint"]
 
