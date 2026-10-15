@@ -13,7 +13,9 @@ view["from_fixture"], so the screen can label them.
 
 from __future__ import annotations
 
+import json
 import os
+import re
 from typing import Any
 
 import httpx
@@ -31,6 +33,14 @@ STEP_KEYS = {
 
 class Unavailable(Exception):
     """The orchestrator could not be reached or answered with a server error."""
+
+
+class ServiceError(Unavailable):
+    """The orchestrator answered, but one of the services behind it failed; `plain` says which, in words."""
+
+    def __init__(self, message: str, plain: str):
+        super().__init__(message)
+        self.plain = plain
 
 
 class Unsupported(Exception):
@@ -53,8 +63,15 @@ class Orchestrator:
         if r.status_code in (404, 405):
             raise Unsupported(path)
         if r.status_code >= 500:
+            detail = _detail(r)
+            if detail:
+                raise ServiceError(f"HTTP {r.status_code} from {path}: {detail}", plain_error(detail))
             raise Unavailable(f"HTTP {r.status_code} from {path}")
-        r.raise_for_status()
+        if (
+            r.status_code >= 400
+        ):  # e.g. 415 when OCR refuses the uploaded file: the file's fault, said plainly
+            detail = _detail(r) or f"HTTP {r.status_code}"
+            raise ServiceError(f"HTTP {r.status_code} from {path}: {detail}", plain_error(detail))
         return r.json()
 
     def health(self) -> bool:
@@ -84,6 +101,34 @@ class Orchestrator:
         return self._call("POST", f"/flow/confirm/{tx_id}")
 
 
+SERVICE_NAMES = {"/ocr/": "the OCR service", "/policy/": "the policy service", "/wallet/": "the agent wallet"}
+
+
+def _detail(r: httpx.Response) -> str:
+    try:
+        detail = r.json().get("detail")
+    except ValueError:
+        return ""
+    return detail if isinstance(detail, str) else ""
+
+
+def plain_error(detail: str) -> str:
+    """'http://x:8001/ocr/extract answered 415: {"detail": "..."}' -> 'the OCR service refused the request
+    (HTTP 415): ...', so a judge sees which step failed and why instead of a bare 502."""
+    service = next((name for key, name in SERVICE_NAMES.items() if key in detail), "a service")
+    match = re.search(r"answered (\d{3}): ?(.*)", detail, re.S)
+    if not match:
+        return f"{service} failed: {detail[:200]}"
+    code, reason = match.groups()
+    try:
+        inner = json.loads(reason).get("detail")
+        reason = inner if isinstance(inner, str) else reason
+    except (ValueError, AttributeError):
+        pass  # the service's body was cut at 300 characters or isn't JSON; show it as text
+    verb = "refused the request" if code.startswith("4") else "failed"
+    return f"{service} {verb} (HTTP {code}): {reason[:200]}"
+
+
 def _steps(raw: dict) -> dict[str, Any]:
     """{part: payload} from either response shape."""
     if isinstance(raw.get("steps"), list):
@@ -98,11 +143,18 @@ def _steps(raw: dict) -> dict[str, Any]:
     return {part: raw[names[0]] for part, names in STEP_KEYS.items() if names[0] in raw}
 
 
-def wallet_tx(wallet: dict) -> dict:
+TX_CALLS = {
+    "TX-1": "Registry.register (duplicate check)",
+    "TX-2": "Registry.approve (credit approval)",
+    "TX-4": "AgentWallet.execute -> Vault.draw",
+}
+
+
+def wallet_tx(wallet: dict, step: str = "TX-4") -> dict:
     """One timeline row from a WalletResult."""
     return {
-        "step": "TX-4",
-        "call": "wallet execute",
+        "step": step,
+        "call": TX_CALLS.get(step, "wallet execute"),
         "tx_id": wallet.get("tx_id"),
         "status": wallet.get("status", "unknown"),
         "chain_ref": wallet.get("chain_ref") or wallet.get("tx_id"),
@@ -111,8 +163,20 @@ def wallet_tx(wallet: dict) -> dict:
     }
 
 
+def offer_reason(offer: dict) -> str:
+    if offer.get("chosen"):
+        return "highest advance within the approved APR"
+    if not offer.get("within_mandate", True):
+        return "APR above the approved rate"
+    return "lower advance"
+
+
 def to_view(raw: dict, fixture: dict) -> dict:
-    """The screen's view model from an orchestrator response, with fixture parts labelled."""
+    """The screen's view model from an orchestrator response, with fixture parts labelled.
+
+    A part the flow never reached (offers after a review, the wallet after a duplicate) stays empty and is
+    listed in view["not_reached"]; only a part an older orchestrator doesn't return falls back to the fixture.
+    """
     parts = _steps(raw)
     view: dict[str, Any] = {
         "source": "orchestrator",
@@ -120,31 +184,46 @@ def to_view(raw: dict, fixture: dict) -> dict:
         "state": raw.get("state") or raw.get("outcome"),
         "mandate_text": fixture["mandate_text"],
         "from_fixture": [],
+        "not_reached": [],
     }
     if "ocr" not in parts:
         raise ValueError("orchestrator response has no ocr step")
     view["ocr"] = parts["ocr"]
     view["policy"] = parts.get("policy")  # None when the flow stopped before policy (e.g. a duplicate)
     view["registry"] = parts.get("registry", {})
-    for part in ("mandate", "offers"):
-        if part in parts:
-            view[part] = parts[part]
-        else:
-            view[part] = fixture[part]
-            view["from_fixture"].append(part)
     wallet = parts.get("wallet")
+    if "mandate" in parts:
+        view["mandate"] = parts["mandate"]
+    else:
+        view["mandate"] = fixture["mandate"]
+        view["from_fixture"].append("mandate")
+    if "offers" in parts:
+        view["offers"] = [{**o, "reason": o.get("reason") or offer_reason(o)} for o in parts["offers"]]
+    elif wallet:  # the draw ran, so quotes existed: this orchestrator just doesn't return them
+        view["offers"] = fixture["offers"]
+        view["from_fixture"].append("offers")
+    else:
+        view["offers"] = []
+        view["not_reached"].append("offers")
+    register, approve = raw.get("register"), raw.get("approve")
+    view["timeline"] = [wallet_tx(r, step) for r, step in ((register, "TX-1"), (approve, "TX-2")) if r]
     if wallet:
         view["wallet"] = wallet
-        view["timeline"] = [wallet_tx(wallet)]
+        view["timeline"].append(wallet_tx(wallet))
     else:  # stopped before the wallet (duplicate, reject, review)
-        view["wallet"] = {"status": view["state"], "chain": None, "audit_ref": "-"}
-        view["timeline"] = []
-    if view["registry"].get("duplicate"):
+        chain = (register or {}).get("chain")
+        view["wallet"] = {
+            "status": view["state"],
+            "chain": chain,
+            "audit_ref": (register or {}).get("audit_ref"),
+        }
+        view["not_reached"].append("wallet")
+    if view["registry"].get("duplicate") and not register:
         view["timeline"].insert(
             0,
             {
                 "step": "TX-1",
-                "call": "registry duplicate check",
+                "call": TX_CALLS["TX-1"],
                 "status": "blocked",
                 "chain_ref": None,
                 "block_reason": "DuplicateReceivable",

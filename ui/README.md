@@ -23,7 +23,7 @@ works with no backend. A blue "FIXTURE MODE" banner says so on screen.
 UI_MODE=live ORCHESTRATOR_URL=http://localhost:8000 streamlit run ui/app.py --server.port 3000
 ```
 
-The screen talks **only** to the orchestrator, through `ui/client.py`. [Use demo invoice] (or an uploaded file)
+The screen talks **only** to the orchestrator, through `ui/client.py`. [Use demo invoice] (`data/invoices/demo/01_happy.pdf`; OCR refuses the old `.txt` sample outside development mode) or an uploaded file
 posts to `POST /flow/run`, and `client.to_view` maps the response onto the view model. It reads both today's
 flat `{mandate_id, ocr, registry, policy, wallet, outcome}` and the brief's `{flow_id, state, steps: [...]}`.
 Nothing crashes when the orchestrator is missing something:
@@ -32,13 +32,14 @@ Nothing crashes when the orchestrator is missing something:
 |---|---|---|---|
 | Run the flow | `POST /flow/run` (file, `mandate_id`) | served | live OCR, policy and wallet results; a duplicate shows STOPPED with a red registry row |
 | Compiled mandate | `POST /flow/mandate/compile` `{text}` | missing | saved mandate, labelled FIXTURE |
-| Lender quotes | an `offers` / `quotes` step in `/flow/run` | missing | saved quotes, labelled FIXTURE |
+| Ledger timeline | `register` (TX-1), `approve` (TX-2), `wallet` (TX-4) in `/flow/run` | served | one row per wallet call that ran; a duplicate shows the wallet's own red TX-1 |
+| Lender quotes | `offers` in `/flow/run` | served | live quotes; "Not reached" when the flow stopped at review, reject or a duplicate |
 | Human approval | `POST /flow/confirm/{tx_id}` | missing | amber notice; the button is marked done |
 | Buyer paid | `POST /flow/repay` (JSON `{flow_id, amount_paid}` when there is a `flow_id`, else form `invoice_id`) | stub reply | shows the stub's status as a grey TX-5 row |
 | Attacks A1–A6 | `POST /flow/attack/{case}` | missing | saved attack row, labelled "fixture: orchestrator has no attack route" |
 | Audit link | `audit_ref` from the wallet result | served (stub ref) | shown in the footer |
 
-An unreachable orchestrator gives an amber "Orchestrator unavailable … showing fixtures" banner and the fixture
+A service that fails behind the orchestrator is named in plain words ("the OCR service refused the request (HTTP 415): …"). [Buyer paid] appears only after a draw executed. An unreachable orchestrator gives an amber "Orchestrator unavailable … showing fixtures" banner and the fixture
 screen. A live attack response that was **not** stopped is shown with its real status, never relabelled BLOCKED.
 
 ## What is on screen, and where the numbers come from
