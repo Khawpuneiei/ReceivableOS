@@ -160,3 +160,21 @@ def test_approval_eval_cases_all_pass():
     cases = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
     failures = [(c["id"], evaluate(c, run_case(c, CANARY, False))[1]) for c in cases]
     assert [f for f in failures if f[1] != "ok"] == []
+
+
+@pytest.mark.parametrize(("approve", "status"), [(True, "executed"), (False, "blocked")])
+def test_a_double_clicked_confirm_answers_instead_of_erroring(wallet, approve, status):
+    """Two confirms of one draw at once: the other request drops the queued entry while this one is on the
+    ledger, and this one must still answer."""
+    client, service, _ = wallet
+    tx_id = queue_big_draw(client)
+    real = service.ledger.confirm
+
+    def racing(pending_id, approve=True):
+        res = real(pending_id, approve=approve)
+        service.store.pending.pop(tx_id, None)  # the parallel confirm finished first
+        return res
+
+    service.ledger.confirm = racing
+    assert confirm(client, tx_id, approve=approve)["status"] == status
+    assert tx_id not in service.store.pending

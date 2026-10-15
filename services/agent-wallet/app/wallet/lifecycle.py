@@ -540,7 +540,8 @@ class WalletService:
         else:
             res = self.ledger.confirm(item.pending_id)
             if res.ok or res.revert_reason == "NotPending":
-                del self.store.pending[tx_id]  # the ledger no longer holds it either
+                # The ledger no longer holds it either. pop, not del: a double-clicked confirm may have dropped it.
+                self.store.pending.pop(tx_id, None)
             fact = self.store.receivables.get(item.intent.invoice_fingerprint) if item.intent else None
             if res.ok and fact is not None and item.intent is not None:
                 fact.drawn_amount = item.intent.amount
@@ -552,7 +553,7 @@ class WalletService:
         """Declines the queued draw on the ledger as well, so it cannot be released later."""
         res = self.ledger.confirm(item.pending_id, approve=False)
         if res.ok or res.revert_reason == "NotPending":
-            del self.store.pending[tx_id]
+            self.store.pending.pop(tx_id, None)
         checks = [GuardCheck(layer="L4", code=code, passed=False)]
         if not res.ok and res.revert_reason != "NotPending":  # e.g. Paused: still queued, decline again later
             checks.append(GuardCheck(layer="L5", code=res.revert_reason or "Unknown", passed=False))
