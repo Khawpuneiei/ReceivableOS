@@ -146,6 +146,7 @@ def run_file(content: bytes, name: str, case: str | None = None) -> str | None:
         return f"Orchestrator unavailable at {orch.base_url()} ({exc})."
     st.session_state.update(paid=False, approved=False, notice=None, extra_tx=[], case=case or name)
     st.session_state.ran.add(case or name)
+    st.session_state.live_views[case or name] = st.session_state.view
     return None
 
 
@@ -184,7 +185,11 @@ def run_all() -> None:
     """Judge mode: every available case in order (Happy first, so Duplicate has something to repeat)."""
     board = []
     for case, label, filename, _ in [c for c in DEMO_CASES if case_available(c[0], c[2])]:
-        run_case(case, filename)
+        if live() and case in st.session_state.live_views:
+            # Already ran live this session: re-posting it would only show the registry's duplicate block.
+            st.session_state.update(view=st.session_state.live_views[case], case=case, notice=None)
+        else:
+            run_case(case, filename)
         view = load_view()
         if st.session_state.case != case:  # it failed and there is no saved run to show instead
             board.append(
@@ -284,6 +289,7 @@ def init_state() -> None:
         "notice": None,
         "extra_tx": [],
         "ran": set(),
+        "live_views": {},
         "case": None,
         "scoreboard": [],
     }
