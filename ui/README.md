@@ -23,6 +23,9 @@ works with no backend. A blue "FIXTURE MODE" banner says so on screen.
 UI_MODE=live ORCHESTRATOR_URL=http://localhost:8000 streamlit run ui/app.py --server.port 3000
 ```
 
+When the orchestrator requires a caller token, the screen sends `ORCHESTRATOR_TOKEN` (from `.env`) as
+`X-Orchestrator-Token` on every call; a missing or wrong token shows "the orchestrator refused the screen".
+
 The screen talks **only** to the orchestrator, through `ui/client.py`. Four one-click cases post the PDFs in `data/invoices/demo/`: Happy, Injected instructions, Inflated amount and Duplicate (re-saved PDF); Duplicate runs Happy first when this session hasn't, so there is something to duplicate. Any other file goes through "Or upload your own invoice". Each run
 posts to `POST /flow/run`, and `client.to_view` maps the response onto the view model. It reads both today's
 flat `{mandate_id, ocr, registry, policy, wallet, outcome}` and the brief's `{flow_id, state, steps: [...]}`.
