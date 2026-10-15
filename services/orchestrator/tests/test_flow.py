@@ -288,6 +288,16 @@ def test_an_upload_ocr_refuses_keeps_its_4xx_and_reaches_nothing_else(client, mo
     assert seen == ["/ocr/extract"]
 
 
+@pytest.mark.parametrize("status", [401, 403, 404])
+def test_an_ocr_4xx_that_is_not_the_uploads_fault_is_still_a_502(client, monkeypatch, status):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(status, json={"detail": "Unauthorized"})
+
+    monkeypatch.setattr(main, "_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    r = client.post("/flow/run", files={"file": ("01_happy.pdf", b"%PDF-1.4 test", "application/pdf")})
+    assert r.status_code == 502  # a token or routing problem in the stack, not the caller's file
+
+
 def test_an_ocr_outage_is_still_a_502(client, monkeypatch):
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(503, json={"detail": "FINGERPRINT_HMAC_KEY is not configured"})
