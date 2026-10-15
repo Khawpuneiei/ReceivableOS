@@ -540,7 +540,7 @@ class WalletService:
         else:
             res = self.ledger.confirm(item.pending_id)
             if res.ok or res.revert_reason == "NotPending":
-                # The ledger no longer holds it either. pop, not del: a double-clicked confirm may have dropped it.
+                # The ledger no longer holds it either. pop: a double-clicked confirm may have dropped it.
                 self.store.pending.pop(tx_id, None)
             fact = self.store.receivables.get(item.intent.invoice_fingerprint) if item.intent else None
             if res.ok and fact is not None and item.intent is not None:
