@@ -139,3 +139,9 @@ def test_live_failure_falls_back_to_the_saved_run_of_the_same_case(monkeypatch):
     assert not at.exception
     assert "saved run of this case" in at.warning[0].value
     assert "Rejected" in _text(at) and "SAVED RUN: Inflated amount" in at.info[0].value
+
+
+def test_cases_without_a_saved_run_or_pdf_are_not_offered():
+    at = AppTest.from_file(APP, default_timeout=30).run()
+    keys = {b.key for b in at.button if b.key and b.key.startswith("case_")}
+    assert {"case_happy", "case_duplicate"} <= keys and "case_qr_swap" not in keys  # no saved QR-swap run yet

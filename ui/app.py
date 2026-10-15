@@ -26,19 +26,17 @@ DEMO_INVOICE = DEMO_DIR / "01_happy.pdf"  # a real PDF; OCR refuses the old .txt
 # One-click cases: (key, button, file in data/invoices/demo/, what it shows). Built by the AI engineers.
 DEMO_CASES = (
     ("happy", "Happy invoice", "01_happy.pdf", "a clean invoice: read, approved and paid"),
-    (
-        "injected",
-        "Injected instructions",
-        "02_injected.pdf",
-        "text in the PDF tells the AI to approve and pay",
-    ),
+    ("injected", "Injected instructions", "02_injected.pdf", "the PDF tells the AI to approve and pay"),
     ("inflated", "Inflated amount", "03_inflated.pdf", "the total is bigger than its line items"),
     (
         "duplicate",
         "Duplicate (re-saved PDF)",
         "04_duplicate.pdf",
-        "the happy invoice saved again as a new file",
+        "the happy invoice, re-saved as a new file",
     ),
+    # Shown only once ocr-ai's tamper and QR checks land with their demo PDFs (see case_available).
+    ("tampered", "Tampered PDF", "05_tampered.pdf", "text was added to the PDF after it was made"),
+    ("qr_swap", "QR swap", "06_qr_swap.pdf", "the payment QR pays someone other than the supplier"),
 )
 FIXTURES = HERE / "fixtures"
 ATTACKS = ("a1", "a2", "a3", "a4", "a5", "a6")
@@ -156,6 +154,13 @@ def show_saved_run(case: str, notice: str | None) -> None:
     st.session_state.update(paid=False, approved=False, notice=notice, extra_tx=[], case=case)
 
 
+def case_available(case: str, filename: str) -> bool:
+    """Live: the demo PDF is in the repo. Fixture mode: a saved run of the case exists."""
+    if live():
+        return (DEMO_DIR / filename).exists()
+    return (FIXTURES / "runs" / f"{case}.json").exists()
+
+
 def run_case(case: str, filename: str) -> None:
     """Live: run the case's PDF; if the stack fails, show the saved run of the same case instead."""
     if not live():
@@ -164,16 +169,19 @@ def run_case(case: str, filename: str) -> None:
     if case == "duplicate" and "happy" not in st.session_state.ran:
         run_file(DEMO_INVOICE.read_bytes(), DEMO_INVOICE.name, "happy")  # something to be a duplicate of
     error = run_file((DEMO_DIR / filename).read_bytes(), filename, case)
-    if error:
+    if error and (FIXTURES / "runs" / f"{case}.json").exists():
         show_saved_run(case, f"{error} Showing the saved run of this case instead.")
+    elif error:
+        st.session_state.notice = error
 
 
 def run_controls() -> None:
     """One click per demo case: live through the orchestrator, or the saved run in fixture mode."""
     title = "Run a demo invoice through the live flow" if live() else "Show a recorded run of a demo invoice"
     st.markdown(f"**{title}**")
-    cols = st.columns(len(DEMO_CASES))
-    for col, (case, label, filename, hint) in zip(cols, DEMO_CASES, strict=True):
+    cases = [c for c in DEMO_CASES if case_available(c[0], c[2])]
+    cols = st.columns(len(cases))
+    for col, (case, label, filename, hint) in zip(cols, cases, strict=True):
         if col.button(label, key=f"case_{case}", type="primary" if case == "happy" else "secondary"):
             run_case(case, filename)
             st.rerun()
@@ -318,6 +326,17 @@ def section_invoice(view: dict) -> None:
         )
         clean = f'<span class="chip" style="background:{fmt.GREEN}">no injection or fraud flags</span>'
         st.markdown(f"Fraud score {esc(inv['fraud_score'])}<br>{chips or clean}", unsafe_allow_html=True)
+        found = story.findings(inv)
+        if found:
+            lines = []
+            for f in found:
+                weight = f" <i>(+{esc(f['weight'])} fraud score)</i>" if f.get("weight") else ""
+                detail = (
+                    f"<br><span style='font-size:15px'>{esc(f['detail'])}</span>" if f.get("detail") else ""
+                )
+                headline = f["headline"][:1].upper() + f["headline"][1:]  # keep "QR", "PDF" as written
+                lines.append(row(f"<b>{esc(headline)}</b>{weight}{detail}", "review"))
+            st.markdown("<b>What the document checks found</b>" + "".join(lines), unsafe_allow_html=True)
         st.markdown(
             f"doc_hash <code>{esc(fmt.short_hash(inv['doc_hash']))}</code><br>"
             f"fingerprint <code>{esc(fmt.short_hash(inv['invoice_fingerprint']))}</code>",

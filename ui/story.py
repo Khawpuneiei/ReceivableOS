@@ -59,6 +59,100 @@ PLAIN = {
 }
 
 
+# OCR fraud codes (fraud_flags / fraud_details[].code), including the tamper and QR checks in newer ocr-ai.
+FINDING_PLAIN = {
+    "duplicate_fingerprint": "the same invoice was seen before",
+    "duplicate_invoice_hash": "this exact file was seen before",
+    "near_duplicate": "a very similar invoice was seen before",
+    "math_inconsistent": "the line items do not add up to the total",
+    "bank_account_changed": "the supplier's bank account changed",
+    "shared_bank_token": "the bank account is shared with other suppliers",
+    "suspicious_cluster": "the invoice sits in a suspicious cluster",
+    "po_amount_mismatch": "the amount differs from the purchase order",
+    "po_currency_mismatch": "the currency differs from the purchase order",
+    "po_party_mismatch": "the parties differ from the purchase order",
+    "pdf_text_covered": "text in the PDF is covered by something drawn on top",
+    "pdf_appended_text_layer": "text was added to the PDF after it was made",
+    "pdf_font_anomaly": "part of the text uses a different font",
+    "pdf_incremental_update": "the PDF was edited after it was saved",
+    "qr_payee_mismatch": "the payment QR pays someone other than the supplier",
+    "qr_amount_mismatch": "the payment QR asks for a different amount",
+    "qr_crc_invalid": "the payment QR is corrupted",
+    "qr_payee_unverified": "the payment QR's payee could not be checked",
+    "amount_outlier": "the amount is at least 3x what this supplier usually bills this buyer",
+    "circular_invoicing": "the buyer billed this supplier back for a similar amount within 90 days",
+}
+INJECTION_CATEGORY = {
+    "role_override": "tries to take over the AI's role",
+    "decision_coercion": "tries to force an approval",
+    "payee_redirect": "tries to redirect the payment",
+    "score_tampering": "tries to zero the risk score",
+    "addressed_command": "gives the AI a direct order",
+    "tool_invocation": "tries to make the AI call a tool",
+    "exfiltration": "tries to make the AI leak data",
+}
+# OCR validation_flags (newer ocr-ai): checks that the invoice agrees with itself.
+VALIDATION_PLAIN = {
+    "AMOUNT_WORDS_MISMATCH": "the total written in words does not match the digits",
+    "DUE_DATE_TERMS_MISMATCH": "the due date does not match the invoice's own payment terms",
+    "SUPPLIER_IS_BUYER": "the buyer has the supplier's own tax ID, a company billing itself",
+}
+INJECTION_TECHNIQUE = {
+    "plain": "plain",
+    "normalized": "disguised",
+    "homoglyph": "look-alike-letter",
+    "leetspeak": "number-for-letter",
+    "spacing": "spaced-out",
+    "encoded": "encoded",
+}
+
+
+def findings(inv: dict) -> list[dict]:
+    """What the document checks found, in words: [{kind, headline, detail, weight}].
+
+    Reads fraud_details and injection_details when ocr-ai sends them (newer versions) and falls back to the
+    bare flags otherwise, so an older ocr-ai still gets one row per flag. The detail text is ocr-ai's own.
+    """
+    out: list[dict] = []
+    details = inv.get("fraud_details") or []
+    seen = set()
+    for d in details:
+        code = str(d.get("code", ""))
+        seen.add(code)
+        out.append(
+            {
+                "kind": "fraud",
+                "headline": FINDING_PLAIN.get(code, code.replace("_", " ")),
+                "detail": d.get("reason"),
+                "weight": d.get("weight"),
+            }
+        )
+    for code in inv.get("fraud_flags", []):
+        if code not in seen:
+            out.append({"kind": "fraud", "headline": FINDING_PLAIN.get(code, code.replace("_", " "))})
+    for code in inv.get("validation_flags") or []:
+        words = VALIDATION_PLAIN.get(code, str(code).replace("_", " ").lower())
+        out.append({"kind": "fraud", "headline": words})
+    injections = inv.get("injection_details") or []
+    for i in injections:
+        what = INJECTION_CATEGORY.get(i.get("category"), str(i.get("category", "")).replace("_", " "))
+        how = INJECTION_TECHNIQUE.get(i.get("technique"), i.get("technique"))
+        where = str(i.get("channel") or "document").replace("_", " ")
+        out.append(
+            {
+                "kind": "injection",
+                "headline": f"hidden instructions for the AI: {what}",
+                "detail": f"{how} text in the {where}" if how else None,
+            }
+        )
+    if not injections:
+        for flag in inv.get("injection_flags", []):
+            out.append(
+                {"kind": "injection", "headline": f"instructions for the AI found in the document ({flag})"}
+            )
+    return out
+
+
 def plain(code: str | None) -> str | None:
     """'HARD.INJECTION' or 'HARD.INJECTION: details' -> plain words; None when the code is unknown."""
     if not code:
@@ -152,12 +246,18 @@ def verdict(view: dict, paid: bool = False) -> tuple[str, str, str]:
             f"No money moved ({view.get('state') or 'unknown'}).",
         )
     decision, reasons = policy["decision"], policy.get("reasons", [])
+    found = [f["headline"] for f in findings(view.get("ocr") or {}) if f["kind"] == "fraud"]
+    found_line = f" The document checks found: {_join(found)}." if found else ""
     if decision == "reject":
         why = _why(reasons, ("HARD.", "KO.", "REVIEW.")) or ["the credit policy said no"]
-        return STOPPED, "Rejected: no money moved", f"Rejected because {_join(why)}."
+        return STOPPED, "Rejected: no money moved", f"Rejected because {_join(why)}.{found_line}"
     if decision == "review":
         why = _why(reasons, ("HARD.", "REVIEW.", "KO.")) or ["a rule asked for a person to look"]
-        return REVIEW, "Sent to a person: no money moved", f"Held for human review because {_join(why)}."
+        return (
+            REVIEW,
+            "Sent to a person: no money moved",
+            f"Held for human review because {_join(why)}.{found_line}",
+        )
     status = wallet.get("status")
     if status == "executed":
         chosen = next((o for o in view.get("offers", []) if o.get("chosen")), None)
