@@ -15,6 +15,7 @@ from pathlib import Path
 import httpx
 
 ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "http://localhost:8000")
+CALLER = {"X-Orchestrator-Token": os.getenv("ORCHESTRATOR_TOKEN", "")}  # both /flow endpoints need it
 DEFAULT_INVOICE = Path(__file__).resolve().parents[2] / "data" / "invoices" / "demo" / "01_happy.pdf"
 
 
@@ -44,13 +45,19 @@ def main() -> int:
     args = [a for a in sys.argv[1:] if a != "--no-repay"]
     invoice_path = Path(args[0]) if args else DEFAULT_INVOICE
     with invoice_path.open("rb") as f, httpx.Client(timeout=120) as client:
-        r = client.post(f"{ORCHESTRATOR_URL}/flow/run", files={"file": (invoice_path.name, f)})
+        r = client.post(
+            f"{ORCHESTRATOR_URL}/flow/run", headers=CALLER, files={"file": (invoice_path.name, f)}
+        )
         r.raise_for_status()
         steps = r.json()
         print(json.dumps(steps, indent=2))
         repay = None
         if "--no-repay" not in sys.argv and steps.get("wallet", {}).get("status") == "executed":
-            r = client.post(f"{ORCHESTRATOR_URL}/flow/repay", data={"invoice_id": steps["ocr"]["invoice_id"]})
+            r = client.post(
+                f"{ORCHESTRATOR_URL}/flow/repay",
+                headers=CALLER,
+                data={"invoice_id": steps["ocr"]["invoice_id"]},
+            )
             r.raise_for_status()
             repay = r.json()
             print(json.dumps(repay, indent=2))
