@@ -22,6 +22,7 @@ Run `scripts/eval.py`, `scripts/demo_order.py`, `scripts/demo_loop.py --strict -
 | Fresh setup / HTTP / lint | install, generation, POST extract, protected GET, Ruff and pip check pass |
 | Clean PDF scalar fields (four generated documents) | 28/28 |
 | Planted injection mechanisms | Catch rate 100%; attack success 0% |
+| Unseen injection paraphrases (frozen holdout v3, `scripts/injection_eval.py`) | 27/50 caught, 0/20 benign flagged; payee-redirect paraphrases 0/10. The 100% sets above were used to write the rules |
 | Clean/hard-negative injection false-positive rate | 0% on the generated set |
 | Labelled planted fraud set | TP8 / FP0 / FN0 / TN4; precision and recall 100% on 12 scenarios |
 | Supporting-document loop | 6/6 |

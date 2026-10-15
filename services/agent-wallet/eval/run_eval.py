@@ -17,7 +17,7 @@ import os
 import secrets
 import sys
 from collections import Counter
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -143,6 +143,7 @@ def substitute(obj, case_id: str, canary: str):
             .replace("{id}", case_id)
             .replace("{canary}", canary)
             .replace("{owner_token}", OWNER_TOKEN)
+            .replace("{approver_token}", APPROVER_TOKEN)
             .replace("0xbad0bad0bad0bad0bad0bad0bad0bad0bad0bad0", ATTACKER)
         )
     return obj
@@ -222,6 +223,14 @@ def run_setup(h: Harness, case: dict, case_id: str, tx: dict) -> None:
             h.client.post("/wallet/settle", json=body, headers=AGENT_HEADERS)
         elif step == "pause":
             h.client.post("/wallet/pause", headers={"X-Approver-Token": APPROVER_TOKEN})
+        elif step == "unpause":
+            h.client.post("/wallet/unpause", headers={"X-Owner-Token": OWNER_TOKEN})
+        elif step in ("confirm", "decline"):  # the approver acts on the queued draw from the execute step
+            tx_id = tx.get("execute", {}).get("tx_id", "missing")
+            approver = {"X-Approver-Token": APPROVER_TOKEN}
+            h.client.post(f"/wallet/confirm/{tx_id}", json={"approve": step == "confirm"}, headers=approver)
+        elif step == "age_24h":  # the approver comes back after the 24h approval window
+            h.now = h.now + timedelta(hours=24, minutes=1)
         elif step == "expire_mandate":
             h.now = EXPIRED
 

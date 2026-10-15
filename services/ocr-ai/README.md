@@ -60,6 +60,7 @@ services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/demo_order.py
 services/ocr-ai/.venv/bin/python -m pip install -r services/ocr-ai/requirements-integration.txt
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/demo_loop.py --strict --skip-fraud-eval
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/eval.py
+services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/injection_eval.py
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/benchmark_cache.py
 # Complete release check, with fresh clone/environment:
 services/ocr-ai/.venv/bin/python services/ocr-ai/scripts/release_check.py --fresh --strict

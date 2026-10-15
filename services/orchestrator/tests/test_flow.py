@@ -17,6 +17,7 @@ FP = "0x" + "11" * 32
 DECISION_HASH = "0x" + "22" * 32
 AGENT = "agent-test-token"
 RISK_ORACLE = "risk-oracle-test-token"
+CALLER = {"X-Orchestrator-Token": "caller-test-token"}
 
 INVOICE = {
     "invoice_id": "obs_1",
@@ -104,8 +105,9 @@ class Services:
 def client(monkeypatch):
     monkeypatch.setattr(main, "WALLET_AGENT_TOKEN", AGENT)
     monkeypatch.setattr(main, "WALLET_RISK_ORACLE_TOKEN", RISK_ORACLE)
+    monkeypatch.setattr(main, "ORCHESTRATOR_TOKEN", CALLER["X-Orchestrator-Token"])
     main._flows.clear()
-    return TestClient(app)
+    return TestClient(app, headers=CALLER)
 
 
 def wire(monkeypatch, services: Services) -> None:
@@ -272,6 +274,40 @@ def test_a_wallet_refusal_is_reported_as_502_with_its_reason(client, monkeypatch
     assert "Unauthorized" in r.json()["detail"]
 
 
+def test_an_upload_ocr_refuses_keeps_its_4xx_and_reaches_nothing_else(client, monkeypatch):
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.url.path)
+        return httpx.Response(415, json={"detail": "Only signature-verified PDF, JPEG, and PNG uploads"})
+
+    monkeypatch.setattr(main, "_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    r = client.post("/flow/run", files={"file": ("notes.txt", b"not an invoice", "text/plain")})
+    assert r.status_code == 415  # the caller's file is at fault, not a service: no 502
+    assert "/ocr/extract answered 415" in r.json()["detail"]
+    assert seen == ["/ocr/extract"]
+
+
+@pytest.mark.parametrize("status", [401, 403, 404])
+def test_an_ocr_4xx_that_is_not_the_uploads_fault_is_still_a_502(client, monkeypatch, status):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(status, json={"detail": "Unauthorized"})
+
+    monkeypatch.setattr(main, "_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    r = client.post("/flow/run", files={"file": ("01_happy.pdf", b"%PDF-1.4 test", "application/pdf")})
+    assert r.status_code == 502  # a token or routing problem in the stack, not the caller's file
+
+
+def test_an_ocr_outage_is_still_a_502(client, monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, json={"detail": "FINGERPRINT_HMAC_KEY is not configured"})
+
+    monkeypatch.setattr(main, "_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    r = client.post("/flow/run", files={"file": ("01_happy.pdf", b"%PDF-1.4 test", "application/pdf")})
+    assert r.status_code == 502
+    assert "/ocr/extract answered 503" in r.json()["detail"]
+
+
 def test_select_quote_prefers_the_highest_advance_within_the_approved_apr():
     chosen, offers = main.select_quote(decision())
     assert chosen["lender_id"] == "lender_a"  # 70% at 10.95% beats 65% at 9.13%
@@ -284,3 +320,48 @@ def test_select_quote_prefers_the_highest_advance_within_the_approved_apr():
 
     none, _ = main.select_quote({**decision(), "apr": None, "fee_rate": "0.001"})
     assert none is None  # falls back to shared.money.fee_rate_30d_to_apr; 1.22% APR fits no quote
+
+
+PDF = {"file": ("01_happy.pdf", b"%PDF-1.4 test", "application/pdf")}
+
+
+def test_callers_without_the_token_are_refused_before_anything_runs(client, monkeypatch):
+    services = Services()
+    wire(monkeypatch, services)
+    anonymous = TestClient(app)
+    assert anonymous.post("/flow/run", files=PDF).status_code == 403
+    assert (
+        anonymous.post("/flow/run", files=PDF, headers={"X-Orchestrator-Token": "wrong"}).status_code == 403
+    )
+    assert anonymous.post("/flow/repay", data={"invoice_id": "obs_1"}).status_code == 403
+    assert services.paths() == []  # nothing reached ocr-ai, policy-ai or the wallet
+
+
+def test_with_no_token_configured_every_caller_is_refused(client, monkeypatch):
+    services = Services()
+    wire(monkeypatch, services)
+    monkeypatch.setattr(main, "ORCHESTRATOR_TOKEN", "")
+    assert client.post("/flow/run", files=PDF).status_code == 403
+    assert services.paths() == []
+
+
+@pytest.mark.parametrize("raw", ["abc", "-5", "0", "749000.01", "NaN", "10.555"])
+def test_repay_refuses_an_amount_that_is_not_a_sensible_payment(client, monkeypatch, raw):
+    services = Services()
+    wire(monkeypatch, services)
+    run(client)
+    r = client.post("/flow/repay", data={"invoice_id": "obs_1", "amount_paid": raw})
+    assert r.status_code == 422, r.text
+    assert "/wallet/settle" not in services.paths()  # the wallet is not asked to settle it
+
+
+def test_a_service_that_does_not_answer_is_a_502_not_a_500(client, monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/ocr/extract":
+            return httpx.Response(200, json=INVOICE)
+        raise httpx.ConnectError("connection refused", request=request)
+
+    monkeypatch.setattr(main, "_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    r = client.post("/flow/run", files=PDF)
+    assert r.status_code == 502
+    assert "/wallet/register unreachable" in r.json()["detail"]

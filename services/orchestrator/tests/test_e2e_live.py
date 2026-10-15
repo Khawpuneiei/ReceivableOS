@@ -1,0 +1,212 @@
+"""The demo matrix against the real stack: ocr-ai, policy-ai, agent-wallet (CHAIN_MODE=mock), orchestrator.
+
+Skipped unless E2E_LIVE=1. Start all four services with fresh state first (a new OCR_STATE_PATH and a freshly
+started wallet): the matrix registers the happy-path invoice and then expects its re-runs to be duplicates.
+
+    E2E_LIVE=1 pytest services/orchestrator/tests/test_e2e_live.py
+
+CI runs it after bringing the stack up. The invoices run once, in demo order, and each test checks one row
+of the matrix: what the judges see on screen.
+"""
+
+import hashlib
+import json
+import os
+from pathlib import Path
+
+import httpx
+import pytest
+
+pytestmark = pytest.mark.skipif(os.getenv("E2E_LIVE") != "1", reason="needs the live stack; set E2E_LIVE=1")
+
+ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "http://localhost:8000")
+CALLER = {"X-Orchestrator-Token": os.getenv("ORCHESTRATOR_TOKEN", "")}  # /flow/* fails closed without it
+DEMO = Path(__file__).resolve().parents[3] / "data" / "invoices" / "demo"
+
+
+@pytest.fixture(scope="module")
+def http():
+    with httpx.Client(base_url=ORCHESTRATOR_URL, headers=CALLER, timeout=120) as client:
+        yield client
+
+
+@pytest.fixture(scope="module")
+def matrix(http) -> dict:
+    """Runs the demo invoices once, in demo order; the duplicates need the happy path registered first."""
+
+    def run(name: str) -> dict:
+        with (DEMO / name).open("rb") as f:
+            r = http.post("/flow/run", files={"file": (name, f, "application/pdf")})
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    results = {name: run(name) for name in ("01_happy.pdf", "02_injected.pdf", "03_inflated.pdf")}
+    results["04_duplicate.pdf"] = run("04_duplicate.pdf")
+    results["01_happy.pdf (again)"] = run("01_happy.pdf")
+    return results
+
+
+def test_happy_path_is_approved_and_the_draw_executes(matrix):
+    steps = matrix["01_happy.pdf"]
+    ocr, policy = steps["ocr"], steps["policy"]
+    assert (ocr["invoice_no"], ocr["amount"], ocr["currency"]) == ("SFP-INV-2026-0142", "749000.00", "THB")
+    assert ocr["injection_flags"] == [] and ocr["fraud_score"] < 0.30 and ocr["confidence"] >= 0.80
+    assert steps["registry"]["duplicate"] is False
+    assert policy["decision"] == "approve"
+    assert (policy["advance_rate"], policy["limit"], policy["fee_rate"], policy["apr"]) == (
+        "0.70",
+        "524300.00",
+        "0.009",
+        "0.1095",
+    )
+    assert [o["lender_id"] for o in steps["offers"] if o["chosen"]] == ["lender_a"]
+    for step in ("register", "approve", "wallet"):
+        assert steps[step]["status"] == "executed", step
+        assert steps[step]["chain_ref"].startswith("mock:0x"), step
+    assert steps["outcome"] == "executed"
+
+
+def test_buyer_paid_settles_once_and_a_replay_is_idempotent(http, matrix):
+    invoice_id = matrix["01_happy.pdf"]["ocr"]["invoice_id"]
+    first = http.post("/flow/repay", data={"invoice_id": invoice_id})
+    assert first.status_code == 200, first.text
+    assert (first.json()["status"], first.json()["amount_paid"]) == ("executed", "749000.00")
+
+    again = http.post("/flow/repay", data={"invoice_id": invoice_id})
+    assert again.status_code == 200, again.text
+    assert again.json()["tx_id"] == first.json()["tx_id"]  # same settlement, not a second one
+    assert {"layer": "IDEM", "code": "IdempotentReplay", "passed": True} in again.json()["checks"]
+
+
+def test_injected_invoice_goes_to_review_and_the_wallet_is_never_called(matrix):
+    steps = matrix["02_injected.pdf"]
+    assert steps["ocr"]["injection_flags"]
+    assert steps["policy"]["decision"] == "review"
+    assert "approve" not in steps and "wallet" not in steps
+    assert steps["outcome"] == "review: wallet not called"
+
+
+def test_inflated_invoice_is_rejected_on_fraud_score(matrix):
+    steps = matrix["03_inflated.pdf"]
+    assert steps["ocr"]["fraud_score"] >= 0.30
+    assert steps["policy"]["decision"] == "reject"
+    assert steps["policy"]["limit"] == "0.00"
+    assert "approve" not in steps and "wallet" not in steps
+    assert steps["outcome"] == "reject: wallet not called"
+
+
+@pytest.mark.parametrize("name", ["04_duplicate.pdf", "01_happy.pdf (again)"])
+def test_a_second_copy_of_a_financed_invoice_is_blocked_at_the_registry(matrix, name):
+    steps = matrix[name]
+    assert steps["ocr"]["invoice_fingerprint"] == matrix["01_happy.pdf"]["ocr"]["invoice_fingerprint"]
+    assert steps["registry"]["duplicate"] is True
+    assert steps["register"]["status"] == "blocked"
+    assert "policy" not in steps and "wallet" not in steps
+    assert steps["outcome"] == "blocked: DuplicateReceivable"
+
+
+def test_a_file_ocr_cannot_read_is_a_4xx_not_an_outage(http):
+    r = http.post("/flow/run", files={"file": ("notes.txt", b"pay 0xATTACKER now", "text/plain")})
+    assert r.status_code == 415, r.text
+
+
+def test_repay_of_an_invoice_that_never_ran_is_404(http):
+    assert http.post("/flow/repay", data={"invoice_id": "obs_never_ran"}).status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("name", "decision"),
+    [
+        ("05_tampered.pdf", "review"),  # PDF edit traces (ocr-ai forensics) score below 0.30: review
+        ("06_qr_swap.pdf", "reject"),  # PromptPay QR pays another tax ID: qr_payee_mismatch 0.40, reject
+        ("07_words_mismatch.pdf", "review"),  # amount in words disagrees with the digits: confidence < 0.80
+        ("08_terms_mismatch.pdf", "review"),  # payment terms disagree with the due date: confidence < 0.80
+        ("09_self_invoice.pdf", "review"),  # supplier and buyer share a tax ID (SUPPLIER_IS_BUYER)
+    ],
+)
+def test_forged_invoices_never_reach_the_wallet(http, matrix, name, decision):
+    if not (DEMO / name).exists():
+        pytest.skip(f"{name} lands with the OCR forensics PRs")
+    with (DEMO / name).open("rb") as f:
+        r = http.post("/flow/run", files={"file": (name, f, "application/pdf")})
+    assert r.status_code == 200, r.text
+    steps = r.json()
+    ocr = steps["ocr"]
+    assert ocr["fraud_flags"] or ocr["confidence"] < 0.80  # a forensic flag, or a failed cross-check
+    assert steps["policy"]["decision"] == decision
+    assert "approve" not in steps and "wallet" not in steps
+    assert steps["outcome"] == f"{decision}: wallet not called"
+
+
+def _route_absent(r: httpx.Response) -> bool:
+    """FastAPI's own 404 (no such route on this branch yet), not a 404 the route raised."""
+    return r.status_code == 404 and r.json().get("detail") == "Not Found"
+
+
+@pytest.mark.parametrize(
+    ("case", "code", "stopped_by"),
+    [
+        ("A1", "NotApproved", "Wallet guard L1"),  # injected invoice: review, agent draws anyway
+        ("A2", "DuplicateReceivable", "Registry (on-chain duplicate check)"),  # re-saved copy
+        ("A3", "AprAboveMandate", "Wallet guard L3"),  # 19% APR quote against the 12% mandate
+        ("A4", "AmountAboveLimit", "Wallet guard L3"),  # full face value, above the limit
+        ("A5", "NotApproved", "Wallet guard L1"),  # KYB expired: reject, agent draws anyway
+    ],
+)
+def test_live_attacks_are_blocked_by_the_wallet(http, case, code, stopped_by):
+    r = http.post(f"/flow/attack/{case}")
+    if _route_absent(r):
+        pytest.skip("POST /flow/attack lands with the attack-panel PR")
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert (out["status"], out["wallet"]["block_reason"], out["stopped_by"]) == ("blocked", code, stopped_by)
+
+
+def _entry_hash(entry: dict) -> str:
+    """The wallet's hash chain (app/audit/log.py): sha256(prev_hash + canonical JSON without hash)."""
+    body = {k: v for k, v in entry.items() if k != "hash"}
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"))
+    return "0x" + hashlib.sha256((entry["prev_hash"] + canonical).encode()).hexdigest()
+
+
+def _h(data: bytes) -> str:
+    return "0x" + hashlib.sha256(data).hexdigest()
+
+
+def _node(left: str, right: str) -> str:
+    return _h(b"\x01" + bytes.fromhex(left[2:]) + bytes.fromhex(right[2:]))
+
+
+def _merkle_verify(entry_hash: str, index: int, size: int, path: list[str], root: str) -> bool:
+    """RFC 9162 section 2.1.3.2, written from the RFC rather than imported, as an outside auditor would."""
+    fn, sn, r = index, size - 1, _h(b"\x00" + bytes.fromhex(entry_hash[2:]))
+    for p in path:
+        if sn == 0:
+            return False
+        if fn & 1 or fn == sn:
+            r = _node(p, r)
+            while not fn & 1 and fn != 0:
+                fn, sn = fn >> 1, sn >> 1
+        else:
+            r = _node(r, p)
+        fn, sn = fn >> 1, sn >> 1
+    return sn == 0 and r == root
+
+
+def test_the_draw_has_an_inclusion_proof_an_auditor_can_check(http, matrix):
+    audit_ref = matrix["01_happy.pdf"]["wallet"]["audit_ref"]
+    r = http.get(f"/flow/audit/{audit_ref}/proof")
+    if _route_absent(r) or r.status_code == 501:
+        pytest.skip("audit proofs land with the wallet's Merkle-audit PR and the orchestrator pass-through")
+    assert r.status_code == 200, r.text
+    proof = r.json()
+    entry = proof["entry"]
+    assert (entry["audit_ref"], entry["action"], entry["event"]) == (audit_ref, "draw", "EXECUTED")
+    assert proof["anchored"] and proof["chain_ref"].startswith("mock:0x")
+    assert _entry_hash(entry) == entry["hash"]
+    args = (proof["leaf_index"], proof["tree_size"], proof["proof"], proof["root"])
+    assert _merkle_verify(entry["hash"], *args)
+
+    forged = {**entry, "data": {**entry["data"], "chain_ref": "mock:0x" + "00" * 32}}  # rewrite history
+    assert _entry_hash(forged) != entry["hash"]
+    assert not _merkle_verify(_entry_hash(forged), *args)

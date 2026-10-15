@@ -38,3 +38,6 @@ services/agent-wallet/contracts/build/
 .vscode/
 .idea/
 .DS_Store
+
+# local stack (scripts/stack.sh)
+.stack/
