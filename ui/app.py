@@ -21,7 +21,25 @@ import story
 import streamlit as st
 
 HERE = Path(__file__).resolve().parent
-DEMO_INVOICE = HERE.parent / "data" / "invoices" / "demo" / "01_happy.pdf"  # a real PDF; OCR refuses the .txt
+DEMO_DIR = HERE.parent / "data" / "invoices" / "demo"
+DEMO_INVOICE = DEMO_DIR / "01_happy.pdf"  # a real PDF; OCR refuses the old .txt sample
+# One-click cases: (key, button, file in data/invoices/demo/, what it shows). Built by the AI engineers.
+DEMO_CASES = (
+    ("happy", "Happy invoice", "01_happy.pdf", "a clean invoice: read, approved and paid"),
+    (
+        "injected",
+        "Injected instructions",
+        "02_injected.pdf",
+        "text in the PDF tells the AI to approve and pay",
+    ),
+    ("inflated", "Inflated amount", "03_inflated.pdf", "the total is bigger than its line items"),
+    (
+        "duplicate",
+        "Duplicate (re-saved PDF)",
+        "04_duplicate.pdf",
+        "the happy invoice saved again as a new file",
+    ),
+)
 FIXTURES = HERE / "fixtures"
 ATTACKS = ("a1", "a2", "a3", "a4", "a5", "a6")
 ATTACK_LABELS = {
@@ -112,24 +130,45 @@ def not_reached(view: dict, part: str) -> bool:
     return True
 
 
-def run_controls() -> None:
-    """Live mode: run the flow through the orchestrator with the demo invoice or an upload."""
-    upload = st.file_uploader("Invoice file", key="upload")
-    if st.button("Run flow with this file" if upload else "Use demo invoice"):
-        content, name = (
-            (upload.getvalue(), upload.name) if upload else (DEMO_INVOICE.read_bytes(), DEMO_INVOICE.name)
+def run_file(content: bytes, name: str, case: str | None = None) -> None:
+    """POST one invoice to /flow/run and put the result on screen; errors become a readable notice."""
+    try:
+        raw = orch.Orchestrator().run_flow(content, name)
+        st.session_state.view = orch.to_view(raw, load_fixture("happy"))
+        st.session_state.update(paid=False, approved=False, notice=None, extra_tx=[], case=case or name)
+        st.session_state.ran.add(case or name)
+    except orch.ServiceError as exc:
+        st.session_state.notice = f"The flow stopped with an error: {exc.plain}. Showing the saved demo."
+    except (orch.Unavailable, orch.Unsupported, ValueError) as exc:
+        st.session_state.notice = (
+            f"Orchestrator unavailable at {orch.base_url()} ({exc}). Showing the saved demo."
         )
-        try:
-            raw = orch.Orchestrator().run_flow(content, name)
-            st.session_state.view = orch.to_view(raw, load_fixture("happy"))
-            st.session_state.update(paid=False, approved=False, notice=None, extra_tx=[])
-        except orch.ServiceError as exc:
-            st.session_state.notice = f"The flow stopped with an error: {exc.plain}. Showing the saved demo."
-        except (orch.Unavailable, orch.Unsupported, ValueError) as exc:
-            st.session_state.notice = (
-                f"Orchestrator unavailable at {orch.base_url()} ({exc}). Showing the saved demo."
-            )
-        st.rerun()
+
+
+def run_case(case: str, filename: str) -> None:
+    if case == "duplicate" and "happy" not in st.session_state.ran:
+        run_file(DEMO_INVOICE.read_bytes(), DEMO_INVOICE.name, "happy")  # something to be a duplicate of
+    run_file((DEMO_DIR / filename).read_bytes(), filename, case)
+
+
+def run_controls() -> None:
+    """Live mode: one click per demo case, or an uploaded invoice, through the orchestrator."""
+    st.markdown("**Run a demo invoice through the live flow**")
+    cols = st.columns(len(DEMO_CASES))
+    for col, (case, label, filename, hint) in zip(cols, DEMO_CASES, strict=True):
+        if col.button(label, key=f"case_{case}", type="primary" if case == "happy" else "secondary"):
+            run_case(case, filename)
+            st.rerun()
+        col.caption(hint)
+    st.caption(
+        "Each invoice can be financed once: running Happy twice is blocked as a duplicate, by design. "
+        "Reset the OCR demo history between rehearsals (services/ocr-ai/README.md)."
+    )
+    with st.expander("Or upload your own invoice"):
+        upload = st.file_uploader("Invoice file", key="upload")
+        if upload and st.button("Run flow with this file"):
+            run_file(upload.getvalue(), upload.name)
+            st.rerun()
 
 
 def init_state() -> None:
@@ -140,6 +179,8 @@ def init_state() -> None:
         "compiled": True,
         "notice": None,
         "extra_tx": [],
+        "ran": set(),
+        "case": None,
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
@@ -160,7 +201,10 @@ def header(view: dict) -> None:
     elif view.get("source") == "fixtures":
         st.info("FIXTURE MODE: saved responses from ui/fixtures/, no backend called.")
     else:
-        st.success(f"LIVE: orchestrator at {orch.base_url()} · flow state {view.get('state')}")
+        label = {c[0]: c[1] for c in DEMO_CASES}.get(st.session_state.case, st.session_state.case)
+        st.success(
+            f"LIVE: {label} via the orchestrator at {orch.base_url()} · flow state {view.get('state')}"
+        )
 
 
 def section_flow(view: dict) -> None:
