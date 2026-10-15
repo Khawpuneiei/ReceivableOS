@@ -274,9 +274,9 @@ class FiscoLedger:
             d.decision_hash,
         )
 
-    def confirm(self, pending_id: int) -> ChainResult:
+    def confirm(self, pending_id: int, approve: bool = True) -> ChainResult:
         return self._send(
-            "approver", self.contracts["AgentWallet"], "AgentWallet", "confirm", [pending_id, True]
+            "approver", self.contracts["AgentWallet"], "AgentWallet", "confirm", [pending_id, approve]
         )
 
     def settle(self, s: SettleIntent) -> ChainResult:

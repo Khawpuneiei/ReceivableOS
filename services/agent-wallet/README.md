@@ -172,8 +172,8 @@ Money is THB with two decimals.
 - **Guard before the ledger.** L0–L4 checks run before any ledger call. Every failure is reported, and the reason is the
   first failing check in layer order. A blocked request never reaches the ledger.
 - **Two layers of mandate checks.** The off-chain guard and the on-chain contracts (or the mock mirror) both enforce the
-  mandate. Either one stops a payment. PD, mandate ID, currency and KYC are off-chain checks; the contracts enforce the
-  money limits and the payee allowlist.
+  mandate. Either one stops a payment. PD, mandate ID, currency and KYC are off-chain checks (PD also at the TX-2 approval);
+  the contracts enforce the money limits and the payee allowlist.
 - **KYC.** Each payee in `config/payees.json` has a `kyc_verified` flag. An unverified seller is refused at registration
   (`KycNotVerified`), and only verified payees are allowlisted on chain. A `kyc_expiry` date, when set, makes the flag
   lapse after that day, and the seller is then refused the same way.
@@ -199,7 +199,8 @@ Money is THB with two decimals.
 - The decision is checked by hash, not signed. Shared `PolicyDecision` has no signature field, so whoever holds the
   risk-oracle token can approve a decision of their own.
 - The risk-oracle key is in the wallet's environment in the MVP. The token gate is in; key separation is not.
-- PD is checked off-chain only. With the guard bypassed, a draw above the PD ceiling executes (v5 cases S15 and S16).
+- PD is not on chain. It is checked off-chain at the draw and again at the TX-2 approval, which refuses a decision
+  above the PD ceiling (`PdAboveMandate`), so with the guard bypassed the draw reverts `NotApproved` on chain.
 - A draw is refused with `FeesExceedAmount` when the lender's fee and the platform fee together reach the draw amount.
   On the demo invoice, any draw under about THB 2,270 is refused.
 - The classifier is English-only and does not detect jailbreaks. On the held-out v3 set, the rules alone catch 14 of 24

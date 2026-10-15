@@ -1,0 +1,75 @@
+# Whole ReceivableOS stack on the mock ledger: docker compose up --build, then open http://localhost:3000.
+# Secrets come from .env (cp .env.example .env and fill it in, or scripts/ci_env.sh for test-only values).
+# Ports are bound to 127.0.0.1 only. Owner: PM.
+x-service: &service
+  build:
+    context: .
+    dockerfile: deploy/Dockerfile
+  image: receivableos:local
+  env_file:
+    - path: .env
+      required: true
+  environment: &urls
+    CHAIN_MODE: mock
+    OCR_URL: http://ocr-ai:8001
+    POLICY_URL: http://policy-ai:8002
+    WALLET_URL: http://agent-wallet:8003
+    ORCHESTRATOR_URL: http://orchestrator:8000
+  restart: unless-stopped
+
+services:
+  ocr-ai:
+    <<: *service
+    command: [python, -m, uvicorn, app.main:app, --app-dir, services/ocr-ai, --host, 0.0.0.0, --port, "8001"]
+    environment:
+      <<: *urls
+      # Rehearsal reset: docker compose up -d --force-recreate ocr-ai agent-wallet (both remember invoices).
+      OCR_STATE_PATH: /state/ocr-state.sqlite
+    ports: ["127.0.0.1:8001:8001"]
+    healthcheck: &health
+      test: [CMD, python, -c, "import urllib.request,sys; urllib.request.urlopen(sys.argv[1], timeout=3)", "http://localhost:8001/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  policy-ai:
+    <<: *service
+    command: [python, -m, uvicorn, app.main:app, --app-dir, services/policy-ai, --host, 0.0.0.0, --port, "8002"]
+    ports: ["127.0.0.1:8002:8002"]
+    healthcheck:
+      <<: *health
+      test: [CMD, python, -c, "import urllib.request,sys; urllib.request.urlopen(sys.argv[1], timeout=3)", "http://localhost:8002/health"]
+
+  agent-wallet:
+    <<: *service
+    command: [python, -m, uvicorn, app.main:app, --app-dir, services/agent-wallet, --host, 0.0.0.0, --port, "8003"]
+    ports: ["127.0.0.1:8003:8003"]
+    healthcheck:
+      <<: *health
+      test: [CMD, python, -c, "import urllib.request,sys; urllib.request.urlopen(sys.argv[1], timeout=3)", "http://localhost:8003/health"]
+
+  orchestrator:
+    <<: *service
+    command: [python, -m, uvicorn, app.main:app, --app-dir, services/orchestrator, --host, 0.0.0.0, --port, "8000"]
+    ports: ["127.0.0.1:8000:8000"]
+    healthcheck:
+      <<: *health
+      test: [CMD, python, -c, "import urllib.request,sys; urllib.request.urlopen(sys.argv[1], timeout=3)", "http://localhost:8000/health"]
+    depends_on:
+      ocr-ai: {condition: service_healthy}
+      policy-ai: {condition: service_healthy}
+      agent-wallet: {condition: service_healthy}
+
+  ui:
+    <<: *service
+    working_dir: /app/ui  # Streamlit reads ui/.streamlit/config.toml (port 3000, theme) from here
+    command: [streamlit, run, app.py, --server.address, 0.0.0.0, --server.port, "3000"]
+    environment:
+      <<: *urls
+      UI_MODE: live
+    ports: ["127.0.0.1:3000:3000"]
+    healthcheck:
+      <<: *health
+      test: [CMD, python, -c, "import urllib.request,sys; urllib.request.urlopen(sys.argv[1], timeout=3)", "http://localhost:3000/_stcore/health"]
+    depends_on:
+      orchestrator: {condition: service_healthy}
