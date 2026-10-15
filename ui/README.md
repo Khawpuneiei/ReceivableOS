@@ -49,8 +49,9 @@ screen. A live attack response that was **not** stopped is shown with its real s
 Under the invoice, **What the document checks found** lists each OCR finding in plain words: `fraud_details`
 (PDF tampering, PromptPay QR swap, inflated totals) and `injection_details` (what the hidden text tries to
 make the AI do). The verdict banner repeats the deciding finding. Unknown codes fall back to the reason text the
-OCR service sent, and the section is hidden when OCR returns neither field. The Tampered PDF and QR swap
-buttons appear only when `05_tampered.pdf` / `06_qr_swap.pdf` are in `data/invoices/demo/`.
+OCR service sent, and the section is hidden when OCR returns neither field. The Tampered PDF, QR swap,
+Amount in words and Payment terms buttons (four per row) appear only when `05_tampered.pdf`, `06_qr_swap.pdf`,
+`07_words_mismatch.pdf` / `08_terms_mismatch.pdf` are in `data/invoices/demo/` (they come with the ocr-ai PRs).
 
 ## What is on screen, and where the numbers come from
 

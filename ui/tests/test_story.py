@@ -121,3 +121,10 @@ def test_validation_flags_and_newer_injection_categories_read_in_words():
         "the total written in words does not match the digits",
         "hidden instructions for the AI: tries to make the AI leak data",
     ]
+
+
+def test_validation_flags_count_as_warnings_on_the_ocr_step():
+    view = copy.deepcopy(HAPPY)
+    view["ocr"]["validation_flags"] = ["DUE_DATE_TERMS_MISMATCH"]
+    read = story.steps(view)[1]
+    assert read["state"] == "review" and "1 warning flag(s)" in read["detail"]
