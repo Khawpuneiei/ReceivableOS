@@ -157,3 +157,23 @@ def test_judge_mode_runs_every_case_and_lists_one_verdict_each():
     assert "Stopped: duplicate invoice (saved demo)" in text
     at.button(key="show_happy").click().run()
     assert not at.exception and "Funded inside the rules" in _text(at)
+
+
+def test_judge_mode_after_a_live_happy_run_reuses_it_instead_of_posting_it_again(monkeypatch):
+    import client as orch
+
+    sent = []
+
+    def fake_run_flow(self, content, filename, mandate_id="mdt_001"):
+        sent.append(filename)
+        case = filename.split("_", 1)[1].removesuffix(".pdf")
+        return json.loads((UI / "fixtures" / "runs" / f"{case}.json").read_text(encoding="utf-8"))
+
+    monkeypatch.setenv("UI_MODE", "live")
+    monkeypatch.setattr(orch.Orchestrator, "run_flow", fake_run_flow)
+    at = AppTest.from_file(APP, default_timeout=60).run()
+    at.button(key="case_happy").click().run()
+    at.button(key="run_all").click().run()
+    assert not at.exception
+    assert sent == ["01_happy.pdf", "02_injected.pdf", "03_inflated.pdf", "04_duplicate.pdf"]
+    assert "Judge mode: 4 invoices, 1 funded" in _text(at)
