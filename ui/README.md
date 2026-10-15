@@ -46,6 +46,7 @@ screen. A live attack response that was **not** stopped is shown with its real s
 
 | Section | Content | Source in fixture mode |
 |---|---|---|
+| Flow strip | a coloured verdict ("Funded inside the rules", "Sent to a person", "Rejected", "Stopped: duplicate invoice") with one sentence built from the reason codes, then six steps (Upload, Read, Registry, Policy, Wallet, Settle) each green / amber / red / grey with a short detail; attack rows add a plain "Why:" line | `ui/story.py` over the same view model; unknown codes get no made-up text |
 | Header | title and ledger badge (`mock` / `fisco`, from the wallet result's `chain`) | `happy.json` → `wallet` |
 | 1. Mandate | the SME's sentence, [Compile], the compiled mandate (green = from the text, grey = platform default) | real `compile_mandate` output for `services/policy-ai/fixtures/mandates/demo_thb.txt` |
 | 2. Invoice | parties, number, dates, amount, OCR confidence bar, injection / fraud chips, short `doc_hash` and fingerprint | the scenario 1 invoice fixture |
@@ -69,6 +70,7 @@ python3 -m pytest ui -q
 ruff check ui
 ```
 
+- `tests/test_story.py`: the step states and verdict sentence for funded, review, reject and duplicate.
 - `tests/test_format.py`: THB and rate formatting, state colours, short hashes, mandate field sources.
 - `tests/test_app_smoke.py`: Streamlit's `AppTest` renders the screen in fixture mode with sockets blocked,
   clicks A1–A6 and [Buyer paid], and checks that the rows appear; in live mode with no orchestrator it checks
