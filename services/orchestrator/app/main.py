@@ -263,6 +263,8 @@ def attack_invoice(case: str) -> dict:
 
 def _stopped_by(result: dict) -> str:
     """'Wallet guard L3' from the first failed check, or the block reason alone."""
+    if result.get("block_reason") == "DuplicateReceivable":
+        return "Registry (on-chain duplicate check)"
     failed = [c for c in result.get("checks", []) if not c.get("passed", True)]
     return f"Wallet guard {failed[0]['layer']}" if failed and failed[0].get("layer") else "Wallet guard"
 
@@ -296,6 +298,10 @@ async def flow_attack(case: str, mandate_id: str = Form(DEFAULT_MANDATE_ID)) -> 
         register = out["register"] = await _post(
             client, f"{WALLET_URL}/wallet/register", headers=agent, json=register_body
         )
+        if register["status"] != "executed":
+            raise HTTPException(
+                status_code=502, detail=f"attack setup: register {register.get('block_reason')}"
+            )
         if case == "A2":  # the attack is the second registration of the same fingerprint
             again = {
                 **register_body,
@@ -306,13 +312,9 @@ async def flow_attack(case: str, mandate_id: str = Form(DEFAULT_MANDATE_ID)) -> 
             wallet = out["wallet"] = await _post(
                 client, f"{WALLET_URL}/wallet/register", headers=agent, json=again
             )
-            out["stopped_by"] = "Registry (on-chain duplicate check)"
+            out["stopped_by"] = _stopped_by(wallet) if wallet["status"] == "blocked" else "not stopped"
             out["status"] = wallet["status"]
             return out
-        if register["status"] != "executed":
-            raise HTTPException(
-                status_code=502, detail=f"attack setup: register {register.get('block_reason')}"
-            )
         decision = out["policy"] = await _post(
             client, f"{POLICY_URL}/policy/decide", json={"invoice": invoice, **profiles}
         )

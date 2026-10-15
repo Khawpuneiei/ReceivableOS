@@ -83,15 +83,49 @@ def test_a5_sends_an_expired_kyb_profile_and_never_approves(client, monkeypatch)
     assert "/wallet/approve" not in services.paths()
 
 
+class RegisterTwice(AttackServices):
+    """The first registration goes through; the second gets `second`."""
+
+    def __init__(self, second: dict):
+        super().__init__()
+        self.answers = [wallet_result(), second]
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/wallet/register":
+            self.register = self.answers.pop(0)
+        return super().handler(request)
+
+
 def test_a2_registers_the_same_fingerprint_twice_with_a_new_doc_hash(client, monkeypatch):
-    services = AttackServices()
-    services.register = wallet_result("blocked", "DuplicateReceivable")  # the second answer is what matters
+    services = RegisterTwice(wallet_result("blocked", "DuplicateReceivable"))
     wire(monkeypatch, services)
     out = attack(client, "A2")
     first, second = [body for path, _, body in services.calls if path == "/wallet/register"]
     assert first["invoice_fingerprint"] == second["invoice_fingerprint"]
     assert first["doc_hash"] != second["doc_hash"]
     assert out["wallet"]["block_reason"] == "DuplicateReceivable"
+    assert out["status"] == "blocked" and out["stopped_by"] == "Registry (on-chain duplicate check)"
+
+
+def test_a2_that_registers_twice_is_reported_as_not_stopped(client, monkeypatch):
+    wire(monkeypatch, RegisterTwice(wallet_result()))
+    out = attack(client, "A2")
+    assert out["status"] == "executed" and out["stopped_by"] == "not stopped"
+
+
+def test_a2_blocked_by_another_check_names_that_check(client, monkeypatch):
+    blocked = wallet_result("blocked", "InjectionSuspected")
+    blocked["checks"] = [{"layer": "L2", "code": "InjectionSuspected", "passed": False}]
+    wire(monkeypatch, RegisterTwice(blocked))
+    assert attack(client, "A2")["stopped_by"] == "Wallet guard L2"
+
+
+def test_a2_whose_first_registration_fails_is_a_setup_error(client, monkeypatch):
+    services = AttackServices()
+    services.register = wallet_result("blocked", "PayeeNotAllowed")
+    wire(monkeypatch, services)
+    r = client.post("/flow/attack/A2")
+    assert r.status_code == 502 and "PayeeNotAllowed" in r.json()["detail"]
 
 
 def test_every_attack_uses_a_fresh_fingerprint(client, monkeypatch):
