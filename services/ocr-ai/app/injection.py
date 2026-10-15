@@ -99,7 +99,8 @@ RULES: tuple[tuple[str, str], ...] = (
     (
         "score_tampering",
         # Not "decision" or "status": "Gift set, status LED" and "Tray set (decision pack)" are product lines.
-        r"\bset\b.{0,20}\b(?:confidence|fraud[_ ]?score|risk[_ ]?score|advance[_ ]?rate|injection[_ ]?flags)\b",
+        r"\bset\b.{0,20}\b(?:confidence|fraud[_ ]?score|risk[_ ]?score|advance[_ ]?rate|"
+        r"injection[_ ]?flags)\b",
     ),
     (
         "score_tampering",

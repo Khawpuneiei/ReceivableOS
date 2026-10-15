@@ -28,7 +28,13 @@ def test_benign_invoice_text_is_not_flagged(case_id, language, text):
 
 
 @pytest.mark.parametrize(
-    "text", ["Gift set, status LED", "Tray set (decision pack)", "Food trays set status", "Set of 4, status: in stock"]
+    "text",
+    [
+        "Gift set, status LED",
+        "Tray set (decision pack)",
+        "Food trays set status",
+        "Set of 4, status: in stock",
+    ],
 )
 def test_product_lines_with_set_and_status_or_decision_are_not_flagged(text):
     assert detect(text) is None
