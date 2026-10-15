@@ -50,6 +50,7 @@ ATTACK_LABELS = {
     "a5": "A5 Expired KYB",
     "a6": "A6 Mandate expired / paused",
 }
+MIN_CONFIDENCE = 0.80  # policy-ai's hard rule: below this the invoice goes to review (root CLAUDE.md)
 MANDATE_FIELDS = (
     ("max_ltv", "Max advance", "pct"),
     ("max_apr", "Max APR", "pct"),
@@ -72,11 +73,12 @@ html, body, [class*="css"], .stMarkdown p, .stMarkdown li { font-size: 18px; }
 .gauge .fill { position:absolute; height:100%; border-radius:4px; }
 .gauge .cap { position:absolute; top:-4px; height:30px; border-left:3px dashed #c62828; }
 code { font-size: 15px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); column-gap:8px; }
 .verdict { padding:14px 20px; border-radius:8px; color:#fff; margin:8px 0 12px; }
 .verdict b { font-size: 28px; display:block; }
 .steps { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
-.step { flex:1 1 140px; border-top:8px solid; border-radius:6px; padding:8px 10px;
-        background:rgba(127,127,127,.08); min-width:140px; }
+.step { flex:1 1 0; border-top:8px solid; border-radius:6px; padding:8px 10px;
+        background:rgba(127,127,127,.08); min-width:118px; }
 .step .n { font-weight:700; } .step .d { font-size:15px; }
 .step .i { display:inline-block; width:24px; height:24px; border-radius:12px; color:#fff;
            text-align:center; font-weight:700; margin-right:6px; line-height:24px; }
@@ -191,7 +193,8 @@ def header(view: dict) -> None:
     ledger_state = {"mock": "pending_approval", "fisco": "executed"}.get(chain, "unknown")
     st.markdown(
         "## ReceivableOS · AI that can move money — only inside the rules "
-        + badge(f"ledger: {chain}", ledger_state),
+        + f'<span class="badge" style="font-size:18px;vertical-align:middle;'
+        f'background:{fmt.state_colour(ledger_state)}">ledger: {esc(chain)}</span>',
         unsafe_allow_html=True,
     )
     if st.session_state.notice:
@@ -255,7 +258,7 @@ def section_mandate(view: dict) -> None:
             f'<div class="row" style="border-color:{colour}"><b>{label}</b>: {shown} '
             f'<span style="color:{colour}">({"from text" if source == "text" else source})</span></div>'
         )
-    st.markdown("".join(cells), unsafe_allow_html=True)
+    st.markdown(f'<div class="grid">{"".join(cells)}</div>', unsafe_allow_html=True)
     with st.expander("Mandate JSON (wallet field names)"):
         st.json(envelope)
 
@@ -274,8 +277,15 @@ def section_invoice(view: dict) -> None:
         ]
         st.markdown("".join(f"<b>{esc(k)}</b>: {esc(v)}<br>" for k, v in rows), unsafe_allow_html=True)
     with right:
-        st.markdown(f"OCR confidence **{fmt.pct(inv['confidence'], 0)}**")
-        st.progress(min(max(float(inv["confidence"]), 0.0), 1.0))
+        confidence = min(max(float(inv["confidence"]), 0.0), 1.0)
+        ok = confidence >= MIN_CONFIDENCE
+        st.markdown(
+            f"OCR confidence <b>{fmt.pct(confidence, 0)}</b> against the {fmt.pct(MIN_CONFIDENCE, 0)} minimum"
+            f'<div class="gauge"><div class="fill" style="width:{confidence * 100:.1f}%;'
+            f'background:{fmt.GREEN if ok else fmt.AMBER}"></div>'
+            f'<div class="cap" style="left:{MIN_CONFIDENCE * 100:.0f}%"></div></div>',
+            unsafe_allow_html=True,
+        )
         flags = [("injection", f) for f in inv.get("injection_flags", [])]
         flags += [("fraud", f) for f in inv.get("fraud_flags", [])]
         chips = "".join(
@@ -302,7 +312,9 @@ def section_decision(view: dict) -> None:
     a, b, c = st.columns(3)
     a.metric("Advance", fmt.pct(d["advance_rate"], 0))
     b.metric("Limit", fmt.thb(d["limit"]))
-    c.metric("Fee", fmt.rate_pair(d["fee_rate"], d.get("apr")))
+    c.metric("Fee", f"{fmt.pct(d['apr'])} APR" if d.get("apr") else fmt.rate_pair(d["fee_rate"], None))
+    if d.get("apr"):
+        c.caption(f"= {fmt.pct(d['fee_rate'])} per 30 days")
     pd_value = float(d.get("pd", d["risk_score"]))
     fill, line = fmt.gauge(pd_value, cap)
     st.markdown(
@@ -313,7 +325,11 @@ def section_decision(view: dict) -> None:
         unsafe_allow_html=True,
     )
     reasons = sorted(d["reasons"], key=lambda r: r.startswith("MODEL."))
-    st.markdown("\n".join(f"- `{esc(code)}` {esc(text)}" for code, text in map(fmt.reason_code, reasons)))
+    lines = []
+    for code, text in map(fmt.reason_code, reasons):
+        words = story.plain(code)
+        lines.append(f"- `{esc(code)}` " + (f"**{esc(words)}**: {esc(text)}" if words else esc(text)))
+    st.markdown("\n".join(lines))
     with st.expander("Why? Model drivers and rule trace"):
         drivers = {f["feature"]: f["contribution"] for f in d.get("top_features", [])}
         if drivers:
