@@ -53,6 +53,11 @@ OCR service sent, and the section is hidden when OCR returns neither field. The 
 Amount in words and Payment terms buttons (four per row) appear only when `05_tampered.pdf`, `06_qr_swap.pdf`,
 `07_words_mismatch.pdf` / `08_terms_mismatch.pdf` are in `data/invoices/demo/` (they come with the ocr-ai PRs).
 
+**Judge mode** (the dark button under the case row) runs every available case in order, Happy first, and lists
+one line per invoice: its verdict badge, the plain-language reason, and a Show button that opens that run below.
+The header line counts funded / sent to a person / stopped. In live mode, reset the OCR demo history first or
+Happy itself will be a duplicate; in fixture mode it lists the saved runs.
+
 ## What is on screen, and where the numbers come from
 
 | Section | Content | Source in fixture mode |
