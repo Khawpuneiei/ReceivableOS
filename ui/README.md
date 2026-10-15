@@ -44,7 +44,7 @@ Nothing crashes when the orchestrator is missing something:
 
 A service that fails behind the orchestrator is named in plain words ("the OCR service refused the request (HTTP 415): …"). [Buyer paid] appears only after a draw executed. If a demo case fails live (orchestrator down, a service error), the screen shows the **saved run of that same
 case** from `ui/fixtures/runs/` with a SAVED RUN banner and "(saved demo)" on the verdict, so the story still
-makes sense on stage. In fixture mode the same buttons show those saved runs (all eight cases, so judge mode works with no stack running). They are real `/flow/run`
+makes sense on stage. In fixture mode the same buttons show those saved runs (all nine cases, so judge mode works with no stack running). They are real `/flow/run`
 responses recorded on the mock ledger (OCR evidence and wallet check lists trimmed); re-record them by running
 each case live on fresh state and saving the response. An unreachable orchestrator gives an amber "Orchestrator unavailable … showing fixtures" banner and the fixture
 screen. A live attack response that was **not** stopped is shown with its real status, never relabelled BLOCKED.
@@ -53,8 +53,9 @@ Under the invoice, **What the document checks found** lists each OCR finding in 
 (PDF tampering, PromptPay QR swap, inflated totals) and `injection_details` (what the hidden text tries to
 make the AI do). The verdict banner repeats the deciding finding. Unknown codes fall back to the reason text the
 OCR service sent, and the section is hidden when OCR returns neither field. The Tampered PDF, QR swap,
-Amount in words and Payment terms buttons (four per row) appear only when `05_tampered.pdf`, `06_qr_swap.pdf`,
-`07_words_mismatch.pdf` / `08_terms_mismatch.pdf` are in `data/invoices/demo/` (they come with the ocr-ai PRs).
+Amount in words, Payment terms and Self-invoice buttons (four per row) appear only when `05_tampered.pdf`,
+`06_qr_swap.pdf`, `07_words_mismatch.pdf`, `08_terms_mismatch.pdf` / `09_self_invoice.pdf` are in
+`data/invoices/demo/` (they come with the ocr-ai PRs).
 
 **Judge mode** (the dark button under the case row) runs every available case in order, Happy first, and lists
 one line per invoice: its verdict badge, the plain-language reason, and a Show button that opens that run below.

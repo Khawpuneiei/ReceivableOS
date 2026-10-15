@@ -125,6 +125,7 @@ def test_the_verdict_says_saved_demo_when_nothing_ran_live():
         ("qr_swap", "Rejected"),
         ("words", "Sent to a person"),
         ("terms", "Sent to a person"),
+        ("self_invoice", "Sent to a person"),
     ],
 )
 def test_fixture_mode_shows_the_saved_run_of_each_case(case, headline):
