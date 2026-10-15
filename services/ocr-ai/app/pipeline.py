@@ -53,6 +53,8 @@ class OcrExtractResponse(ExtractedInvoice):
     fraud_graph: FraudGraph | None = None
     handoff: ConsumerHandoff | None = None
     model_checks: list[dict[str, str]] = Field(default_factory=list)
+    # Optional, additive: which instruction category/technique/channel raised each injection flag.
+    injection_details: list[dict] = Field(default_factory=list)
 
 
 def extract(content: bytes, document_type: str, settings: Settings) -> Extraction:
@@ -197,6 +199,7 @@ def compatible_invoice(result: Extraction, settings: Settings) -> OcrExtractResp
         review_required=bool(doc.review_reasons),
         extractor=doc.extractor,
         model_checks=result.model_checks,
+        injection_details=result.injection_details,
     )
 
 
