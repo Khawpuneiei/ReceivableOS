@@ -9,6 +9,8 @@ CI runs it after bringing the stack up. The invoices run once, in demo order, an
 of the matrix: what the judges see on screen.
 """
 
+import hashlib
+import json
 import os
 from pathlib import Path
 
@@ -119,6 +121,7 @@ def test_repay_of_an_invoice_that_never_ran_is_404(http):
         ("06_qr_swap.pdf", "reject"),  # PromptPay QR pays another tax ID: qr_payee_mismatch 0.40, reject
         ("07_words_mismatch.pdf", "review"),  # amount in words disagrees with the digits: confidence < 0.80
         ("08_terms_mismatch.pdf", "review"),  # payment terms disagree with the due date: confidence < 0.80
+        ("09_self_invoice.pdf", "review"),  # supplier and buyer share a tax ID (SUPPLIER_IS_BUYER)
     ],
 )
 def test_forged_invoices_never_reach_the_wallet(http, matrix, name, decision):
@@ -133,3 +136,77 @@ def test_forged_invoices_never_reach_the_wallet(http, matrix, name, decision):
     assert steps["policy"]["decision"] == decision
     assert "approve" not in steps and "wallet" not in steps
     assert steps["outcome"] == f"{decision}: wallet not called"
+
+
+def _route_absent(r: httpx.Response) -> bool:
+    """FastAPI's own 404 (no such route on this branch yet), not a 404 the route raised."""
+    return r.status_code == 404 and r.json().get("detail") == "Not Found"
+
+
+@pytest.mark.parametrize(
+    ("case", "code", "stopped_by"),
+    [
+        ("A1", "NotApproved", "Wallet guard L1"),  # injected invoice: review, agent draws anyway
+        ("A2", "DuplicateReceivable", "Registry (on-chain duplicate check)"),  # re-saved copy
+        ("A3", "AprAboveMandate", "Wallet guard L3"),  # 19% APR quote against the 12% mandate
+        ("A4", "AmountAboveLimit", "Wallet guard L3"),  # full face value, above the limit
+        ("A5", "NotApproved", "Wallet guard L1"),  # KYB expired: reject, agent draws anyway
+    ],
+)
+def test_live_attacks_are_blocked_by_the_wallet(http, case, code, stopped_by):
+    r = http.post(f"/flow/attack/{case}")
+    if _route_absent(r):
+        pytest.skip("POST /flow/attack lands with the attack-panel PR")
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert (out["status"], out["wallet"]["block_reason"], out["stopped_by"]) == ("blocked", code, stopped_by)
+
+
+def _entry_hash(entry: dict) -> str:
+    """The wallet's hash chain (app/audit/log.py): sha256(prev_hash + canonical JSON without hash)."""
+    body = {k: v for k, v in entry.items() if k != "hash"}
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"))
+    return "0x" + hashlib.sha256((entry["prev_hash"] + canonical).encode()).hexdigest()
+
+
+def _h(data: bytes) -> str:
+    return "0x" + hashlib.sha256(data).hexdigest()
+
+
+def _node(left: str, right: str) -> str:
+    return _h(b"\x01" + bytes.fromhex(left[2:]) + bytes.fromhex(right[2:]))
+
+
+def _merkle_verify(entry_hash: str, index: int, size: int, path: list[str], root: str) -> bool:
+    """RFC 9162 section 2.1.3.2, written from the RFC rather than imported, as an outside auditor would."""
+    fn, sn, r = index, size - 1, _h(b"\x00" + bytes.fromhex(entry_hash[2:]))
+    for p in path:
+        if sn == 0:
+            return False
+        if fn & 1 or fn == sn:
+            r = _node(p, r)
+            while not fn & 1 and fn != 0:
+                fn, sn = fn >> 1, sn >> 1
+        else:
+            r = _node(r, p)
+        fn, sn = fn >> 1, sn >> 1
+    return sn == 0 and r == root
+
+
+def test_the_draw_has_an_inclusion_proof_an_auditor_can_check(http, matrix):
+    audit_ref = matrix["01_happy.pdf"]["wallet"]["audit_ref"]
+    r = http.get(f"/flow/audit/{audit_ref}/proof")
+    if _route_absent(r) or r.status_code == 501:
+        pytest.skip("audit proofs land with the wallet's Merkle-audit PR and the orchestrator pass-through")
+    assert r.status_code == 200, r.text
+    proof = r.json()
+    entry = proof["entry"]
+    assert (entry["audit_ref"], entry["action"], entry["event"]) == (audit_ref, "draw", "EXECUTED")
+    assert proof["anchored"] and proof["chain_ref"].startswith("mock:0x")
+    assert _entry_hash(entry) == entry["hash"]
+    args = (proof["leaf_index"], proof["tree_size"], proof["proof"], proof["root"])
+    assert _merkle_verify(entry["hash"], *args)
+
+    forged = {**entry, "data": {**entry["data"], "chain_ref": "mock:0x" + "00" * 32}}  # rewrite history
+    assert _entry_hash(forged) != entry["hash"]
+    assert not _merkle_verify(_entry_hash(forged), *args)
