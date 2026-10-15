@@ -51,9 +51,17 @@ def base_url() -> str:
     return os.getenv("ORCHESTRATOR_URL", "http://localhost:8000").rstrip("/")
 
 
+def auth_headers() -> dict[str, str]:
+    """The orchestrator's caller token (ORCHESTRATOR_TOKEN in .env), sent on every call; none when unset."""
+    token = os.getenv("ORCHESTRATOR_TOKEN", "").strip()
+    return {"X-Orchestrator-Token": token} if token else {}
+
+
 class Orchestrator:
     def __init__(self, url: str | None = None, transport: httpx.BaseTransport | None = None):
-        self.http = httpx.Client(base_url=url or base_url(), timeout=TIMEOUT_SECONDS, transport=transport)
+        self.http = httpx.Client(
+            base_url=url or base_url(), timeout=TIMEOUT_SECONDS, transport=transport, headers=auth_headers()
+        )
 
     def _call(self, method: str, path: str, **kwargs: Any) -> dict:
         try:
@@ -67,6 +75,9 @@ class Orchestrator:
             if detail:
                 raise ServiceError(f"HTTP {r.status_code} from {path}: {detail}", plain_error(detail))
             raise Unavailable(f"HTTP {r.status_code} from {path}")
+        if r.status_code in (401, 403):
+            plain = "the orchestrator refused the screen: set ORCHESTRATOR_TOKEN to the orchestrator's token"
+            raise ServiceError(f"HTTP {r.status_code} from {path}: {_detail(r)}", plain)
         if (
             r.status_code >= 400
         ):  # e.g. 415 when OCR refuses the uploaded file: the file's fault, said plainly
