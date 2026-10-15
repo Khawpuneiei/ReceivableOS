@@ -12,7 +12,7 @@ Build brief for the service: [`CLAUDE.md`](CLAUDE.md). Request and response mode
   against them with `CHAIN_MODE=fisco`, and the demo's on-chain transactions are checked on chain. The records are in
   [`eval/fisco-deployment.md`](eval/fisco-deployment.md) and [`eval/demo_tx_hashes_fisco.md`](eval/demo_tx_hashes_fisco.md).
 - **Local Anvil:** `scripts/deploy.py` and `scripts/evm_smoke.py` pass 7 of 7 checks.
-- **Tests:** `pytest` 141 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
+- **Tests:** `pytest` 149 passed, 2 skipped (the classifier model tests). `forge test` 42 passed. The last fresh-clone check was at `fedd575`, with 135 passed.
 - **Orchestrator:** the integration isn't finished. See `docs/orchestrator-integration.md`.
 
 Per-item status is in the table in [`docs/03-agent-wallet.md`](../../docs/03-agent-wallet.md) section 8.
@@ -156,6 +156,7 @@ Not built: `GET /wallet/registry/{invoice_fingerprint}` and the optional `POST /
 | `WALLET_APPROVER_TOKEN` | unset | Approver endpoints refuse every request until this is set. |
 | `WALLET_RISK_ORACLE_TOKEN` | unset | `POST /wallet/approve` refuses every request until this is set. |
 | `WALLET_AGENT_TOKEN` | unset | register, execute and settle refuse every request until this is set. |
+| `WALLET_STATE_FILE` | unset | FISCO only. A JSON file that keeps holds, pending approvals, idempotency results and the audit log across restarts. Unset means in memory only. |
 | `DEMO_MODE` | `0` | `1` allows `skip_offchain_checks`, so the chain alone is tested. |
 | `AGENT_CANARY` | unset | Canary string; seeing it in a request is a leak. |
 | `INJECTION_MODEL_DIR` | unset | Folder with the pinned classifier model. Unset means rules only. |
@@ -204,8 +205,11 @@ Money is THB with two decimals.
   On the demo invoice, any draw under about THB 2,270 is refused.
 - The classifier is English-only and does not detect jailbreaks. On the held-out v3 set, the rules alone catch 14 of 24
   attacks. On held-out v4, they catch 12 of 30.
-- Holds and pending approvals are kept in memory. A restart loses them, and a confirm for a draw sent before the
-  restart returns `NotPending`. The chain still holds the pending call.
+- Without `WALLET_STATE_FILE`, holds, pending approvals, idempotency results and the audit log are in memory, and
+  a restart loses them. With it (FISCO only), they are written to one JSON file after every audited action and read
+  back at startup. A crash between a ledger call and that write loses the one result; the chain still refuses a
+  repeat. The file is tied to the deployed `AgentWallet`, so a fresh deployment starts empty. It is a single local
+  file, not a database: one wallet process, no replication. On the mock, state is always in memory.
 - The FISCO adapter does not retry a transaction that fails at the RPC level; such a failure raises an exception.
 - The 15-minute approval-age rule from CLAUDE.md §5.4 is not implemented.
 - The optional agent loop (`POST /agent/run`, CLAUDE.md §7.3) is not built, so the eval skips its two cases.

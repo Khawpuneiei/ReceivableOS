@@ -34,6 +34,7 @@ from app.models import (
     canonical_json,
 )
 from app.money import apr_to_bps
+from app.wallet.persist import StateFile
 from app.wallet.store import Hold, ReceivableFact, Store
 from shared.money import fee_rate_30d_to_apr
 from shared.schemas import Decision as DecisionKind
@@ -66,6 +67,7 @@ class WalletService:
         canary: str | None = None,
         classifier: Classifier | None = None,
         classifier_action: str = "log",
+        state: StateFile | None = None,
     ) -> None:
         self.ledger = ledger
         self.store = store
@@ -79,6 +81,12 @@ class WalletService:
         self.mandate: Mandate | None = None
         self.paused = False
         self.audit = AuditLog()
+        # Durable state (FISCO): what a restart must not lose. See app/wallet/persist.py.
+        self.state = state
+        if state is not None:
+            paused = state.load_into(self.store, self.audit)
+            if paused is not None:
+                self.paused = paused
 
     # ----- helpers -----
 
@@ -233,6 +241,8 @@ class WalletService:
                 tx_id=result.tx_id,
                 data={"head": head, "entries": len(self.audit.entries), "chain_ref": anchor.tx_hash},
             )
+        if self.state is not None:
+            self.state.save(self.store, self.audit, self.paused)
 
     def _invoice_of(self, fingerprint: str) -> str:
         fact = self.store.receivables.get(fingerprint)
