@@ -9,3 +9,7 @@ known-first-party = ["app", "shared"]
 
 [lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.File", "fastapi.Depends", "fastapi.Query", "fastapi.Form"]
+
+[format]
+# ruff 0.17 also formats code blocks inside Markdown; docs keep their hand layout.
+exclude = ["*.md"]
