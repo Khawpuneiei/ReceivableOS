@@ -62,6 +62,15 @@ def test_unknown_codes_have_no_made_up_explanation():
     assert story.plain("AprAboveMandate") == "the lender's APR is above the SME's ceiling"
 
 
+def test_newer_wallet_guard_codes_read_in_plain_words_in_the_verdict():
+    view = copy.deepcopy(HAPPY)
+    view["timeline"] = [{"step": "TX-4", "status": "blocked", "block_reason": "InvoiceQuarantined"}]
+    view["wallet"] = {"status": "blocked", "block_reason": "InvoiceQuarantined"}
+    assert "quarantined after an earlier attack" in story.verdict(view)[2]
+    for code in ("HoneytokenTouched", "SessionBudgetExceeded", "DecisionTampered", "AgentMisaligned"):
+        assert story.plain(code)
+
+
 def test_findings_use_the_ocr_details_when_present_and_the_flags_otherwise():
     newer = {
         "fraud_flags": ["qr_payee_mismatch"],
