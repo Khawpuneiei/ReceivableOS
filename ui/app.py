@@ -17,6 +17,7 @@ from pathlib import Path
 
 import client as orch
 import format as fmt
+import merkle
 import story
 import streamlit as st
 
@@ -508,6 +509,55 @@ def section_chain(view: dict) -> None:
         st.caption("The wallet was never asked to pay: no credit approval (TX-2) and no draw (TX-4).")
     if wallet.get("status") == "executed" and not st.session_state.paid and st.button("Buyer paid"):
         action(lambda o: o.repay(view), "TX-5", "Buyer paid", "paid")
+    audit_check(view)
+
+
+def short(h: str | None) -> str:
+    """0xcec8...752e; a chain prefix such as mock: is kept whole."""
+    prefix, _, value = str(h).rpartition(":")
+    value = f"{value[:6]}...{value[-4:]}" if len(value) > 14 else value
+    return f"{prefix}:{value}" if prefix else value
+
+
+def audit_check(view: dict) -> None:
+    """Fetch the wallet's Merkle proof for the draw and check it here, so the screen does not take the
+    wallet's word for it (ui/merkle.py). Live runs only; hidden before the draw executed."""
+    wallet = view.get("wallet") or {}
+    ref = wallet.get("audit_ref")
+    if view.get("source") != "orchestrator" or wallet.get("status") != "executed" or not ref:
+        return
+    if st.button("Check this payment in the audit log", key="audit_check"):
+        try:
+            bundle = orch.Orchestrator().audit_proof(ref)
+            st.session_state.proof = {"ref": ref, "bundle": bundle, "problems": merkle.check(bundle)}
+        except orch.Unsupported:
+            st.session_state.proof = {"ref": ref, "bundle": None, "problems": ["unsupported"]}
+        except (orch.ServiceError, orch.Unavailable, KeyError, ValueError) as exc:
+            plain_text = getattr(exc, "plain", None) or str(exc)
+            st.session_state.proof = {"ref": ref, "bundle": None, "problems": [plain_text]}
+    proof = st.session_state.get("proof")
+    if not proof or proof["ref"] != ref:
+        return
+    bundle, problems = proof["bundle"], proof["problems"]
+    if problems == ["unsupported"]:
+        body, state = "This wallet version does not serve Merkle audit proofs yet.", "unknown"
+    elif bundle is None or problems:
+        body, state = f"<b>Audit check failed</b>: {esc('; '.join(problems))}.", "blocked"
+    else:
+        e = bundle["entry"]
+        anchored = (
+            f" That root is anchored on chain ({esc(short(bundle.get('chain_ref')))})."
+            if bundle.get("anchored")
+            else " Not on chain yet: the wallet anchors the root when the buyer pays, then check again."
+        )
+        body = (
+            f"<b>Verified on this screen</b>: audit entry #{esc(e['seq'])} ({esc(e['action'])}, "
+            f"{esc(e['event'])}) matches its own hash and is in the wallet's Merkle log of "
+            f"{esc(bundle['tree_size'])} entries ({len(bundle['proof'])}-hash path, root "
+            f"<code>{esc(short(bundle['root']))}</code>).{anchored}"
+        )
+        state = "executed"
+    st.markdown(row(body, state), unsafe_allow_html=True)
 
 
 def action(call, step: str, label: str, flag: str) -> None:

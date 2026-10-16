@@ -221,6 +221,16 @@ def test_a_refused_upload_is_a_plain_error_not_a_crash():
     )
 
 
+def test_audit_proof_is_unsupported_until_the_wallet_serves_proofs():
+    def no_proofs(request):
+        return httpx.Response(501, json={"detail": "agent-wallet has no Merkle audit proofs yet"})
+
+    with pytest.raises(orch.Unsupported):
+        _client(no_proofs).audit_proof("aud_1")
+    proof = {"seq": 3, "root": "0x01"}
+    assert _client(lambda r: httpx.Response(200, json=proof)).audit_proof("aud_1") == proof
+
+
 def test_the_orchestrator_token_rides_every_call(monkeypatch):
     seen = []
 
