@@ -8,7 +8,7 @@ gatherUsageStats = false
 [theme]
 base = "light"          # high contrast on a projector
 baseFontSize = 18
-primaryColor = "#1f4e9c"  # navy: buttons and focus only; green / amber / red stay reserved for states
+primaryColor = "#1a4f99"  # brand blue: buttons and focus only; green / amber / red stay reserved for states
 
 [client]
 toolbarMode = "viewer"  # no Deploy / developer menu on the projector

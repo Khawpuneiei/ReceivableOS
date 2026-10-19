@@ -1,4 +1,4 @@
-"""The demo screen imports and renders in fixture mode with the network blocked."""
+"""The demo site imports and renders every page in fixture mode with the network blocked."""
 
 import json
 import socket
@@ -26,19 +26,33 @@ def _text(at: AppTest) -> str:
     return "\n".join(m.value for m in at.markdown)
 
 
+def _open(at: AppTest, page: str) -> AppTest:
+    """Go to one of the top-nav pages (ui/views/<page>.py), keeping this session's state."""
+    return at.switch_page(f"views/{page}.py").run()
+
+
 def test_happy_path_renders_from_fixtures():
     at = AppTest.from_file(APP, default_timeout=30).run()
     assert not at.exception
     happy = json.loads((UI / "fixtures" / "happy.json").read_text(encoding="utf-8"))
-    text = _text(at)
-    assert "APPROVE" in text and "THB 524,300.00" in [m.value for m in at.metric]
+    assert "Write the rule once" in _text(at) and "THB 524,300.00" in _text(at)  # Home's hero
     assert "FIXTURE MODE" in at.info[0].value
     assert happy["policy"]["model_version"] in at.caption[-1].value
-    assert "TX-4" in text and "TX-5" not in text
+    _open(at, "decision")
+    assert "APPROVE" in _text(at) and "THB 524,300.00" in [m.value for m in at.metric]
+    _open(at, "ledger")
+    assert "TX-4" in _text(at) and "TX-5" not in _text(at)
+
+
+@pytest.mark.parametrize("page", ["home", "invoice", "decision", "rule", "ledger", "security"])
+def test_every_page_renders_with_the_status_banner_and_footer(page):
+    at = _open(AppTest.from_file(APP, default_timeout=30).run(), page)
+    assert not at.exception
+    assert "FIXTURE MODE" in at.info[0].value and "policy_version" in at.caption[-1].value
 
 
 def test_each_attack_button_adds_a_red_blocked_row():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = _open(AppTest.from_file(APP, default_timeout=30).run(), "security")
     for case in ("a1", "a2", "a3", "a4", "a5", "a6"):
         at.button(key=f"attack_{case}").click().run()
         assert not at.exception
@@ -46,8 +60,15 @@ def test_each_attack_button_adds_a_red_blocked_row():
     assert "AprAboveMandate" in _text(at) and "DuplicateReceivable" in _text(at)
 
 
+def test_run_all_six_attacks_adds_six_blocked_rows():
+    at = _open(AppTest.from_file(APP, default_timeout=30).run(), "security")
+    at.button(key="attack_all").click().run()
+    assert not at.exception
+    assert all(f"BLOCKED {case}" in _text(at) for case in ("A1", "A2", "A3", "A4", "A5", "A6"))
+
+
 def test_buyer_paid_appends_the_settlement_tx():
-    at = AppTest.from_file(APP, default_timeout=30).run()
+    at = _open(AppTest.from_file(APP, default_timeout=30).run(), "ledger")
     next(b for b in at.button if b.label == "Buyer paid").click().run()
     assert not at.exception
     assert "TX-5" in _text(at)
@@ -67,8 +88,8 @@ def test_live_mode_without_an_orchestrator_degrades_to_fixtures(monkeypatch):
     at.button(key="case_happy").click().run()
     assert not at.exception
     assert "Orchestrator unavailable" in at.warning[0].value
-    assert "APPROVE" in _text(at)  # the fixture view is still on screen
-    at.button(key="attack_a3").click().run()
+    assert "APPROVE" in _text(_open(at, "decision"))  # the fixture view is still on screen
+    _open(at, "security").button(key="attack_a3").click().run()
     assert not at.exception
     assert "BLOCKED A3" in _text(at) and "fixture: orchestrator has no attack route" in _text(at)
 
