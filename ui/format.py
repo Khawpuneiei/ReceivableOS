@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-GREEN, AMBER, RED, GREY = "#1a7f37", "#b26a00", "#c62828", "#6b7280"
+GREEN, AMBER, RED, GREY = "#1a7f37", "#b26a00", "#d80c18", "#6b7280"
 
 _STATE = {
     "approve": GREEN,
