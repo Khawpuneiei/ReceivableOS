@@ -15,6 +15,7 @@ from __future__ import annotations
 import html
 import json
 import os
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import client as orch
@@ -63,7 +64,18 @@ PAGES = (
     ("views/ledger.py", "Ledger", ":material/receipt_long:", "Every transaction the wallet recorded"),
     ("views/security.py", "Security tests", ":material/shield:", "Six attacks, each one blocked"),
 )
-MIN_CONFIDENCE = 0.80  # policy-ai's hard rule: below this the invoice goes to review (root CLAUDE.md)
+MIN_CONFIDENCE = 0.80
+MAX_FRAUD = 0.30  # policy-ai's hard rule: at or above this the invoice is rejected (root CLAUDE.md)
+BRAND = "#1a4f99"  # a blocked attack is a defence that worked: brand blue, not alarm red
+STOPPED_STATUSES = ("blocked", "failed", "reject", "review")
+# Step icons, drawn at one stroke weight and coloured by currentColor (never text glyphs).
+STATE_PATH = {
+    story.DONE: "M5 12.5l4.5 4.5L19 7.5",
+    story.REVIEW: "M12 7v6M12 17v.5",
+    story.STOPPED: "M7 7l10 10M17 7L7 17",
+    story.SKIPPED: "M7 12h10",
+    story.WAITING: "M12 7v5l3 2",
+}  # policy-ai's hard rule: below this the invoice goes to review (root CLAUDE.md)
 MANDATE_FIELDS = (
     ("max_ltv", "Max advance", "pct"),
     ("max_apr", "Max APR", "pct"),
@@ -90,11 +102,19 @@ html, body, .stApp, .stMarkdown, .stMarkdown p, .stMarkdown li, button, input, t
 .block-container { max-width: 1200px; padding-top: 4.5rem; }
 [data-testid="stHeader"] { background: transparent; }
 h1, h2, h3 { color: var(--ink); font-weight: 600 !important; letter-spacing: -0.01em; }
+h1, h2, h3, .headline, .verdict b { text-wrap: balance; }
+.lede, .why, .verdict, .row, .tally { text-wrap: pretty; }
+.nw { white-space: nowrap; }
+::selection { background: var(--brand-soft); color: var(--ink); }
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {
+  font-size: 14px !important; color: var(--ink3) !important; opacity: 1 !important; }
+a:focus-visible, [data-testid="stTopNavLink"]:focus-visible { outline: 2px solid var(--brand);
+  outline-offset: 2px; border-radius: 6px; }
 h3 { font-size: 18px !important; margin: 0; padding: 0; }
 code, .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px;
   background: var(--subtle); color: var(--ink2) !important; padding: 1px 6px; border-radius: 6px; }
 .hero { position:relative; margin:0 0 56px; padding:22px 24px 72px; border-radius:16px; color:#fff;
-  background:linear-gradient(135deg, var(--brand) 0%, #2d6cc4 100%); }
+  background:var(--brand); }
 .hero .top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 .hero .mark { width:38px; height:38px; border-radius:10px; background:#fff; color:var(--brand);
   font-weight:600; display:flex; align-items:center; justify-content:center; font-size:16px; }
@@ -103,24 +123,29 @@ code, .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 
 .hero .spacer { flex:1; }
 .hero .pill { display:inline-block; padding:4px 12px; border-radius:999px; font-size:13px; font-weight:500;
   background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.35); color:#fff; }
-.hero .headline { margin-top:28px; font-size:40px; font-weight:600; line-height:1.1; letter-spacing:-0.02em;
+.hero .body { display:flex; flex-wrap:wrap; gap:20px 40px; align-items:flex-end; margin-top:24px; }
+.hero .pitch { flex:1 1 440px; min-width:0; } .hero .case { flex:0 1 380px; min-width:0; }
+.hero .headline { font-size:36px; font-weight:600; line-height:1.1; letter-spacing:-0.02em;
   color:#fff; max-width:760px; }
-.hero .lede { margin-top:12px; font-size:17px; line-height:1.5; color:#dcecff; max-width:640px; }
-.hero .greet { margin-top:28px; font-size:13px; font-weight:600; letter-spacing:.08em;
-  text-transform:uppercase; color:var(--brand-soft); }
+.hero .lede { margin-top:10px; font-size:17px; line-height:1.5; color:#dcecff; max-width:640px; }
+.hero .greet { font-size:14px; color:#dcecff; }
 .head { margin:4px 0 20px; } .head h1 { font-size:32px; margin:0; padding:0; }
 .head .sub { font-size:15px; color:var(--ink2); margin-top:4px; }
-.hero .amt { font-size:36px; font-weight:600; line-height:1.15; color:#fff; letter-spacing:-0.01em; }
+.hero .amt { font-size:32px; font-weight:600; line-height:1.15; color:#fff; letter-spacing:-0.01em; }
 .hero .sub { font-size:14px; color:var(--brand-soft); margin-top:2px; }
 .tiles { position:absolute; left:16px; right:16px; bottom:-44px; display:grid; gap:10px;
   grid-template-columns:repeat(4, 1fr); }
-.tile { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px;
-  color:var(--ink); }
+.tile { background:#fff; border:1px solid rgba(11,31,51,.06); border-radius:12px; padding:12px 14px;
+  color:var(--ink); box-shadow:0 1px 2px rgba(11,31,51,.06), 0 8px 24px rgba(11,31,51,.10);
+  animation:rise .4s cubic-bezier(.2,0,0,1) both; }
+.tile:nth-child(2) { animation-delay:.06s; } .tile:nth-child(3) { animation-delay:.12s; }
+.tile:nth-child(4) { animation-delay:.18s; }
+.tile .chip { margin:2px 0 0; font-size:15px; font-weight:600; }
 .tile .k { font-size:12px; color:var(--ink3); }
-.tile .v { font-size:18px; font-weight:600; margin-top:2px; }
+.tile .v { font-size:18px; font-weight:600; margin-top:2px; white-space:nowrap; }
 .tile .v.on { color:var(--brand); }
 .sec { display:flex; align-items:center; gap:10px; margin:28px 0 8px; }
-.sec .bar { width:4px; height:20px; border-radius:2px; background:var(--accent); }
+.sec .bar { width:4px; height:20px; border-radius:2px; background:var(--brand); }
 .sec b { font-size:18px; font-weight:600; }
 .badge { display:inline-block; padding:4px 12px; border-radius:999px; font-weight:600; font-size:14px;
   border:1px solid; }
@@ -128,34 +153,49 @@ code, .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 
 .chip { display:inline-block; padding:2px 10px; margin:2px; border-radius:999px; font-size:13px;
   font-weight:500; border:1px solid; }
 .why { font-size:14px; color:var(--ink3); }
-.row { padding:12px 16px; margin:6px 0; border:1px solid var(--line); border-left:4px solid;
-  border-radius:10px; background:#fff; }
+.row { display:flex; gap:12px; align-items:flex-start; padding:12px 16px; margin:6px 0;
+  border:1px solid var(--line); border-radius:10px; background:#fff;
+  animation:rise .18s cubic-bezier(.2,0,0,1) both; }
+.row .dot { flex:none; width:10px; height:10px; border-radius:50%; margin-top:7px; }
+.tally { padding:14px 18px; margin:8px 0; border-radius:12px; font-size:18px; font-weight:600;
+  background:var(--brand-tint); border:1px solid var(--brand-soft); color:var(--brand-hover);
+  animation:rise .24s cubic-bezier(.2,0,0,1) both; }
+table.items { width:100%; border-collapse:collapse; font-size:15px; margin:10px 0 4px; }
+table.items th { text-align:left; font-size:12px; font-weight:600; color:var(--ink3); padding:6px 8px;
+  border-bottom:1px solid var(--line); }
+table.items td { padding:8px; border-bottom:1px solid var(--line); } table.items .n { text-align:right; }
 .gauge { position:relative; height:10px; background:var(--subtle); border-radius:999px; margin:8px 0 14px; }
 .gauge .fill { position:absolute; height:100%; border-radius:999px; }
-.gauge .cap { position:absolute; top:-5px; height:20px; border-left:2px dashed var(--accent); }
+.gauge .cap { position:absolute; top:-5px; height:20px; border-left:2px dashed var(--ink2); }
 .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:8px; }
-.verdict { padding:18px 22px; border-radius:12px; margin:8px 0 12px;
-  border:1px solid; border-left-width:6px; }
+.verdict { padding:18px 22px; border-radius:12px; margin:8px 0 12px; border:1px solid;
+  animation:rise .24s cubic-bezier(.2,0,0,1) both; }
 .verdict b { font-size: 24px; font-weight:600; display:block; margin-bottom:4px; }
 .steps { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
-.step { flex:1 1 0; border:1px solid var(--line); border-top:4px solid; border-radius:10px; padding:10px 12px;
+.step { flex:1 1 0; border:1px solid var(--line); border-radius:10px; padding:10px 12px;
         background:#fff; min-width:130px; }
 .step .n { font-weight:600; } .step .d { font-size:14px; color:var(--ink3); line-height:1.4; }
-.step .i { display:inline-block; width:22px; height:22px; border-radius:11px; border:1px solid;
-           text-align:center; font-weight:600; margin-right:6px; line-height:20px; font-size:13px; }
+.step .i { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px;
+           border-radius:11px; border:1px solid; margin-right:6px; vertical-align:-5px; }
+.step .i svg { width:14px; height:14px; }
+@keyframes rise { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce) { .tile, .row, .tally, .verdict { animation:none; } }
 [data-testid="stMetric"] { background:#fff; border:1px solid var(--line); border-radius:12px;
   padding:12px 16px; }
 [data-testid="stMetricValue"] { font-weight:600; font-size:30px; }
 @media (max-width: 640px) {
   .hero { margin-bottom:24px; padding-bottom:22px; } .hero .headline { font-size:30px; }
   .tiles { position:static; margin-top:18px; grid-template-columns:repeat(2, 1fr); }
+  .tile .v { font-size:16px; }
 }
 .stButton button, .stDownloadButton button { border-radius:10px; font-weight:500; min-height:44px;
   border:1px solid #717d8c; color:var(--ink); background:#fff; }
 .stButton button[kind="primary"] { background:var(--brand); border-color:var(--brand); color:#fff; }
 .stButton button[kind="primary"]:hover { background:var(--brand-hover); border-color:var(--brand-hover); }
 .stButton button:hover { border-color:var(--brand); color:var(--brand); background:var(--brand-tint); }
-.stButton button { transition: background .15s ease, border-color .15s ease, color .15s ease; }
+.stButton button { transition: background .15s ease, border-color .15s ease, color .15s ease,
+  transform .1s ease-out; }
+.stButton button:active { transform: scale(0.96); }
 .stButton button[kind="primary"] p, .stButton button[kind="primary"]:hover p { color:#fff; }
 [data-testid="stExpander"] details { background:#fff; border:1px solid var(--line); border-radius:12px; }
 textarea, input { border-radius:8px !important; }
@@ -178,8 +218,17 @@ def badge(text: str, state: str | None = None, big: bool = False) -> str:
     return f'<span class="{cls}" style="{fmt.tone(fmt.state_colour(state or text))}">{esc(text)}</span>'
 
 
-def row(body: str, state: str) -> str:
-    return f'<div class="row" style="border-color:{fmt.state_colour(state)}">{body}</div>'
+def row(body: str, state: str, colour: str | None = None) -> str:
+    """A result line: a dot in the state's colour, then the text."""
+    dot = colour or fmt.state_colour(state)
+    return f'<div class="row"><span class="dot" style="background:{dot}"></span><div>{body}</div></div>'
+
+
+def state_icon(state: str) -> str:
+    return (
+        '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" '
+        f'stroke-linecap="round" stroke-linejoin="round"><path d="{STATE_PATH[state]}"/></svg>'
+    )
 
 
 def load_fixture(name: str) -> dict:
@@ -307,19 +356,22 @@ def section_scoreboard() -> None:
         return
     funded = sum(r["state"] == story.DONE for r in board)
     held = sum(r["state"] == story.REVIEW for r in board)
-    summary = f"**Judge mode: {len(board)} invoices, {funded} funded, {held} sent to a person, "
-    summary += f"{len(board) - funded - held} stopped.**"
+    summary = f"Judge mode: {len(board)} invoices, {funded} funded, {held} sent to a person, "
+    summary += f"{len(board) - funded - held} stopped."
     if funded == 1 and board[0]["case"] == "happy" and board[0]["state"] == story.DONE:
         summary += " Only one invoice moved money; every forged one was held or stopped."
-    st.markdown(summary)
+    st.markdown(f'<div class="tally">{esc(summary)}</div>', unsafe_allow_html=True)
     for r in board:
         colour = story.STATE_COLOUR[r["state"]]
         tag = " (saved demo)" if r["saved"] else ""
         left, right = st.columns([6, 1], vertical_alignment="center")
         left.markdown(
-            f'<div class="row" style="border-color:{colour}"><b>{esc(r["label"])}</b> · '
-            f'<span class="chip" style="{fmt.tone(colour)}">{esc(r["headline"] + tag)}</span>'
-            f'<br><span class="why">{esc(r["sentence"])}</span></div>',
+            row(
+                f'<b>{esc(r["label"])}</b> · <span class="chip" style="{fmt.tone(colour)}">'
+                f'{esc(r["headline"] + tag)}</span><br><span class="why">{esc(r["sentence"])}</span>',
+                "",
+                colour,
+            ),
             unsafe_allow_html=True,
         )
         if r["view"] and right.button("Show", key=f"show_{r['case']}", width="stretch"):
@@ -336,8 +388,7 @@ def run_controls() -> None:
         cols = st.columns(CASES_PER_ROW)
         row = cases[start : start + CASES_PER_ROW]
         for col, (case, label, filename, hint) in zip(cols, row, strict=False):
-            kind = "primary" if case == "happy" else "secondary"
-            if col.button(label, key=f"case_{case}", type=kind, width="stretch"):
+            if col.button(label, key=f"case_{case}", width="stretch"):
                 run_case(case, filename)
                 st.rerun()
             col.caption(hint)
@@ -397,25 +448,32 @@ def hero(view: dict) -> None:
         ("Advance rate", fmt.pct(d["advance_rate"], 0) if d.get("advance_rate") else "-", True),
         ("Advance limit", fmt.thb(d["limit"]) if d.get("limit") else "-", False),
         ("Cost", f"{fmt.pct(d['apr'])} APR" if d.get("apr") else "-", False),
-        ("Decision", (d.get("decision") or view.get("state") or "-").replace("_", " ").capitalize(), True),
     ]
+    state = story.verdict(view, st.session_state.paid)[0]
+    decided = {"approve": "Approved", "review": "Sent to a person", "reject": "Rejected"}
     tile_html = "".join(
         f'<div class="tile"><div class="k">{esc(k)}</div>'
         f'<div class="v{" on" if on else ""}">{esc(v)}</div></div>'
         for k, v, on in tiles
     )
+    label = decided.get(d.get("decision"), "Stopped")
+    tile_html += (
+        '<div class="tile"><div class="k">Decision</div>'
+        f'<span class="chip" style="{fmt.tone(story.STATE_COLOUR[state])}">{esc(label)}</span></div>'
+    )
     st.markdown(
         '<div class="hero"><div class="top"><div class="mark">R</div>'
         '<div><div class="name">ReceivableOS</div>'
-        '<div class="tag">Invoice financing for Thai SMEs · the AI proposes, your signed rule decides</div>'
+        '<div class="tag">Invoice financing for Thai SMEs</div>'
         f'</div><div class="spacer"></div><span class="pill">Ledger: {esc(chain)}</span></div>'
+        '<div class="body"><div class="pitch">'
         '<div class="headline">Write the rule once. Your invoices fund themselves.</div>'
-        '<div class="lede">An AI agent reads each invoice, prices it and draws the advance on-chain, '
-        "but only inside the rule you signed. Every step is checked by code and recorded.</div>"
-        f'<div class="greet">Latest case · {esc(owner)}</div>'
+        '<div class="lede">An AI agent reads, prices and draws each invoice on-chain, but only inside the '
+        "rule you signed. Code checks every step and the ledger records it.</div></div>"
+        f'<div class="case"><div class="greet">Latest case from {esc(owner)}</div>'
         f'<div class="amt">{esc(amount)}</div>'
-        f'<div class="sub">Invoice {esc(inv.get("invoice_no", "-"))} · '
-        f"billed to {esc((inv.get('buyer') or {}).get('name') or '-')}</div>"
+        f'<div class="sub">Invoice <span class="nw">{esc(inv.get("invoice_no", "-"))}</span> · '
+        f"billed to {esc((inv.get('buyer') or {}).get('name') or '-')}</div></div></div>"
         f'<div class="tiles">{tile_html}</div></div>',
         unsafe_allow_html=True,
     )
@@ -433,7 +491,7 @@ def status_banner(view: dict) -> None:
     elif view.get("source") == "fixtures" and live():
         st.info(f"SAVED DEMO: nothing has run live yet. Run an invoice below to call {orch.base_url()}.")
     elif view.get("source") == "fixtures":
-        st.info("FIXTURE MODE: saved responses from ui/fixtures/, no backend called.")
+        st.info("FIXTURE MODE: saved responses, no backend called.")
     else:
         label = {c[0]: c[1] for c in DEMO_CASES}.get(st.session_state.case, st.session_state.case)
         st.success(
@@ -455,8 +513,8 @@ def section_flow(view: dict) -> None:
     for n, s in enumerate(story.steps(view, st.session_state.paid), 1):
         colour = story.STATE_COLOUR[s["state"]]
         cards.append(
-            f'<div class="step" style="border-top-color:{colour}"><span class="i" style="{fmt.tone(colour)}">'
-            f'{story.STATE_ICON[s["state"]]}</span><span class="n">{n}. {esc(s["name"])}</span>'
+            f'<div class="step"><span class="i" style="{fmt.tone(colour)}">'
+            f'{state_icon(s["state"])}</span><span class="n">{n}. {esc(s["name"])}</span>'
             f'<div class="d">{esc(s["detail"])}</div></div>'
         )
     st.markdown(f'<div class="steps">{"".join(cards)}</div>', unsafe_allow_html=True)
@@ -481,13 +539,17 @@ def section_mandate(view: dict) -> None:
     cells = []
     for key, label, kind in MANDATE_FIELDS:
         value = mandate.get(key)
-        shown = fmt.pct(value, 0) if kind == "pct" else fmt.thb(value) if kind == "thb" else esc(value or "-")
+        shown = (
+            fmt.pct(value, 0)
+            if kind == "pct"
+            else fmt.thb(value)
+            if kind == "thb"
+            else esc(value or "-")[:10]
+        )
         source = fmt.field_source(envelope, key)
         colour = fmt.GREY if source == "default" else fmt.GREEN
-        cells.append(
-            f'<div class="row" style="border-color:{colour}"><b>{label}</b>: {shown} '
-            f'<span style="color:{colour}">({"from text" if source == "text" else source})</span></div>'
-        )
+        origin = f'<span style="color:{colour}">({"from text" if source == "text" else source})</span>'
+        cells.append(row(f"<b>{label}</b>: {shown} {origin}", "", colour))
     st.markdown(f'<div class="grid">{"".join(cells)}</div>', unsafe_allow_html=True)
     with st.expander("Mandate JSON (wallet field names)"):
         st.json(envelope)
@@ -505,6 +567,7 @@ def section_invoice(view: dict) -> None:
             ("Amount", fmt.thb(inv["amount"], inv["currency"])),
         ]
         st.markdown("".join(f"<b>{esc(k)}</b>: {esc(v)}<br>" for k, v in rows), unsafe_allow_html=True)
+        line_items(inv)
     with right:
         confidence = min(max(float(inv["confidence"]), 0.0), 1.0)
         ok = confidence >= MIN_CONFIDENCE
@@ -515,13 +578,22 @@ def section_invoice(view: dict) -> None:
             f'<div class="cap" style="left:{MIN_CONFIDENCE * 100:.0f}%"></div></div>',
             unsafe_allow_html=True,
         )
+        fraud = min(max(float(inv["fraud_score"]), 0.0), 1.0)
+        finding = fmt.RED if fraud >= MAX_FRAUD else fmt.AMBER  # one colour per finding, from the outcome
+        st.markdown(
+            f"Fraud score <b>{fraud:.2f}</b> against the {MAX_FRAUD:.2f} reject line"
+            f'<div class="gauge"><div class="fill" style="width:{fraud * 100:.1f}%;'
+            f'background:{fmt.GREEN if fraud < MAX_FRAUD else fmt.RED}"></div>'
+            f'<div class="cap" style="left:{MAX_FRAUD * 100:.0f}%"></div></div>',
+            unsafe_allow_html=True,
+        )
         flags = [("injection", f) for f in inv.get("injection_flags", [])]
         flags += [("fraud", f) for f in inv.get("fraud_flags", [])]
         chips = "".join(
-            f'<span class="chip" style="{fmt.tone(fmt.RED)}">{esc(k)}: {esc(f)}</span>' for k, f in flags
+            f'<span class="chip" style="{fmt.tone(finding)}">{esc(k)}: {esc(f)}</span>' for k, f in flags
         )
         clean = f'<span class="chip" style="{fmt.tone(fmt.GREEN)}">no injection or fraud flags</span>'
-        st.markdown(f"Fraud score {esc(inv['fraud_score'])}<br>{chips or clean}", unsafe_allow_html=True)
+        st.markdown(chips or clean, unsafe_allow_html=True)
         found = story.findings(inv)
         if found:
             lines = []
@@ -531,13 +603,44 @@ def section_invoice(view: dict) -> None:
                     f"<br><span style='font-size:15px'>{esc(f['detail'])}</span>" if f.get("detail") else ""
                 )
                 headline = f["headline"][:1].upper() + f["headline"][1:]  # keep "QR", "PDF" as written
-                lines.append(row(f"<b>{esc(headline)}</b>{weight}{detail}", "review"))
+                lines.append(row(f"<b>{esc(headline)}</b>{weight}{detail}", "", finding))
             st.markdown("<b>What the document checks found</b>" + "".join(lines), unsafe_allow_html=True)
         st.markdown(
             f"doc_hash <code>{esc(fmt.short_hash(inv['doc_hash']))}</code><br>"
             f"fingerprint <code>{esc(fmt.short_hash(inv['invoice_fingerprint']))}</code>",
             unsafe_allow_html=True,
         )
+
+
+def _num(value, places: int = 2) -> str:
+    try:
+        return f"{Decimal(str(value)):,.{places}f}"
+    except (InvalidOperation, ValueError):
+        return str(value or "-")
+
+
+def line_items(inv: dict) -> None:
+    """The invoice's own lines and what they add up to, next to the stated total. Text is escaped."""
+    items = inv.get("line_items") or []
+    if not items:
+        return
+    body = "".join(
+        f"<tr><td>{esc(i.get('description'))}</td><td class='n'>{esc(_num(i.get('qty'), 0))}</td>"
+        f"<td class='n'>{esc(_num(i.get('unit_price')))}</td>"
+        f"<td class='n'>{esc(_num(i.get('total')))}</td></tr>"
+        for i in items
+    )
+    st.markdown(
+        '<table class="items"><tr><th>Line item</th><th class="n">Qty</th><th class="n">Unit price</th>'
+        f'<th class="n">Total</th></tr>{body}</table>',
+        unsafe_allow_html=True,
+    )
+    try:
+        added = sum(Decimal(str(i.get("total"))) for i in items)
+    except (InvalidOperation, ValueError):
+        return
+    total = fmt.thb(inv["amount"], inv["currency"])
+    st.caption(f"Lines add up to {fmt.thb(added, inv['currency'])}; the invoice total is {total}.")
 
 
 def section_decision(view: dict) -> None:
@@ -563,7 +666,12 @@ def section_decision(view: dict) -> None:
         f'<div class="cap" style="left:{line * 100:.1f}%"></div></div>',
         unsafe_allow_html=True,
     )
-    reasons = sorted(d["reasons"], key=lambda r: r.startswith("MODEL."))
+    if d["decision"] != "approve":
+        st.caption("Not approved: these are the terms the policy computed, not money paid.")
+    deciding = ("HARD.", "KO.", "REVIEW.")  # the rules that decided it come first, model drivers last
+    reasons = sorted(
+        d["reasons"], key=lambda r: 0 if r.startswith(deciding) else 2 if r.startswith("MODEL.") else 1
+    )
     lines = []
     for code, text in map(fmt.reason_code, reasons):
         words = story.plain(code)
@@ -648,7 +756,7 @@ def run_attack(case: str) -> dict:
 
 def attack_row_html(a: dict) -> str:
     """One attack: verdict and title, a plain Why, then who stopped it, the deciding policy codes, the ref."""
-    stopped = a["status"] in ("blocked", "failed", "reject", "review")
+    stopped = a["status"] in STOPPED_STATUSES
     label = a.get("label") or ""
     source = (
         badge("LIVE", "executed")
@@ -657,8 +765,9 @@ def attack_row_html(a: dict) -> str:
         if label
         else ""
     )
-    why = story.plain(a.get("block_reason"))
     deciding = [c for c in a.get("policy_reasons", []) if c.startswith(("HARD.", "KO.", "REVIEW."))]
+    reasons = [story.plain(deciding[0]) if deciding else None, story.plain(a.get("block_reason"))]
+    why = "; ".join(dict.fromkeys(r for r in reasons if r))
     policy = (
         f" · policy <b>{esc(a['policy_decision'])}</b>"
         + (f" ({', '.join(esc(c) for c in deciding)})" if deciding else "")
@@ -673,7 +782,8 @@ def attack_row_html(a: dict) -> str:
         + (f"Why: {esc(why)}.<br>" if why and stopped else "")
         + f'<span style="font-size:15px">stopped by <b>{esc(a["stopped_by"])}</b>{policy} · '
         f"code <b>{esc(a.get('block_reason') or '-')}</b> · {where}</span>",
-        "blocked" if stopped else a["status"],
+        a["status"],
+        BRAND if stopped else None,
     )
 
 
@@ -685,8 +795,18 @@ def section_attacks() -> None:
         for col, case in zip(cols, ATTACKS[start : start + 3], strict=True):
             if col.button(ATTACK_LABELS[case], key=f"attack_{case}", width="stretch"):
                 st.session_state.attacks.append(run_attack(case))
-    for a in reversed(st.session_state.attacks):
+    done = st.session_state.attacks
+    if not done:
+        return
+    held = sum(a["status"] in STOPPED_STATUSES for a in done)
+    tally = f"{held} of {len(done)} attacks blocked"
+    tally += ". No money moved." if held == len(done) else f". {len(done) - held} got through."
+    st.markdown(f'<div class="tally">{esc(tally)}</div>', unsafe_allow_html=True)
+    for a in done:
         st.markdown(attack_row_html(a), unsafe_allow_html=True)
+    if st.button("Clear results", key="attack_clear"):
+        st.session_state.attacks = []
+        st.rerun()
 
 
 def footer(view: dict) -> None:
@@ -703,9 +823,9 @@ def page_home() -> None:
     view = load_view()
     hero(view)
     run_controls()
-    section_scoreboard()
     section_title("Where this invoice got to")
     section_flow(view)
+    section_scoreboard()
     section_title("Look closer")
     for col, (path, title, icon, blurb) in zip(st.columns(len(PAGES) - 1), PAGES[1:], strict=True):
         col.page_link(path, label=title, icon=icon)

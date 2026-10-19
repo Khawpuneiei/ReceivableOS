@@ -65,6 +65,18 @@ def test_run_all_six_attacks_adds_six_blocked_rows():
     at.button(key="attack_all").click().run()
     assert not at.exception
     assert all(f"BLOCKED {case}" in _text(at) for case in ("A1", "A2", "A3", "A4", "A5", "A6"))
+    assert "6 of 6 attacks blocked. No money moved." in _text(at)
+    at.button(key="attack_clear").click().run()
+    assert "BLOCKED A1" not in _text(at)
+
+
+def test_invoice_page_lists_the_line_items_and_what_they_add_up_to():
+    at = _open(AppTest.from_file(APP, default_timeout=30).run(), "invoice")
+    assert not at.exception
+    assert "Food trays" in _text(at) and "against the 0.30 reject line" in _text(at)
+    assert any(
+        "Lines add up to THB 700,000.00; the invoice total is THB 749,000.00." in c.value for c in at.caption
+    )
 
 
 def test_buyer_paid_appends_the_settlement_tx():
