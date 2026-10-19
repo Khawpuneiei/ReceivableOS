@@ -358,7 +358,6 @@ def init_state() -> None:
 
 def header(view: dict) -> None:
     chain = (view.get("wallet") or {}).get("chain") or "unknown"
-    ledger_state = {"mock": "pending_approval", "fisco": "executed"}.get(chain, "unknown")
     inv, d = view.get("ocr") or {}, view.get("policy") or {}
     owner = (inv.get("supplier") or {}).get("name") or "your company"
     amount = fmt.thb(inv.get("amount"), inv.get("currency", "THB")) if inv.get("amount") else "-"
@@ -381,7 +380,7 @@ def header(view: dict) -> None:
         f'<div class="greet">Good morning, {esc(owner)}</div>'
         f'<div class="amt">{esc(amount)}</div>'
         f'<div class="sub">Invoice {esc(inv.get("invoice_no", "-"))} · '
-        f"{esc(ledger_state.replace('_', ' '))} on the ledger</div>"
+        f"billed to {esc((inv.get('buyer') or {}).get('name') or '-')}</div>"
         f'<div class="tiles">{tile_html}</div></div>',
         unsafe_allow_html=True,
     )
