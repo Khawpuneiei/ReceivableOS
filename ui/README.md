@@ -7,6 +7,9 @@ six at once). Every page shows the mode banner on top and the policy and model v
 audit reference in the footer. `ui/app.py` is the shared frame and holds each page's renderer; `ui/views/*.py` are
 one-line page files. Owner: Policy AI engineer. Port 3000.
 
+The owner-facing web app (TypeScript, port 3001) lives in [`ui/web/`](web/README.md); this Streamlit
+screen stays as the demo and test harness for the OCR, LLM and chain calls.
+
 ## Run
 
 ```bash
