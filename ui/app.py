@@ -1,6 +1,8 @@
-"""ReceivableOS demo screen (brief section 12). Run: streamlit run ui/app.py --server.port 3000
+"""ReceivableOS demo site (brief section 12). Run: streamlit run ui/app.py --server.port 3000
 
-One screen, top to bottom: mandate, invoice, decision, offers, on-chain timeline, attacks, footer.
+Six pages behind a top nav: Home (hero, demo cases, where the invoice got to), Invoice, Credit decision,
+My rule, Ledger and Security tests. This file is the frame every page shares (style, status banner, footer)
+and holds each page's renderer; ui/views/*.py are one-line page files that call them.
 UI_MODE=fixtures (the default) renders the saved responses in ui/fixtures/ with no backend.
 UI_MODE=live talks to the orchestrator only (ui/client.py); any part it can't serve yet falls back to the
 fixture with a visible label, and an unreachable orchestrator shows an amber banner instead of crashing.
@@ -52,6 +54,15 @@ ATTACK_LABELS = {
     "a5": "A5 Expired KYB",
     "a6": "A6 Mandate expired / paused",
 }
+# Top nav, in order: (page file, title, icon, one line for the Home page's "Look closer" links).
+PAGES = (
+    ("views/home.py", "Home", ":material/home:", ""),
+    ("views/invoice.py", "Invoice", ":material/description:", "What we read and how we checked it"),
+    ("views/decision.py", "Credit decision", ":material/query_stats:", "Advance, price and why"),
+    ("views/rule.py", "My rule", ":material/rule:", "Your rule in your words, and what the agent enforces"),
+    ("views/ledger.py", "Ledger", ":material/receipt_long:", "Every transaction the wallet recorded"),
+    ("views/security.py", "Security tests", ":material/shield:", "Six attacks, each one blocked"),
+)
 MIN_CONFIDENCE = 0.80  # policy-ai's hard rule: below this the invoice goes to review (root CLAUDE.md)
 MANDATE_FIELDS = (
     ("max_ltv", "Max advance", "pct"),
@@ -76,7 +87,7 @@ html, body, .stApp, .stMarkdown, .stMarkdown p, .stMarkdown li, button, input, t
   font-family: 'IBM Plex Sans Thai', 'IBM Plex Sans', system-ui, sans-serif;
   font-variant-numeric: tabular-nums lining-nums; color: var(--ink); }
 .stMarkdown p, .stMarkdown li { font-size: 16px; line-height: 1.5; }
-.block-container { max-width: 1200px; padding-top: 3.5rem; }
+.block-container { max-width: 1200px; padding-top: 4.5rem; }
 [data-testid="stHeader"] { background: transparent; }
 h1, h2, h3 { color: var(--ink); font-weight: 600 !important; letter-spacing: -0.01em; }
 h3 { font-size: 18px !important; margin: 0; padding: 0; }
@@ -92,7 +103,13 @@ code, .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 
 .hero .spacer { flex:1; }
 .hero .pill { display:inline-block; padding:4px 12px; border-radius:999px; font-size:13px; font-weight:500;
   background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.35); color:#fff; }
-.hero .greet { margin-top:18px; font-size:15px; color:var(--brand-soft); }
+.hero .headline { margin-top:28px; font-size:40px; font-weight:600; line-height:1.1; letter-spacing:-0.02em;
+  color:#fff; max-width:760px; }
+.hero .lede { margin-top:12px; font-size:17px; line-height:1.5; color:#dcecff; max-width:640px; }
+.hero .greet { margin-top:28px; font-size:13px; font-weight:600; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--brand-soft); }
+.head { margin:4px 0 20px; } .head h1 { font-size:32px; margin:0; padding:0; }
+.head .sub { font-size:15px; color:var(--ink2); margin-top:4px; }
 .hero .amt { font-size:36px; font-weight:600; line-height:1.15; color:#fff; letter-spacing:-0.01em; }
 .hero .sub { font-size:14px; color:var(--brand-soft); margin-top:2px; }
 .tiles { position:absolute; left:16px; right:16px; bottom:-44px; display:grid; gap:10px;
@@ -128,7 +145,11 @@ code, .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 
            text-align:center; font-weight:600; margin-right:6px; line-height:20px; font-size:13px; }
 [data-testid="stMetric"] { background:#fff; border:1px solid var(--line); border-radius:12px;
   padding:12px 16px; }
-[data-testid="stMetricValue"] { font-weight:600; }
+[data-testid="stMetricValue"] { font-weight:600; font-size:30px; }
+@media (max-width: 640px) {
+  .hero { margin-bottom:24px; padding-bottom:22px; } .hero .headline { font-size:30px; }
+  .tiles { position:static; margin-top:18px; grid-template-columns:repeat(2, 1fr); }
+}
 .stButton button, .stDownloadButton button { border-radius:10px; font-weight:500; min-height:44px;
   border:1px solid #717d8c; color:var(--ink); background:#fff; }
 .stButton button[kind="primary"] { background:var(--brand); border-color:var(--brand); color:#fff; }
@@ -356,7 +377,18 @@ def init_state() -> None:
         st.session_state.setdefault(key, value)
 
 
-def header(view: dict) -> None:
+def page_head(title: str, view: dict, sub: str | None = None) -> None:
+    """A page's title and a line under it: by default, the invoice it is about. Every page but Home."""
+    inv = view.get("ocr") or {}
+    sub = sub or (
+        f"Invoice {inv.get('invoice_no', '-')} · {(inv.get('supplier') or {}).get('name') or '-'} → "
+        f"{(inv.get('buyer') or {}).get('name') or '-'}"
+    )
+    head = f'<div class="head"><h1>{esc(title)}</h1><div class="sub">{esc(sub)}</div></div>'
+    st.markdown(head, unsafe_allow_html=True)
+
+
+def hero(view: dict) -> None:
     chain = (view.get("wallet") or {}).get("chain") or "unknown"
     inv, d = view.get("ocr") or {}, view.get("policy") or {}
     owner = (inv.get("supplier") or {}).get("name") or "your company"
@@ -377,13 +409,20 @@ def header(view: dict) -> None:
         '<div><div class="name">ReceivableOS</div>'
         '<div class="tag">Invoice financing for Thai SMEs · the AI proposes, your signed rule decides</div>'
         f'</div><div class="spacer"></div><span class="pill">Ledger: {esc(chain)}</span></div>'
-        f'<div class="greet">Good morning, {esc(owner)}</div>'
+        '<div class="headline">Write the rule once. Your invoices fund themselves.</div>'
+        '<div class="lede">An AI agent reads each invoice, prices it and draws the advance on-chain, '
+        "but only inside the rule you signed. Every step is checked by code and recorded.</div>"
+        f'<div class="greet">Latest case · {esc(owner)}</div>'
         f'<div class="amt">{esc(amount)}</div>'
         f'<div class="sub">Invoice {esc(inv.get("invoice_no", "-"))} · '
         f"billed to {esc((inv.get('buyer') or {}).get('name') or '-')}</div>"
         f'<div class="tiles">{tile_html}</div></div>',
         unsafe_allow_html=True,
     )
+
+
+def status_banner(view: dict) -> None:
+    """Says on every page whether this is a live run, a saved run or fixtures."""
     if st.session_state.notice:
         st.warning(st.session_state.notice)
     if view.get("source") == "saved":
@@ -424,7 +463,6 @@ def section_flow(view: dict) -> None:
 
 
 def section_mandate(view: dict) -> None:
-    section_title("1. Mandate")
     text = st.text_area("The SME's rule, in plain language", view["mandate_text"], height=80)
     if st.button("Compile"):
         st.session_state.compiled = True
@@ -456,7 +494,6 @@ def section_mandate(view: dict) -> None:
 
 
 def section_invoice(view: dict) -> None:
-    section_title("2. Invoice")
     inv = view["ocr"]
     left, right = st.columns([3, 2])
     with left:
@@ -504,7 +541,6 @@ def section_invoice(view: dict) -> None:
 
 
 def section_decision(view: dict) -> None:
-    section_title("3. Decision")
     d = view["policy"]
     if not d:
         st.markdown(badge("STOPPED", "blocked", big=True), unsafe_allow_html=True)
@@ -542,7 +578,7 @@ def section_decision(view: dict) -> None:
 
 
 def section_offers(view: dict) -> None:
-    section_title("4. Offers")
+    section_title("Lender offers")
     fixture_label(view, "offers")
     if not_reached(view, "offers"):
         return
@@ -571,7 +607,6 @@ def tx_row(t: dict) -> str:
 
 
 def section_chain(view: dict) -> None:
-    section_title("5. On-chain")
     wallet = view.get("wallet") or {}
     timeline = list(view.get("timeline", []))
     if wallet.get("status") == "pending_approval" and not st.session_state.approved:
@@ -643,10 +678,8 @@ def attack_row_html(a: dict) -> str:
 
 
 def section_attacks() -> None:
-    section_title("6. Attacks")
-    st.caption(
-        "Each button tries to make the agent move money it should not. Every one must come back BLOCKED."
-    )
+    if st.button("Run all six attacks", key="attack_all", type="primary"):
+        st.session_state.attacks += [run_attack(case) for case in ATTACKS]
     for start in range(0, len(ATTACKS), 3):
         cols = st.columns(3)
         for col, case in zip(cols, ATTACKS[start : start + 3], strict=True):
@@ -666,22 +699,55 @@ def footer(view: dict) -> None:
     )
 
 
+def page_home() -> None:
+    view = load_view()
+    hero(view)
+    run_controls()
+    section_scoreboard()
+    section_title("Where this invoice got to")
+    section_flow(view)
+    section_title("Look closer")
+    for col, (path, title, icon, blurb) in zip(st.columns(len(PAGES) - 1), PAGES[1:], strict=True):
+        col.page_link(path, label=title, icon=icon)
+        col.caption(blurb)
+
+
+def page_invoice() -> None:
+    page_head("Invoice", load_view())
+    section_invoice(load_view())
+
+
+def page_decision() -> None:
+    page_head("Credit decision", load_view())
+    section_decision(load_view())
+    section_offers(load_view())
+
+
+def page_rule() -> None:
+    page_head("My rule", load_view())
+    section_mandate(load_view())
+
+
+def page_ledger() -> None:
+    page_head("Ledger", load_view())
+    section_chain(load_view())
+
+
+def page_security() -> None:
+    sub = "Each button tries to make the agent move money it should not. Every one must come back BLOCKED."
+    page_head("Security tests", load_view(), sub)
+    section_attacks()
+
+
 def main() -> None:
     st.set_page_config(page_title="ReceivableOS", page_icon="◆", layout="wide")
     st.markdown(CSS, unsafe_allow_html=True)
     init_state()
-    view = load_view()
-    header(view)
-    run_controls()
-    section_scoreboard()
-    section_flow(view)
-    section_mandate(view)
-    section_invoice(view)
-    section_decision(view)
-    section_offers(view)
-    section_chain(view)
-    section_attacks()
-    footer(view)
+    pages = [st.Page(path, title=title, icon=icon) for path, title, icon, _ in PAGES]  # the first is Home
+    nav = st.navigation(pages, position="top")
+    status_banner(load_view())
+    nav.run()
+    footer(load_view())
 
 
 if __name__ == "__main__":  # streamlit runs the script as __main__; tests import it without rendering

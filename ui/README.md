@@ -1,8 +1,11 @@
 # ui: ReceivableOS demo screen
 
-One Streamlit screen for the 3-minute demo (brief section 12): **mandate → invoice → decision → offers →
-on-chain → attacks**, with the policy and model versions, the decision hash and the audit reference in the footer.
-Owner: Policy AI engineer. Port 3000.
+A six-page Streamlit site for the 3-minute demo (brief section 12), behind a top nav: **Home** (hero, demo
+cases, judge mode, where the invoice got to), **Invoice**, **Credit decision** (with lender offers), **My rule**
+(the mandate), **Ledger** (on-chain timeline, Approve, Buyer paid) and **Security tests** (attacks A1–A6, or all
+six at once). Every page shows the mode banner on top and the policy and model versions, the decision hash and the
+audit reference in the footer. `ui/app.py` is the shared frame and holds each page's renderer; `ui/views/*.py` are
+one-line page files. Owner: Policy AI engineer. Port 3000.
 
 ## Run
 
