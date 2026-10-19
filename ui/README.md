@@ -4,6 +4,9 @@ One Streamlit screen for the 3-minute demo (brief section 12): **mandate → inv
 on-chain → attacks**, with the policy and model versions, the decision hash and the audit reference in the footer.
 Owner: Policy AI engineer. Port 3000.
 
+The owner-facing web app (TypeScript, port 3001) lives in [`ui/web/`](web/README.md); this Streamlit
+screen stays as the demo and test harness for the OCR, LLM and chain calls.
+
 ## Run
 
 ```bash
