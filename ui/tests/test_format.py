@@ -44,3 +44,9 @@ def test_field_source_and_reason_code():
 def test_gauge_positions_pd_against_the_cap():
     assert fmt.gauge(0.0027, 0.05) == (0.027, 0.5)
     assert fmt.gauge(0.5, 0.05) == (1.0, 0.5)
+
+
+def test_tone_gives_each_state_a_pale_tint_and_dark_ink_and_unknown_is_grey():
+    assert fmt.tone(fmt.GREEN) == "background:#e6f4ec;color:#0f6b35;border-color:#1a7f37"
+    assert "color:#a61b1b" in fmt.tone(fmt.RED)
+    assert fmt.tone("#123456").startswith("background:#eef2f6;color:#3b4a5c")
