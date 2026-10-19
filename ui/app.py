@@ -68,26 +68,43 @@ CSS = """
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600\
 &family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-:root { --brand:#00629b; --brand-hover:#004b78; --brand-tint:#e6f1f8; --ink:#0b1f33; --ink2:#344054;
-        --ink3:#5f6b7a; --line:#e3e8ee; --canvas:#f6f9fc; --subtle:#f2f4f7; }
+:root { --brand:#1a4f99; --brand-hover:#143d78; --brand-soft:#aedaff; --brand-tint:#eaf4ff; --accent:#d80c18;
+        --ink:#0b1f33; --ink2:#344054; --ink3:#5f6b7a; --line:#e3e8ee; --canvas:#f4f7fb; --subtle:#f2f4f7; }
+* { -webkit-font-smoothing: antialiased; }
 .stApp { background: var(--canvas); }
 html, body, .stApp, .stMarkdown, .stMarkdown p, .stMarkdown li, button, input, textarea {
   font-family: 'IBM Plex Sans Thai', 'IBM Plex Sans', system-ui, sans-serif;
   font-variant-numeric: tabular-nums lining-nums; color: var(--ink); }
 .stMarkdown p, .stMarkdown li { font-size: 16px; line-height: 1.5; }
-.block-container { max-width: 1200px; padding-top: 4rem; }
+.block-container { max-width: 1200px; padding-top: 3.5rem; }
 [data-testid="stHeader"] { background: transparent; }
 h1, h2, h3 { color: var(--ink); font-weight: 600 !important; letter-spacing: -0.01em; }
-h3 { font-size: 20px !important; margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--line); }
+h3 { font-size: 18px !important; margin: 0; padding: 0; }
 code, .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px;
   background: var(--subtle); color: var(--ink2) !important; padding: 1px 6px; border-radius: 6px; }
-.appbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 18px; margin-bottom:12px;
-  background:#fff; border:1px solid var(--line); border-radius:12px; }
-.appbar .mark { width:36px; height:36px; border-radius:10px; background:var(--brand); color:#fff;
-  font-weight:600; display:flex; align-items:center; justify-content:center; font-size:15px; }
-.appbar .name { font-size:20px; font-weight:600; line-height:1.2; }
-.appbar .tag { font-size:14px; color:var(--ink3); }
-.appbar .spacer { flex:1; }
+.hero { position:relative; margin:0 0 56px; padding:22px 24px 72px; border-radius:16px; color:#fff;
+  background:linear-gradient(135deg, var(--brand) 0%, #2d6cc4 100%); }
+.hero .top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.hero .mark { width:38px; height:38px; border-radius:10px; background:#fff; color:var(--brand);
+  font-weight:600; display:flex; align-items:center; justify-content:center; font-size:16px; }
+.hero .name { font-size:20px; font-weight:600; line-height:1.2; color:#fff; }
+.hero .tag { font-size:13px; color:var(--brand-soft); }
+.hero .spacer { flex:1; }
+.hero .pill { display:inline-block; padding:4px 12px; border-radius:999px; font-size:13px; font-weight:500;
+  background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.35); color:#fff; }
+.hero .greet { margin-top:18px; font-size:15px; color:var(--brand-soft); }
+.hero .amt { font-size:36px; font-weight:600; line-height:1.15; color:#fff; letter-spacing:-0.01em; }
+.hero .sub { font-size:14px; color:var(--brand-soft); margin-top:2px; }
+.tiles { position:absolute; left:16px; right:16px; bottom:-44px; display:grid; gap:10px;
+  grid-template-columns:repeat(4, 1fr); }
+.tile { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+  color:var(--ink); }
+.tile .k { font-size:12px; color:var(--ink3); }
+.tile .v { font-size:18px; font-weight:600; margin-top:2px; }
+.tile .v.on { color:var(--brand); }
+.sec { display:flex; align-items:center; gap:10px; margin:28px 0 8px; }
+.sec .bar { width:4px; height:20px; border-radius:2px; background:var(--accent); }
+.sec b { font-size:18px; font-weight:600; }
 .badge { display:inline-block; padding:4px 12px; border-radius:999px; font-weight:600; font-size:14px;
   border:1px solid; }
 .big { font-size: 24px; padding: 6px 20px; }
@@ -98,7 +115,7 @@ code, .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 
   border-radius:10px; background:#fff; }
 .gauge { position:relative; height:10px; background:var(--subtle); border-radius:999px; margin:8px 0 14px; }
 .gauge .fill { position:absolute; height:100%; border-radius:999px; }
-.gauge .cap { position:absolute; top:-5px; height:20px; border-left:2px dashed #c62828; }
+.gauge .cap { position:absolute; top:-5px; height:20px; border-left:2px dashed var(--accent); }
 .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:8px; }
 .verdict { padding:18px 22px; border-radius:12px; margin:8px 0 12px;
   border:1px solid; border-left-width:6px; }
@@ -116,13 +133,19 @@ code, .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 
   border:1px solid #717d8c; color:var(--ink); background:#fff; }
 .stButton button[kind="primary"] { background:var(--brand); border-color:var(--brand); color:#fff; }
 .stButton button[kind="primary"]:hover { background:var(--brand-hover); border-color:var(--brand-hover); }
-.stButton button:hover { border-color:var(--brand); color:var(--brand); }
+.stButton button:hover { border-color:var(--brand); color:var(--brand); background:var(--brand-tint); }
+.stButton button { transition: background .15s ease, border-color .15s ease, color .15s ease; }
 .stButton button[kind="primary"] p, .stButton button[kind="primary"]:hover p { color:#fff; }
 [data-testid="stExpander"] details { background:#fff; border:1px solid var(--line); border-radius:12px; }
 textarea, input { border-radius:8px !important; }
 [data-testid="stAlert"] { border-radius:12px; }
 </style>
 """
+
+
+def section_title(text: str) -> None:
+    """Section heading in the brand style: a short accent bar beside the title."""
+    st.markdown(f'<div class="sec"><span class="bar"></span><b>{esc(text)}</b></div>', unsafe_allow_html=True)
 
 
 def esc(value) -> str:
@@ -336,12 +359,30 @@ def init_state() -> None:
 def header(view: dict) -> None:
     chain = (view.get("wallet") or {}).get("chain") or "unknown"
     ledger_state = {"mock": "pending_approval", "fisco": "executed"}.get(chain, "unknown")
+    inv, d = view.get("ocr") or {}, view.get("policy") or {}
+    owner = (inv.get("supplier") or {}).get("name") or "your company"
+    amount = fmt.thb(inv.get("amount"), inv.get("currency", "THB")) if inv.get("amount") else "-"
+    tiles = [
+        ("Advance rate", fmt.pct(d["advance_rate"], 0) if d.get("advance_rate") else "-", True),
+        ("Advance limit", fmt.thb(d["limit"]) if d.get("limit") else "-", False),
+        ("Cost", f"{fmt.pct(d['apr'])} APR" if d.get("apr") else "-", False),
+        ("Decision", (d.get("decision") or view.get("state") or "-").replace("_", " ").capitalize(), True),
+    ]
+    tile_html = "".join(
+        f'<div class="tile"><div class="k">{esc(k)}</div>'
+        f'<div class="v{" on" if on else ""}">{esc(v)}</div></div>'
+        for k, v, on in tiles
+    )
     st.markdown(
-        '<div class="appbar"><div class="mark">R</div><div><div class="name">ReceivableOS</div>'
+        '<div class="hero"><div class="top"><div class="mark">R</div>'
+        '<div><div class="name">ReceivableOS</div>'
         '<div class="tag">Invoice financing for Thai SMEs · the AI proposes, your signed rule decides</div>'
-        '</div><div class="spacer"></div>'
-        f'<span class="badge" style="{fmt.tone(fmt.state_colour(ledger_state))}">'
-        f"Ledger: {esc(chain)}</span></div>",
+        f'</div><div class="spacer"></div><span class="pill">Ledger: {esc(chain)}</span></div>'
+        f'<div class="greet">Good morning, {esc(owner)}</div>'
+        f'<div class="amt">{esc(amount)}</div>'
+        f'<div class="sub">Invoice {esc(inv.get("invoice_no", "-"))} · '
+        f"{esc(ledger_state.replace('_', ' '))} on the ledger</div>"
+        f'<div class="tiles">{tile_html}</div></div>',
         unsafe_allow_html=True,
     )
     if st.session_state.notice:
@@ -384,7 +425,7 @@ def section_flow(view: dict) -> None:
 
 
 def section_mandate(view: dict) -> None:
-    st.subheader("1. Mandate")
+    section_title("1. Mandate")
     text = st.text_area("The SME's rule, in plain language", view["mandate_text"], height=80)
     if st.button("Compile"):
         st.session_state.compiled = True
@@ -416,7 +457,7 @@ def section_mandate(view: dict) -> None:
 
 
 def section_invoice(view: dict) -> None:
-    st.subheader("2. Invoice")
+    section_title("2. Invoice")
     inv = view["ocr"]
     left, right = st.columns([3, 2])
     with left:
@@ -464,7 +505,7 @@ def section_invoice(view: dict) -> None:
 
 
 def section_decision(view: dict) -> None:
-    st.subheader("3. Decision")
+    section_title("3. Decision")
     d = view["policy"]
     if not d:
         st.markdown(badge("STOPPED", "blocked", big=True), unsafe_allow_html=True)
@@ -502,7 +543,7 @@ def section_decision(view: dict) -> None:
 
 
 def section_offers(view: dict) -> None:
-    st.subheader("4. Offers")
+    section_title("4. Offers")
     fixture_label(view, "offers")
     if not_reached(view, "offers"):
         return
@@ -531,7 +572,7 @@ def tx_row(t: dict) -> str:
 
 
 def section_chain(view: dict) -> None:
-    st.subheader("5. On-chain")
+    section_title("5. On-chain")
     wallet = view.get("wallet") or {}
     timeline = list(view.get("timeline", []))
     if wallet.get("status") == "pending_approval" and not st.session_state.approved:
@@ -603,7 +644,7 @@ def attack_row_html(a: dict) -> str:
 
 
 def section_attacks() -> None:
-    st.subheader("6. Attacks")
+    section_title("6. Attacks")
     st.caption(
         "Each button tries to make the agent move money it should not. Every one must come back BLOCKED."
     )
