@@ -22,6 +22,21 @@ _STATE = {
 }
 
 
+# Soft tint and dark ink per state colour, so a chip reads as icon-free text on a pale band (design system).
+_TONE = {
+    GREEN: ("#e6f4ec", "#0f6b35"),
+    AMBER: ("#fff4e0", "#8a4b00"),
+    RED: ("#fdecec", "#a61b1b"),
+    GREY: ("#eef2f6", "#3b4a5c"),
+}
+
+
+def tone(colour: str) -> str:
+    """Inline style for a chip, badge or verdict in a state colour: pale tint, dark ink, coloured edge."""
+    tint, ink = _TONE.get(colour.lower(), _TONE[GREY])
+    return f"background:{tint};color:{ink};border-color:{colour}"
+
+
 def state_colour(state: str | None) -> str:
     """Green / amber / red by state; anything unknown is grey (never green)."""
     return _STATE.get((state or "").lower(), GREY)

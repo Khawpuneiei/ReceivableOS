@@ -64,27 +64,63 @@ MANDATE_FIELDS = (
 )
 
 CSS = """
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600\
+&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-html, body, [class*="css"], .stMarkdown p, .stMarkdown li { font-size: 18px; }
-.badge { display:inline-block; padding:4px 14px; border-radius:6px; color:#fff; font-weight:700; }
-.big { font-size: 34px; padding: 8px 28px; }
-.chip { display:inline-block; padding:2px 10px; margin:2px; border-radius:12px; color:#fff; font-size:15px; }
-.why { font-size:15px; color:#555; }
-.row { padding:8px 12px; margin:4px 0; border-left:6px solid; border-radius:4px;
-       background:rgba(127,127,127,.08); }
-.gauge { position:relative; height:22px; background:rgba(127,127,127,.18); border-radius:4px; }
-.gauge .fill { position:absolute; height:100%; border-radius:4px; }
-.gauge .cap { position:absolute; top:-4px; height:30px; border-left:3px dashed #c62828; }
-code { font-size: 15px; }
-.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); column-gap:8px; }
-.verdict { padding:14px 20px; border-radius:8px; color:#fff; margin:8px 0 12px; }
-.verdict b { font-size: 28px; display:block; }
+:root { --brand:#00629b; --brand-hover:#004b78; --brand-tint:#e6f1f8; --ink:#0b1f33; --ink2:#344054;
+        --ink3:#5f6b7a; --line:#e3e8ee; --canvas:#f6f9fc; --subtle:#f2f4f7; }
+.stApp { background: var(--canvas); }
+html, body, .stApp, .stMarkdown, .stMarkdown p, .stMarkdown li, button, input, textarea {
+  font-family: 'IBM Plex Sans Thai', 'IBM Plex Sans', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums; color: var(--ink); }
+.stMarkdown p, .stMarkdown li { font-size: 16px; line-height: 1.5; }
+.block-container { max-width: 1200px; padding-top: 4rem; }
+[data-testid="stHeader"] { background: transparent; }
+h1, h2, h3 { color: var(--ink); font-weight: 600 !important; letter-spacing: -0.01em; }
+h3 { font-size: 20px !important; margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--line); }
+code, .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px;
+  background: var(--subtle); color: var(--ink2) !important; padding: 1px 6px; border-radius: 6px; }
+.appbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 18px; margin-bottom:12px;
+  background:#fff; border:1px solid var(--line); border-radius:12px; }
+.appbar .mark { width:36px; height:36px; border-radius:10px; background:var(--brand); color:#fff;
+  font-weight:600; display:flex; align-items:center; justify-content:center; font-size:15px; }
+.appbar .name { font-size:20px; font-weight:600; line-height:1.2; }
+.appbar .tag { font-size:14px; color:var(--ink3); }
+.appbar .spacer { flex:1; }
+.badge { display:inline-block; padding:4px 12px; border-radius:999px; font-weight:600; font-size:14px;
+  border:1px solid; }
+.big { font-size: 24px; padding: 6px 20px; }
+.chip { display:inline-block; padding:2px 10px; margin:2px; border-radius:999px; font-size:13px;
+  font-weight:500; border:1px solid; }
+.why { font-size:14px; color:var(--ink3); }
+.row { padding:12px 16px; margin:6px 0; border:1px solid var(--line); border-left:4px solid;
+  border-radius:10px; background:#fff; }
+.gauge { position:relative; height:10px; background:var(--subtle); border-radius:999px; margin:8px 0 14px; }
+.gauge .fill { position:absolute; height:100%; border-radius:999px; }
+.gauge .cap { position:absolute; top:-5px; height:20px; border-left:2px dashed #c62828; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:8px; }
+.verdict { padding:18px 22px; border-radius:12px; margin:8px 0 12px;
+  border:1px solid; border-left-width:6px; }
+.verdict b { font-size: 24px; font-weight:600; display:block; margin-bottom:4px; }
 .steps { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
-.step { flex:1 1 0; border-top:8px solid; border-radius:6px; padding:8px 10px;
-        background:rgba(127,127,127,.08); min-width:118px; }
-.step .n { font-weight:700; } .step .d { font-size:15px; }
-.step .i { display:inline-block; width:24px; height:24px; border-radius:12px; color:#fff;
-           text-align:center; font-weight:700; margin-right:6px; line-height:24px; }
+.step { flex:1 1 0; border:1px solid var(--line); border-top:4px solid; border-radius:10px; padding:10px 12px;
+        background:#fff; min-width:130px; }
+.step .n { font-weight:600; } .step .d { font-size:14px; color:var(--ink3); line-height:1.4; }
+.step .i { display:inline-block; width:22px; height:22px; border-radius:11px; border:1px solid;
+           text-align:center; font-weight:600; margin-right:6px; line-height:20px; font-size:13px; }
+[data-testid="stMetric"] { background:#fff; border:1px solid var(--line); border-radius:12px;
+  padding:12px 16px; }
+[data-testid="stMetricValue"] { font-weight:600; }
+.stButton button, .stDownloadButton button { border-radius:10px; font-weight:500; min-height:44px;
+  border:1px solid #717d8c; color:var(--ink); background:#fff; }
+.stButton button[kind="primary"] { background:var(--brand); border-color:var(--brand); color:#fff; }
+.stButton button[kind="primary"]:hover { background:var(--brand-hover); border-color:var(--brand-hover); }
+.stButton button:hover { border-color:var(--brand); color:var(--brand); }
+.stButton button[kind="primary"] p, .stButton button[kind="primary"]:hover p { color:#fff; }
+[data-testid="stExpander"] details { background:#fff; border:1px solid var(--line); border-radius:12px; }
+textarea, input { border-radius:8px !important; }
+[data-testid="stAlert"] { border-radius:12px; }
 </style>
 """
 
@@ -95,7 +131,7 @@ def esc(value) -> str:
 
 def badge(text: str, state: str | None = None, big: bool = False) -> str:
     cls = "badge big" if big else "badge"
-    return f'<span class="{cls}" style="background:{fmt.state_colour(state or text)}">{esc(text)}</span>'
+    return f'<span class="{cls}" style="{fmt.tone(fmt.state_colour(state or text))}">{esc(text)}</span>'
 
 
 def row(body: str, state: str) -> str:
@@ -238,7 +274,7 @@ def section_scoreboard() -> None:
         left, right = st.columns([6, 1], vertical_alignment="center")
         left.markdown(
             f'<div class="row" style="border-color:{colour}"><b>{esc(r["label"])}</b> · '
-            f'<span class="chip" style="background:{colour}">{esc(r["headline"] + tag)}</span>'
+            f'<span class="chip" style="{fmt.tone(colour)}">{esc(r["headline"] + tag)}</span>'
             f'<br><span class="why">{esc(r["sentence"])}</span></div>',
             unsafe_allow_html=True,
         )
@@ -301,9 +337,11 @@ def header(view: dict) -> None:
     chain = (view.get("wallet") or {}).get("chain") or "unknown"
     ledger_state = {"mock": "pending_approval", "fisco": "executed"}.get(chain, "unknown")
     st.markdown(
-        "## ReceivableOS · AI that can move money — only inside the rules "
-        + f'<span class="badge" style="font-size:18px;vertical-align:middle;'
-        f'background:{fmt.state_colour(ledger_state)}">ledger: {esc(chain)}</span>',
+        '<div class="appbar"><div class="mark">R</div><div><div class="name">ReceivableOS</div>'
+        '<div class="tag">Invoice financing for Thai SMEs · the AI proposes, your signed rule decides</div>'
+        '</div><div class="spacer"></div>'
+        f'<span class="badge" style="{fmt.tone(fmt.state_colour(ledger_state))}">'
+        f"Ledger: {esc(chain)}</span></div>",
         unsafe_allow_html=True,
     )
     if st.session_state.notice:
@@ -330,7 +368,7 @@ def section_flow(view: dict) -> None:
     if view.get("source") in ("fixtures", "saved"):
         headline += " (saved demo)"  # never let a saved result read as this run's
     st.markdown(
-        f'<div class="verdict" style="background:{story.STATE_COLOUR[state]}"><b>{esc(headline)}</b>'
+        f'<div class="verdict" style="{fmt.tone(story.STATE_COLOUR[state])}"><b>{esc(headline)}</b>'
         f"{esc(sentence)}</div>",
         unsafe_allow_html=True,
     )
@@ -338,7 +376,7 @@ def section_flow(view: dict) -> None:
     for n, s in enumerate(story.steps(view, st.session_state.paid), 1):
         colour = story.STATE_COLOUR[s["state"]]
         cards.append(
-            f'<div class="step" style="border-color:{colour}"><span class="i" style="background:{colour}">'
+            f'<div class="step" style="border-top-color:{colour}"><span class="i" style="{fmt.tone(colour)}">'
             f'{story.STATE_ICON[s["state"]]}</span><span class="n">{n}. {esc(s["name"])}</span>'
             f'<div class="d">{esc(s["detail"])}</div></div>'
         )
@@ -403,9 +441,9 @@ def section_invoice(view: dict) -> None:
         flags = [("injection", f) for f in inv.get("injection_flags", [])]
         flags += [("fraud", f) for f in inv.get("fraud_flags", [])]
         chips = "".join(
-            f'<span class="chip" style="background:{fmt.RED}">{esc(k)}: {esc(f)}</span>' for k, f in flags
+            f'<span class="chip" style="{fmt.tone(fmt.RED)}">{esc(k)}: {esc(f)}</span>' for k, f in flags
         )
-        clean = f'<span class="chip" style="background:{fmt.GREEN}">no injection or fraud flags</span>'
+        clean = f'<span class="chip" style="{fmt.tone(fmt.GREEN)}">no injection or fraud flags</span>'
         st.markdown(f"Fraud score {esc(inv['fraud_score'])}<br>{chips or clean}", unsafe_allow_html=True)
         found = story.findings(inv)
         if found:
@@ -589,7 +627,7 @@ def footer(view: dict) -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="ReceivableOS demo", layout="wide")
+    st.set_page_config(page_title="ReceivableOS", page_icon="◆", layout="wide")
     st.markdown(CSS, unsafe_allow_html=True)
     init_state()
     view = load_view()
