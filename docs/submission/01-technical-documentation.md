@@ -7,6 +7,7 @@
 | Competition | FinTechathon 2026, International Track |
 | Topic | F — Agent Wallet (autonomous on-chain wallet) |
 | Repository | https://github.com/Khawpuneiei/ReceivableOS |
+| Demo video | https://youtu.be/Bq-4jXATmx4 |
 | Live demo (real FISCO BCOS chain) | https://receivableos-chain.onrender.com |
 | Live demo (mock ledger, backup) | https://receivableos-live.onrender.com |
 | SME owner app | https://receivableos-sme.onrender.com |
