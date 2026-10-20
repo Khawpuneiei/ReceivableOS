@@ -39,10 +39,13 @@ ReceivableOS/
 │   ├── policy-ai/       # POST /policy/decide          port 8002
 │   └── agent-wallet/    # POST /wallet/*               port 8003
 │       └── contracts/   # Solidity for FISCO BCOS
+├── ui/                  # Streamlit demo and test harness   port 3000
+│   └── web/             # SME owner mode (TypeScript)       port 3001
+├── pitch/               # deck, video, business plan
 └── data/invoices/       # demo invoices, clean and attack cases
 ```
 
-Planned, added by their owners when needed: `ui/` (demo screen, port 3000, Policy AI engineer) and `pitch/` (deck, video, business plan).
+Two screens sit on the same flow: the Streamlit demo for judges and for testing the OCR, LLM and chain calls, and [SME owner mode](#sme-owner-mode) for the business owner who wants cash for an invoice.
 
 Each service is a small FastAPI app talking JSON over HTTP. Money is a decimal string (`"10000.00"`). The chain is FISCO BCOS, with a mock ledger (`CHAIN_MODE=mock`) so the demo never blocks on the chain.
 
@@ -100,6 +103,48 @@ CI (`.github/workflows/ci.yml`) runs the same on every PR and on `main`: ruff, p
 end-to-end demo on the mock ledger.
 
 Every service answers `GET /health`. Until a service implements its main endpoint it returns a stub response that still matches the contract, so the end-to-end flow runs from day one.
+
+## SME owner mode
+
+SME owner mode is the web app for the business owner. It talks about money and decisions in plain words, with no hashes, gauges or rule codes on the main path. It lives in [`ui/web/`](ui/web/README.md) (TypeScript, React and Vite) and runs on port 3001.
+
+The owner's flow has three steps:
+
+1. **Get cash.** Upload an invoice (PDF, PNG or JPG) or pick one of four sample invoices.
+2. **We check it.** The owner watches each check finish. The invoice is read and scanned for hidden instructions and tampering. The ledger confirms it was not financed before. The buyer and the price are checked against the owner's rule, and the wallet checks the rule again before it pays.
+3. **Your result.** "You got THB 524,300.00", "We held this invoice" or "We could not finance this invoice", with the reasons in plain words.
+
+There are seven screens behind a sidebar, which becomes a bottom tab bar on a phone:
+
+| Screen | What the owner sees |
+|---|---|
+| Home | money received, money coming and the cost of financing, plus a banner when something needs them |
+| Get cash | the upload or sample invoice, then the checks |
+| Invoice result | what they got, the money step by step, lender quotes, how it was checked, ledger receipts |
+| Invoices | every invoice and its status |
+| Needs you | held invoices, and draws at or above the ask-me limit |
+| My rule | the advance, cost, buyer-risk and ask-me limits, as one signed sentence |
+| Money & activity | every baht in and out, blocked attempts, the six protection tests, a CSV of receipts |
+
+Run it (Node 22 or newer):
+
+```bash
+cd ui/web
+npm ci
+npm run dev        # sample mode on http://localhost:3001, no backend needed
+```
+
+**Sample mode** (`UI_MODE=fixtures`, the default) replays runs recorded from the live stack in `ui/fixtures/`, so it needs no services and no LLM. **Live mode** runs the real flow. Start the four services as above, then:
+
+```bash
+UI_MODE=live ORCHESTRATOR_URL=http://localhost:8000 npm run dev
+```
+
+The browser only calls `/api/...`. The Vite server forwards those calls to the orchestrator and adds `X-Orchestrator-Token` from `.env` on the server side, so the token never reaches the page.
+
+Not wired yet: "Save and sign" on My rule and "Approve this once" for a large draw need orchestrator routes that don't exist yet (`/flow/mandate/compile` and `/flow/confirm/{tx_id}`). The app says so on screen and changes nothing. The orchestrator pays as soon as an invoice passes the rule, so the result page reports money received instead of asking the owner to accept an offer.
+
+Test it with `npm run typecheck && npm test && npm run build` in `ui/web/`. CI and the Docker image don't include it yet, so run it with npm as shown.
 
 ## Docs
 
