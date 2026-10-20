@@ -27,6 +27,8 @@ if [ ! -d "$NODES" ]; then
   log "building the $COUNT-node chain"
   (cd "$WORK" && bash /opt/fisco/build_chain.sh -l "127.0.0.1:$COUNT" -p 30300,20200 -e /opt/fisco/fisco-bcos >/dev/null)
 fi
+# build_chain.sh binds RPC and P2P on 0.0.0.0 whatever -l says; keep them on loopback so only Streamlit is reachable.
+sed -i 's/listen_ip=0\.0\.0\.0/listen_ip=127.0.0.1/' "$NODES"/node*/config.ini
 log "starting the nodes"
 bash "$NODES/start_all.sh" >/dev/null
 for _ in $(seq 1 60); do
