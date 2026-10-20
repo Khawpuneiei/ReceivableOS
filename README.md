@@ -14,6 +14,7 @@ Built for [FinTechathon 2026](https://fintechathon.g-ican.com/#/en), Agent Walle
 
 | | |
 |---|---|
+| **Demo video (3:53)** | https://youtu.be/Bq-4jXATmx4 |
 | **Try it live (real chain)** | https://receivableos-chain.onrender.com: upload the happy invoice and watch it get funded on a FISCO BCOS 3.16.4 chain the service builds on boot. First visit after idle takes about 3 minutes. |
 | **Backup (mock ledger)** | https://receivableos-live.onrender.com: the same flow, wakes in about a minute |
 | **SME owner app** | https://receivableos-sme.onrender.com |
