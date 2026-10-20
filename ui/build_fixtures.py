@@ -145,6 +145,13 @@ def main() -> None:
             "AmountAboveLimit",
         ),
         "a5": ("Supplier KYB expired", "Policy", a5, "NotApproved"),
+        # Not offered by the Streamlit screen (the orchestrator has no A6 route); ui/web imports a6.json.
+        "a6": (
+            "Mandate expired / wallet paused by the human owner",
+            "Wallet + PolicyGuard",
+            None,
+            "MandateExpired",
+        ),
     }
     for case, (title, stopped_by, decision, reason) in attacks.items():
         row = {

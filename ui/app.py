@@ -15,6 +15,7 @@ from __future__ import annotations
 import html
 import json
 import os
+import threading
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -270,12 +271,29 @@ def boot_runs() -> dict:
 
     The ledger takes each invoice once per start (a second try is the registry's duplicate block, by design),
     so a second visitor, or a reload, is shown the run that did it instead of posting the same PDF again.
-    views: case -> view model. repaid: case -> the TX-5 row after Buyer paid."""
-    return {"views": {}, "repaid": {}}
+    views: case -> view model. repaid: case -> the TX-5 row after Buyer paid. locks: one per case, so a click
+    on a case that is still running waits for its result instead of racing it to the registry."""
+    return {"views": {}, "repaid": {}, "locks": {case: threading.Lock() for case in CASE_KEYS}}
 
 
 def is_duplicate_block(view: dict) -> bool:
     return bool((view.get("registry") or {}).get("duplicate"))
+
+
+def registered(view: dict) -> bool:
+    """True when TX-1 executed: the invoice is on the ledger, so a second try would only be a duplicate block.
+    A run the wallet refused first (paused, KYB, a node hiccup) is not remembered: the next click runs it."""
+    return any(t.get("step") == "TX-1" and t.get("status") == "executed" for t in view.get("timeline", []))
+
+
+def shared_case(view: dict) -> str | None:
+    """The demo case whose shared run this view is, matched by invoice id and never by a name the visitor
+    typed (an upload called "happy" is not the Happy run)."""
+    invoice_id = (view.get("ocr") or {}).get("invoice_id")
+    for case, run in boot_runs()["views"].items():
+        if invoice_id and (run.get("ocr") or {}).get("invoice_id") == invoice_id:
+            return case
+    return None
 
 
 def run_file(content: bytes, name: str, case: str | None = None) -> str | None:
@@ -289,7 +307,7 @@ def run_file(content: bytes, name: str, case: str | None = None) -> str | None:
         return f"Orchestrator unavailable ({exc})."
     st.session_state.view = view
     st.session_state.update(paid=False, approved=False, notice=None, extra_tx=[], case=case or name)
-    if case in CASE_KEYS and (case == "duplicate" or not is_duplicate_block(view)):
+    if case in CASE_KEYS and (registered(view) or (case == "duplicate" and is_duplicate_block(view))):
         boot_runs()["views"].setdefault(case, dict(view))  # the first run of a case is the one everyone sees
     return None
 
@@ -321,28 +339,41 @@ def case_available(case: str, filename: str) -> bool:
     return (FIXTURES / "runs" / f"{case}.json").exists()
 
 
+def ensure_happy() -> str | None:
+    """Run Happy first when this server hasn't, so Duplicate has something to duplicate. Returns a reason when
+    Happy did not register: Duplicate is then not posted (it would be its fingerprint's first one)"""
+    with boot_runs()["locks"]["happy"]:
+        if "happy" not in boot_runs()["views"]:
+            error = run_file(DEMO_INVOICE.read_bytes(), DEMO_INVOICE.name, "happy")
+            if "happy" not in boot_runs()["views"]:
+                state = load_view().get("state")
+                return (
+                    error
+                    or f"The happy invoice did not register ({state}), so there is nothing to duplicate."
+                )
+    return None
+
+
 def run_case(case: str, filename: str) -> None:
     """Live: run the case's PDF; if the stack fails, show the saved run of the same case instead."""
     if not live():
         show_saved_run(case, None)
         return
-    if case in boot_runs()["views"]:
-        show_earlier_run(case)
-        return
-    if case == "duplicate" and "happy" not in boot_runs()["views"]:
-        run_file(DEMO_INVOICE.read_bytes(), DEMO_INVOICE.name, "happy")  # something to be a duplicate of
-    error = run_file((DEMO_DIR / filename).read_bytes(), filename, case)
-    if error and (FIXTURES / "runs" / f"{case}.json").exists():
-        show_saved_run(case, f"{error} Showing the saved run of this case instead.")
-    elif error:
-        st.session_state.notice = error
-    elif case != "duplicate" and is_duplicate_block(load_view()):
-        if case in boot_runs()["views"]:  # another visitor's click finished first
+    with boot_runs()["locks"][case]:  # a click on a case that is still running waits for its result
+        if case in boot_runs()["views"]:
             show_earlier_run(case)
-        else:
+            return
+        error = ensure_happy() if case == "duplicate" else None
+        error = error or run_file((DEMO_DIR / filename).read_bytes(), filename, case)
+        if error and (FIXTURES / "runs" / f"{case}.json").exists():
+            show_saved_run(case, f"{error} Showing the saved run of this case instead.")
+        elif error:
+            st.session_state.notice = error
+        elif case != "duplicate" and is_duplicate_block(load_view()):
             st.session_state.notice = (
-                "The registry already holds this invoice: it was financed on this server before this screen "
-                "recorded it, so it cannot be financed twice. Restart the service for a clean run."
+                "The registry already holds this invoice from an earlier run that this screen never recorded "
+                "(a rehearsal, or an earlier session of this screen), so it cannot be registered again. "
+                "Restart the UI, orchestrator and ledger together for a clean run."
             )
 
 
@@ -409,7 +440,16 @@ def section_scoreboard() -> None:
             unsafe_allow_html=True,
         )
         if r["view"] and right.button("Show", key=f"show_{r['case']}", width="stretch"):
-            st.session_state.update(view=r["view"], case=r["case"], paid=False, approved=False, extra_tx=[])
+            repaid = (
+                boot_runs()["repaid"].get(r["case"]) if r["view"].get("source") == "orchestrator" else None
+            )
+            st.session_state.update(
+                view=r["view"],
+                case=r["case"],
+                paid=bool(repaid),
+                approved=False,
+                extra_tx=[repaid] if repaid else [],
+            )
             st.rerun()
 
 
@@ -451,6 +491,7 @@ def init_state() -> None:
         "paid": False,
         "approved": False,
         "compiled_mandate": None,
+        "compiled_text": None,
         "notice": None,
         "extra_tx": [],
         "case": None,
@@ -570,12 +611,21 @@ def section_flow(view: dict) -> None:
     st.markdown(f'<div class="steps">{"".join(cards)}</div>', unsafe_allow_html=True)
 
 
+def exact_pct(value) -> str:
+    """'0.696' -> '69.6%', '0.70' -> '70%': a cap is never rounded, because a rounded cap can read looser."""
+    if value is None:
+        return "-"
+    return f"{(Decimal(str(value)) * 100).normalize():f}%"
+
+
 def section_mandate(view: dict) -> None:
-    text = st.text_area("The SME's rule, in plain language", view["mandate_text"], height=80)
+    sentence = st.session_state.compiled_text or view["mandate_text"]  # the box keeps what was last compiled
+    text = st.text_area("The SME's rule, in plain language", sentence, height=80)
     if st.button("Compile"):
         if live():
             try:
                 st.session_state.compiled_mandate = orch.Orchestrator().compile_mandate(text)
+                st.session_state.compiled_text = text
             except orch.Refused as exc:
                 st.error(f"{exc.plain}. Nothing was compiled; the rule below is unchanged.")
             except (orch.Unavailable, orch.Unsupported) as exc:
@@ -597,13 +647,14 @@ def section_mandate(view: dict) -> None:
         else:
             fixture_label(view, "mandate")
     mandate = envelope["mandate"]
+    currency = mandate.get("allowed_currency") or "THB"
     cells = []
     for key, label, kind in MANDATE_FIELDS:
         value = mandate.get(key)
         shown = (
-            fmt.pct(value, 0)
+            exact_pct(value)
             if kind == "pct"
-            else fmt.thb(value)
+            else fmt.thb(value, currency)
             if kind == "thb"
             else esc(value or "-")[:10]
         )
@@ -612,6 +663,8 @@ def section_mandate(view: dict) -> None:
         origin = f'<span style="color:{colour}">({"from text" if source == "text" else source})</span>'
         cells.append(row(f"<b>{label}</b>: {shown} {origin}", "", colour))
     st.markdown(f'<div class="grid">{"".join(cells)}</div>', unsafe_allow_html=True)
+    for warning in envelope.get("warnings") or []:
+        st.caption(f"Compiler note: {warning}")
     with st.expander("Mandate JSON (wallet field names)"):
         st.json(envelope)
 
@@ -826,8 +879,8 @@ def action(call, step: str, label: str, flag: str) -> None:
     """Approve / Buyer paid: through the orchestrator when live; the fixture otherwise or when unsupported."""
     st.session_state[flag] = True
     if live() and (st.session_state.get("view") or {}).get("source") == "orchestrator":
-        case = st.session_state.case
-        shared = boot_runs()["repaid"] if flag == "paid" and case in CASE_KEYS else {}
+        case = shared_case(st.session_state.view)
+        shared = boot_runs()["repaid"] if flag == "paid" and case else {}
         try:
             if case in shared:  # another visit already recorded the payment; settling twice would be refused
                 st.session_state.extra_tx.append(shared[case])

@@ -128,7 +128,8 @@ def test_each_demo_case_posts_its_own_pdf_and_a_duplicate_runs_happy_first(monke
     monkeypatch.setattr(orch.Orchestrator, "run_flow", fake_run_flow)
     at = AppTest.from_file(APP, default_timeout=30).run()
     at.button(key="case_duplicate").click().run()
-    assert sent == ["01_happy.pdf", "04_duplicate.pdf"]  # the happy run failed, so it isn't marked as run
+    # Happy failed, so there is nothing to duplicate: the screen does not post Duplicate on its own.
+    assert sent == ["01_happy.pdf"] and not at.exception
     at.button(key="case_injected").click().run()
     assert sent[-1] == "02_injected.pdf" and not at.exception
 
@@ -370,3 +371,146 @@ def test_live_tally_counts_only_what_the_wallet_really_answered(monkeypatch):
     assert "No attack ran live" in _text(at) and "attacks blocked" not in _text(
         at
     )  # saved rows are not counted
+
+
+def test_a_click_on_a_case_that_is_still_running_waits_and_is_shown_that_run(monkeypatch):
+    import threading
+    import time
+
+    import client as orch
+
+    asked = _stub_flow(monkeypatch)
+    second_visitor = []
+
+    def slow_run_flow(self, content, filename, mandate_id="mdt_001"):
+        asked["run"].append(filename)
+        if len(asked["run"]) == 1:  # while the first click is at the registry, a second visitor clicks Happy
+
+            def click():
+                at = _new_visitor()
+                at.button(key="case_happy").click().run()
+                second_visitor.append(at)
+
+            thread = threading.Thread(target=click)
+            thread.start()
+            time.sleep(1.0)
+            slow_run_flow.thread = thread
+        return _recorded("happy")
+
+    monkeypatch.setattr(orch.Orchestrator, "run_flow", slow_run_flow)
+    first = _new_visitor()
+    first.button(key="case_happy").click().run()
+    slow_run_flow.thread.join(timeout=30)
+    assert asked["run"] == ["01_happy.pdf"]  # the waiting click did not race it to the registry
+    assert (
+        "run earlier on this server" in second_visitor[0].success[0].value and not second_visitor[0].exception
+    )
+
+
+def test_a_happy_run_the_wallet_refused_is_not_remembered_and_duplicate_is_not_posted(monkeypatch):
+    import client as orch
+
+    asked = _stub_flow(monkeypatch)
+
+    def paused(self, content, filename, mandate_id="mdt_001"):
+        asked["run"].append(filename)
+        raw = _recorded("happy")
+        raw["register"] = {**raw["register"], "status": "blocked", "block_reason": "Paused"}
+        raw["approve"] = raw["wallet"] = None
+        raw["outcome"] = "blocked"
+        return raw
+
+    monkeypatch.setattr(orch.Orchestrator, "run_flow", paused)
+    at = _new_visitor()
+    at.button(key="case_duplicate").click().run()
+    assert not at.exception and asked["run"] == [
+        "01_happy.pdf"
+    ]  # Duplicate would have been the first to register
+    assert "did not register" in at.warning[0].value and "Stopped: duplicate invoice (saved demo)" in _text(
+        at
+    )
+    at.button(key="case_happy").click().run()
+    assert asked["run"] == [
+        "01_happy.pdf",
+        "01_happy.pdf",
+    ]  # not saved as Happy's run, so the next click runs it
+
+
+def test_buyer_paid_on_a_different_invoice_is_not_filed_under_the_happy_case(monkeypatch):
+    asked = _stub_flow(monkeypatch)
+    _new_visitor().button(key="case_happy").click().run()
+    other = _new_visitor()
+    other.button(key="case_happy").click().run()
+    view = dict(other.session_state["view"])
+    view["ocr"] = {**view["ocr"], "invoice_id": "inv_someone_elses"}
+    other.session_state["view"], other.session_state["case"] = (
+        view,
+        "happy",
+    )  # an upload that was named "happy"
+    next(b for b in _open(other, "ledger").button if b.label == "Buyer paid").click().run()
+    assert asked["repay"] == ["inv_someone_elses"] and "TX-5" in _text(other)
+    third = _new_visitor()
+    third.button(key="case_happy").click().run()
+    assert "TX-5" not in _text(_open(third, "ledger")) and [
+        b for b in third.button if b.label == "Buyer paid"
+    ]
+
+
+def test_the_show_button_in_judge_mode_keeps_the_payment_another_visitor_recorded(monkeypatch):
+    asked = _stub_flow(monkeypatch)
+    first = _new_visitor()
+    first.button(key="case_happy").click().run()
+    next(b for b in _open(first, "ledger").button if b.label == "Buyer paid").click().run()
+    at = _new_visitor()
+    at.button(key="run_all").click().run()
+    at.button(key="show_happy").click().run()
+    _open(at, "ledger")
+    assert "TX-5" in _text(at) and not [b for b in at.button if b.label == "Buyer paid"]
+    assert len(asked["repay"]) == 1
+
+
+@pytest.mark.parametrize(
+    ("value", "shown"),
+    [("0.70", "70%"), ("0.696", "69.6%"), ("0.0525", "5.25%"), ("1", "100%"), ("0", "0%"), (None, "-")],
+)
+def test_a_mandate_cap_is_shown_exactly_never_rounded_up_to_something_looser(value, shown):
+    import app as ui_app
+
+    assert ui_app.exact_pct(value) == shown
+
+
+def test_my_rule_sends_the_typed_sentence_and_keeps_it_with_the_compiled_rule(monkeypatch):
+    import client as orch
+
+    saved = json.loads((UI / "fixtures" / "happy.json").read_text(encoding="utf-8"))["mandate"]
+    sent = []
+
+    def compile_mandate(self, text):
+        sent.append(text)
+        return saved
+
+    monkeypatch.setenv("UI_MODE", "live")
+    monkeypatch.setattr(orch.Orchestrator, "compile_mandate", compile_mandate)
+    at = _open(_new_visitor(), "rule")
+    at.text_area[0].set_value("Advance at most 50% of an invoice").run()
+    next(b for b in at.button if b.label == "Compile").click().run()
+    assert sent == ["Advance at most 50% of an invoice"]
+    _open(at, "home")
+    assert _open(at, "rule").text_area[0].value == "Advance at most 50% of an invoice"
+
+
+def test_my_rule_shows_amounts_in_the_mandates_own_currency_and_the_compilers_notes(monkeypatch):
+    import client as orch
+
+    saved = json.loads((UI / "fixtures" / "happy.json").read_text(encoding="utf-8"))["mandate"]
+    usd = {
+        **saved,
+        "mandate": {**saved["mandate"], "allowed_currency": "USD", "daily_cap": "5000.00"},
+        "warnings": ["No expiry was given, so the platform default applies"],
+    }
+    monkeypatch.setenv("UI_MODE", "live")
+    monkeypatch.setattr(orch.Orchestrator, "compile_mandate", lambda self, text: usd)
+    at = _open(_new_visitor(), "rule")
+    next(b for b in at.button if b.label == "Compile").click().run()
+    assert not at.exception and "USD 5,000.00" in _text(at) and "THB 5,000.00" not in _text(at)
+    assert any("Compiler note: No expiry was given" in c.value for c in at.caption)

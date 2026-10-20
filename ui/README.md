@@ -71,9 +71,12 @@ by design, so the first run of each demo case, and the TX-5 row after Buyer paid
 kept in a process-wide cache (`boot_runs()` in `ui/app.py`) shared by every visitor. A second visitor, or a reload,
 clicking Happy sees that run again with its real hashes under a green "LIVE, run earlier on this server" banner,
 not a duplicate block; Buyer paid is posted once. Restart the UI together with the orchestrator and the ledger
-(the cache lives in the UI process), or a restarted ledger will be shown the old run. If the registry already
-holds a demo invoice that this screen never recorded (a rehearsal run with `curl`), the screen says so instead of
-showing a bare duplicate block.
+(the cache lives in the UI process), or a restarted ledger will be shown the old run. A click on a case that is
+still running waits for that run (one lock per case) instead of racing it to the registry. A run is remembered
+only when its TX-1 executed: a Happy the wallet refused (paused, KYB) is not saved, so the next click runs it, and
+Duplicate is not posted on top of it. The Buyer paid row is filed under the invoice id, never under a name the
+visitor typed, and Judge mode's Show button restores it. If the registry already holds a demo invoice that this
+screen never recorded (a rehearsal run with `curl`), the screen says so instead of showing a bare duplicate block.
 
 ## What is on screen, and where the numbers come from
 
@@ -89,7 +92,8 @@ showing a bare duplicate block.
 | 6. Attacks | A1–A5 buttons in two rows of three, full labels; each row says LIVE (the wallet's real answer) or SAVED (fixture, with why), a plain "Why:", who stopped it, only the deciding policy codes (HARD / KO / REVIEW), the code, and the ref or "stopped before the ledger"; each adds a red BLOCKED row: who stopped it, the policy decision and codes, the revert reason, the tx ref | A1, A2 and A5 carry real policy decisions (scenarios 4, 5 and 7); revert reasons and refs are hand-written |
 
 `python ui/build_fixtures.py` rebuilds every fixture from policy-ai's own fixtures, so the policy numbers on screen
-change only when the policy service changes. Registry, quotes and wallet parts stand in for the orchestrator until
+change only when the policy service changes. `fixtures/a6.json` is not offered by this screen (the orchestrator has no
+A6 route) but stays because the SME app in `ui/web` imports it. Registry, quotes and wallet parts stand in for the orchestrator until
 it serves them; they are labelled as fixtures and use mock ledger refs, never real-looking chain hashes.
 
 Projector and laptop: buttons are navy (`primaryColor` in `ui/.streamlit/config.toml`) so green, amber and red mean only states; the Deploy toolbar is hidden; OCR confidence is a green / amber bar with the 80% minimum marked; the fee shows the APR as the headline and the per-30-day rate under it; known reason codes get plain words next to the code; the mandate is a two-column grid; the step strip fits six steps from 1024 px. Design rules: state colours only (green executed / approve, amber review / pending, red blocked / reject), body
