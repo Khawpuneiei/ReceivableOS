@@ -1,5 +1,5 @@
 # The whole ReceivableOS stack on a real FISCO BCOS 3.16.4 chain, in one container. Owner: PM.
-# deploy/Dockerfile runs the same stack on the mock ledger. This image adds a 4-node Air chain on 127.0.0.1,
+# deploy/Dockerfile runs the same stack on the mock ledger. This image adds an Air chain on 127.0.0.1 (FISCO_NODES nodes),
 # the FISCO Python SDK and the compiled contracts; deploy/start-fisco.sh builds the chain, deploys the five
 # contracts and starts every service on each boot. Node keys, account keys and certificates are generated
 # inside the container at start, never in the image or the repo. See deploy/RENDER.md.

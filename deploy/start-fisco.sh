@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Start the whole stack on a fresh FISCO BCOS chain inside one container (deploy/Dockerfile.fisco). Owner: PM.
-# Each boot builds a new 4-node Air chain, generates the role keys, deploys and wires the five contracts
+# Each boot builds a new FISCO_NODES-node Air chain (default 4), generates the role keys, deploys and wires the five contracts
 # (scripts/deploy_fisco.py), then starts the four services and the Streamlit UI on $PORT. Chain state lives on
 # the container's disk, so a restart starts from an empty chain, as the mock ledger does.
 set -euo pipefail
@@ -19,11 +19,13 @@ for name in FINGERPRINT_HMAC_KEY BANK_TOKEN_HMAC_KEY ORCHESTRATOR_TOKEN WALLET_A
   fi
 done
 
-# 1. Chain: four nodes on 127.0.0.1, RPC 20200-20203, P2P 30300-30303. build_chain.sh writes the node keys and
-#    the SDK certificates into $WORK/nodes.
+# 1. Chain: FISCO_NODES nodes on 127.0.0.1 (default 4, as in services/agent-wallet/README.md; 1 fits a 512 MB
+#    host), RPC from 20200 and P2P from 30300. build_chain.sh writes the node keys and the SDK certificates into
+#    $WORK/nodes.
+COUNT="${FISCO_NODES:-4}"
 if [ ! -d "$NODES" ]; then
-  log "building the 4-node chain"
-  (cd "$WORK" && bash /opt/fisco/build_chain.sh -l 127.0.0.1:4 -p 30300,20200 -e /opt/fisco/fisco-bcos >/dev/null)
+  log "building the $COUNT-node chain"
+  (cd "$WORK" && bash /opt/fisco/build_chain.sh -l "127.0.0.1:$COUNT" -p 30300,20200 -e /opt/fisco/fisco-bcos >/dev/null)
 fi
 log "starting the nodes"
 bash "$NODES/start_all.sh" >/dev/null
@@ -39,6 +41,10 @@ for role in deployer agent approver risk_oracle buyer; do
 done
 for template in services/agent-wallet/fisco/sdk/*.template; do
   cp "$template" "$WORK/sdk/$(basename "$template" .template)"
+done
+# The template lists four peers; keep only the nodes this chain has.
+for i in 0 1 2 3; do
+  [ "$i" -lt "$COUNT" ] || sed -i "/^\s*node\.$i=/d" "$WORK/sdk/bcos3_sdk_config.ini"
 done
 
 # 3. Contracts: a fresh deployment per boot. It writes the fisco block of contracts/deployments.json.
