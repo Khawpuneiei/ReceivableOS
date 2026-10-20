@@ -20,6 +20,8 @@ Built for [FinTechathon 2026](https://fintechathon.g-ican.com/#/en), Agent Walle
 
 All three redeploy on every push to `main`. The judge demo and the credit risk API are on Render's free plan, so after about 15 idle minutes each takes around a minute to wake on the first visit. The live demo remembers every invoice it has seen, so restart it before a fresh run of the happy case. [deploy/RENDER.md](deploy/RENDER.md) says how it is deployed.
 
+**On-chain evidence.** The live demo uses the mock ledger, so its hashes start with `mock:`. The same flow ran on a real 4-node FISCO BCOS 3.16.4 chain on 11 Oct 2026. The records are [the five contract deployments](services/agent-wallet/eval/fisco-deployment.md), [every demo transaction hash](services/agent-wallet/eval/demo_tx_hashes_fisco.md) (TX-1 to TX-5, the human approval, and the APR, over-limit and duplicate-invoice reverts), [the receipts](services/agent-wallet/eval/fisco-receipts-demo/), and [the check that found all 11 hashes on chain](services/agent-wallet/eval/fisco-verification-demo.txt).
+
 ## Team and roles
 
 | Seat | Owns | Where |
