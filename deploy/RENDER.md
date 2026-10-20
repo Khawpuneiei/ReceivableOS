@@ -6,7 +6,7 @@ The public demo runs on Render from `main`. Owner: PM.
 |---|---|---|
 | `receivableos-live` | Web service, Docker, free plan, Singapore | https://receivableos-live.onrender.com |
 | `receivableos-sme` | Static site | https://receivableos-sme.onrender.com |
-| `receivableos-chain` | Web service, Docker, Standard plan, Singapore | https://receivableos-chain.onrender.com |
+| `receivableos-chain` | Web service, Docker, free plan, Singapore | https://receivableos-chain.onrender.com |
 | `receivableos-credit-risk` | Web service, Docker, free plan, Singapore | https://receivableos-credit-risk.onrender.com |
 
 ## Judge demo (`receivableos-live`)
@@ -35,8 +35,8 @@ The same stack with the agent wallet on a real FISCO BCOS 3.16.4 chain instead o
 `deploy/Dockerfile.fisco` with the repo root as context and needs no Docker Command: the image runs
 `deploy/start-fisco.sh`. On every boot that script:
 
-1. builds a 4-node Air chain on 127.0.0.1 with `build_chain.sh` (node keys and SDK certificates are created
-   inside the container, never stored in the image or the repo);
+1. builds an Air chain of `FISCO_NODES` nodes (default 4) on 127.0.0.1 with `build_chain.sh` (node keys and SDK
+   certificates are created inside the container, never stored in the image or the repo);
 2. generates the five role keys (`deployer`, `agent`, `approver`, `risk_oracle`, `buyer`) with openssl;
 3. deploys and wires the five contracts with `services/agent-wallet/scripts/deploy_fisco.py`;
 4. starts OCR, policy and the orchestrator on Python 3.11, and the agent wallet with `CHAIN_MODE=fisco` on the
@@ -46,12 +46,18 @@ The same stack with the agent wallet on a real FISCO BCOS 3.16.4 chain instead o
 Only Streamlit is public; the chain's RPC and P2P ports stay on 127.0.0.1. A restart builds a new, empty chain,
 as a restart of the mock demo empties the mock ledger. Any of the eight secrets in the mock demo's list that is
 not set gets a fresh random value at boot, because only the processes inside the container use them. Set the
-same fixed values and caps as the mock demo, with `LLM_PROVIDER=none`.
+same fixed values and caps as the mock demo, with `LLM_PROVIDER=none` and `FISCO_NODES=1`.
 
-The chain, the four services and the UI use about 525 MB at rest (four nodes about 200 MB), which is over the free
-and Starter plans' 512 MB, so this service runs on the Standard plan (2 GB). The first boot takes about 25 seconds
-after the image starts. The happy invoice gives real FISCO transaction hashes for TX-1 (register), TX-4 (draw) and
-TX-5 (settle).
+With one node, the chain, the four services and the UI use about 320 MB on Render after a full happy run, which fits
+the free plan's 512 MB. Four nodes use about 525 MB, so `FISCO_NODES=4` needs the Standard plan (2 GB), and Render
+asks for a card on the account before it allows that plan. On the free plan's CPU a boot takes about two minutes
+(25 seconds on a laptop), so the first visit after a sleep waits about three minutes; open it before judges do. The
+happy invoice gives real FISCO transaction hashes for TX-1 (register), TX-4 (draw) and TX-5 (settle).
+
+`SMOKE_TEST=1` makes each boot run the happy invoice and the buyer's payment once and log the outcome and the
+transaction hashes. That uses up the happy case until the next restart, so leave it unset for judges. The service
+was created from the `claude/project-thread-m4tnrm` branch; switch it to `main` under Settings in the dashboard so
+it redeploys with the others.
 
 ## Credit risk API (`receivableos-credit-risk`)
 
