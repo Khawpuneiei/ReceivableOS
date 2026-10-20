@@ -1,0 +1,82 @@
+# The whole ReceivableOS stack on a real FISCO BCOS 3.16.4 chain, in one container. Owner: PM.
+# deploy/Dockerfile runs the same stack on the mock ledger. This image adds a 4-node Air chain on 127.0.0.1,
+# the FISCO Python SDK and the compiled contracts; deploy/start-fisco.sh builds the chain, deploys the five
+# contracts and starts every service on each boot. Node keys, account keys and certificates are generated
+# inside the container at start, never in the image or the repo. See deploy/RENDER.md.
+
+# Contracts: compiled with solc 0.8.11, the version foundry.toml pins.
+FROM python:3.11-slim-bookworm AS contracts
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://github.com/foundry-rs/foundry/releases/download/v1.5.1/foundry_v1.5.1_linux_amd64.tar.gz \
+        | tar -xz -C /usr/local/bin forge \
+    && curl -fsSL -o /usr/local/bin/solc-0.8.11 \
+        https://github.com/ethereum/solidity/releases/download/v0.8.11/solc-static-linux \
+    && chmod +x /usr/local/bin/solc-0.8.11
+COPY services/agent-wallet/contracts /contracts
+RUN cd /contracts && FOUNDRY_SOLC=/usr/local/bin/solc-0.8.11 forge build --offline
+
+FROM python:3.11-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    UV_PYTHON_INSTALL_DIR=/opt/uv-python UV_NO_CACHE=1
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates openssl procps git uuid-runtime \
+    && rm -rf /var/lib/apt/lists/*
+
+# FISCO BCOS node binary and the Air chain builder, both v3.16.4, and the TASSL openssl build_chain.sh uses
+# for node certificates (fetched here so a boot downloads nothing).
+RUN mkdir -p /opt/fisco \
+    && curl -fsSL https://github.com/FISCO-BCOS/FISCO-BCOS/releases/download/v3.16.4/fisco-bcos-linux-x86_64.tar.gz \
+        | tar -xz -C /opt/fisco \
+    && curl -fsSL -o /opt/fisco/build_chain.sh \
+        https://raw.githubusercontent.com/FISCO-BCOS/FISCO-BCOS/v3.16.4/tools/BcosAirBuilder/build_chain.sh \
+    && /opt/fisco/fisco-bcos -v \
+    && mkdir -p /home/app/.fisco \
+    && curl -fsSL https://github.com/FISCO-BCOS/TASSL/releases/download/V_1.4/tassl-1.1.1b-linux-x86_64.tar.gz \
+        | tar -xz -C /home/app/.fisco \
+    && mv /home/app/.fisco/tassl-1.1.1b-linux-x86_64 /home/app/.fisco/tassl-1.1.1b \
+    && rm -f /home/app/.fisco/._*
+
+# FISCO Python SDK (not on PyPI) with its native C library. The SDK needs Python 3.10: its vendored parser
+# uses inspect.getargspec, which 3.11 removed. Only the agent wallet and the deploy script run on it.
+RUN git clone -q https://github.com/FISCO-BCOS/python-sdk.git /opt/python-sdk \
+    && git -C /opt/python-sdk checkout -q 4c3b00f4fd85dfab5e9be3acaa348741552f9c3d \
+    && curl -fsSL -o /opt/python-sdk/bcos3sdklib/libbcos-c-sdk.so \
+        https://github.com/FISCO-BCOS/bcos-c-sdk/releases/download/v3.4.0/libbcos-c-sdk.so
+COPY services/agent-wallet/requirements.txt services/agent-wallet/requirements.txt
+RUN pip install uv==0.11.32 \
+    && uv python install 3.10.20 \
+    && uv venv -q -p 3.10.20 /opt/venv \
+    && grep -viE '^(pycryptodome|#)' /opt/python-sdk/requirements.txt > /tmp/sdk-requirements.txt \
+    && VIRTUAL_ENV=/opt/venv uv pip install -q setuptools==69.5.1 -r /tmp/sdk-requirements.txt \
+        -r services/agent-wallet/requirements.txt \
+    && rm /tmp/sdk-requirements.txt
+
+# Every other service runs on the image's Python 3.11, as in deploy/Dockerfile.
+COPY services/ocr-ai/requirements.txt services/ocr-ai/requirements.txt
+COPY services/policy-ai/requirements.txt services/policy-ai/requirements.txt
+COPY services/orchestrator/requirements.txt services/orchestrator/requirements.txt
+COPY ui/requirements.txt ui/requirements.txt
+RUN pip install \
+    -r services/ocr-ai/requirements.txt \
+    -r services/policy-ai/requirements.txt \
+    -r services/agent-wallet/requirements.txt \
+    -r services/orchestrator/requirements.txt \
+    -r ui/requirements.txt
+
+COPY shared shared
+COPY data data
+COPY services services
+COPY ui ui
+COPY --from=contracts /contracts/out services/agent-wallet/contracts/out
+COPY deploy/start-fisco.sh deploy/start-fisco.sh
+COPY deploy/fisco/get_account.sh /home/app/.fisco/get_account.sh
+
+RUN useradd --uid 10001 app && mkdir -p /work /state \
+    && chown -R app /app /work /state /home/app /opt/python-sdk \
+    && chmod +x /home/app/.fisco/get_account.sh
+USER app
+
+CMD ["bash", "deploy/start-fisco.sh"]
