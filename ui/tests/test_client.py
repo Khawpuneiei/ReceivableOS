@@ -242,3 +242,51 @@ def test_a_missing_token_is_said_plainly():
     with pytest.raises(orch.ServiceError) as err:
         _client(handler).run_flow(b"%PDF", "invoice.pdf")
     assert "set ORCHESTRATOR_TOKEN" in err.value.plain
+
+
+def test_a_refused_sentence_raises_refused_with_the_violated_limit():
+    violations = [{"field": "max_ltv", "code": "OUT_OF_RANGE", "value": "0.95", "limit": "0.90"}]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/flow/mandate/compile" and json.loads(request.content) == {"text": "x"}
+        return httpx.Response(422, json={"detail": violations})
+
+    with pytest.raises(orch.Refused) as err:
+        _client(handler).compile_mandate("x")
+    assert err.value.violations == violations
+    assert err.value.plain == "Refused: max_ltv OUT_OF_RANGE (asked 0.95, limit 0.90)"
+
+
+def test_refusals_without_a_value_or_limit_and_request_validation_rows_read_plainly():
+    unbounded = orch.Refused([{"field": "text", "code": "UNBOUNDED_REQUEST", "value": None, "limit": None}])
+    assert unbounded.plain == "Refused: text UNBOUNDED_REQUEST"
+    too_long = orch.Refused([{"loc": ["body", "text"], "type": "string_too_long", "msg": "too long"}])
+    assert too_long.plain == "Refused: text string_too_long"
+    assert orch.Refused([]).plain == "Refused: the sentence was not accepted"
+
+
+def test_a_compiled_mandate_is_returned_and_other_errors_are_not_refusals():
+    envelope = {"mandate": {"max_ltv": "0.70"}}
+    assert _client(lambda request: httpx.Response(200, json=envelope)).compile_mandate("x") == envelope
+    with pytest.raises(orch.ServiceError):  # a 422 elsewhere is the file's fault, not a refused rule
+        _client(lambda request: httpx.Response(422, json={"detail": "bad"})).run_flow(b"x", "invoice.pdf")
+    with pytest.raises(orch.ServiceError):
+        _client(
+            lambda request: httpx.Response(502, json={"detail": "http://p:8002/x answered 500: boom"})
+        ).compile_mandate("x")
+
+
+def test_a_live_attack_row_never_inherits_the_saved_rows_policy_fields():
+    saved = json.loads((Path(__file__).resolve().parents[1] / "fixtures" / "a2.json").read_text("utf-8"))
+    assert (
+        saved["policy_decision"] == "reject"
+    )  # recorded for the old fixture path; policy never ran in a live A2
+    blocked = {"stopped_by": "Registry (on-chain duplicate check)", "wallet": {"status": "blocked"}}
+    live = orch.attack_row(blocked, saved)
+    assert live["policy_decision"] is None and live["policy_reasons"] == [] and live["label"] == "live"
+    with_policy = {
+        "policy": {"decision": "review", "reasons": ["HARD.INJECTION: x", "MODEL.PD: y"]},
+        **blocked,
+    }
+    row = orch.attack_row(with_policy, saved)
+    assert row["policy_decision"] == "review" and row["policy_reasons"] == ["HARD.INJECTION"]

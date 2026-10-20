@@ -89,6 +89,11 @@ def main() -> None:
     text = (POLICY / "fixtures" / "mandates" / "demo_thb.txt").read_text(encoding="utf-8").strip()
     envelope = mandate.compile_mandate(text, mandate_id="mdt_001", now=NOW)
     invoice, policy = decide("01_happy")
+    # ocr-ai's document_evidence for 01_happy.pdf, trimmed to the tax lines the Invoice page uses.
+    invoice["document_evidence"] = {
+        name: {"value": value, "status": "present"}
+        for name, value in (("subtotal", "700000.00"), ("tax_amount", "49000.00"), ("tax_basis", "exclusive"))
+    }
     happy = {
         "source": "fixtures",
         "mandate_text": text,
@@ -140,12 +145,6 @@ def main() -> None:
             "AmountAboveLimit",
         ),
         "a5": ("Supplier KYB expired", "Policy", a5, "NotApproved"),
-        "a6": (
-            "Mandate expired / wallet paused by the human owner",
-            "Wallet + PolicyGuard",
-            None,
-            "MandateExpired",
-        ),
     }
     for case, (title, stopped_by, decision, reason) in attacks.items():
         row = {

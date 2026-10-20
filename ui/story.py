@@ -230,7 +230,7 @@ def steps(view: dict, paid: bool = False) -> list[dict]:
     ]
     reg = timeline.get("TX-1")
     if (view.get("registry") or {}).get("duplicate") or (reg and reg["status"] == "blocked"):
-        out.append({"name": "Registry", "state": STOPPED, "detail": "already financed: duplicate blocked"})
+        out.append({"name": "Registry", "state": STOPPED, "detail": "already registered: duplicate blocked"})
     else:
         out.append({"name": "Registry", "state": DONE, "detail": "new invoice, registered (TX-1)"})
     if not policy:
