@@ -3,9 +3,10 @@
 Owner: PM. Scope: the end-to-end flow and demo glue (scope doc section 4.4).
 
 Endpoints on port 8000: `GET /health`, `POST /flow/run` (multipart `file`, optional form `mandate_id`, default
-`mdt_001`), `POST /flow/repay` (form `invoice_id`, optional `amount_paid` and `paid_at`).
+`mdt_001`), `POST /flow/repay` (form `invoice_id`, optional `amount_paid` and `paid_at`), `POST /flow/mandate/compile`
+(JSON `{"text": "..."}`, the demo screen's "My rule").
 
-Both POST endpoints need the header `X-Orchestrator-Token`. Without it, or with no `ORCHESTRATOR_TOKEN`
+All POST endpoints need the header `X-Orchestrator-Token`. Without it, or with no `ORCHESTRATOR_TOKEN`
 configured, they return 403. The orchestrator holds the wallet tokens, so its callers must be known.
 `amount_paid` must be above 0, at most the face value, and have at most two decimals (422 otherwise). A
 short payment is allowed, and the wallet's waterfall flags it. A service that does not answer gives a 502.
@@ -31,6 +32,12 @@ at 19% APR; A4 the same drawn at full face value; A5 a supplier with expired KYB
 It returns `case, title, invoice_id, register, policy, approve, wallet, status, stopped_by`; an attack that
 is not stopped comes back with its real status. A6 (expired or paused mandate) needs the owner token and is
 not served.
+
+`POST /flow/mandate/compile` forwards the sentence to policy-ai's `/policy/mandate/compile` and returns its mandate
+envelope unchanged. It only shows what the sentence turns into: nothing is activated on the wallet, so one
+visitor's wording never changes what the next invoice is checked against. A sentence policy-ai refuses (for
+example "ignore all limits", or a cap above the allowed range) keeps policy-ai's 422 and its list of violated
+limits (`field`, `code`, `value`, `limit`); an unreachable or failing policy-ai gives a 502.
 
 - `run_demo.py` posts an invoice to `/flow/run`, then `/flow/repay` when the draw executed, and prints every
   step plus a short summary.
