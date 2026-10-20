@@ -446,7 +446,7 @@ Demo mandate (`docs/06` §1.4): `max_ltv` 0.70, `max_apr` 12%, `max_predicted_de
 **C5.3 Human-approval threshold.** *Calculate:* with a 70% advance, the threshold is hit by any invoice of 837,500 ÷ 0.70 ≈ **THB 1,196,429** or more. *Example:* a THB 1,400,000 invoice → advance 980,000 → `pending_approval` until the Finance teammate confirms via `POST /wallet/confirm/{tx_id}`. Exactly 837,500 also waits (≥, inclusive).
 **C5.4 Daily cap and salami slicing.** An attacker splits a large theft into many small draws under the approval threshold. *Calculate:* four draws of 800,000 = 3,200,000 > 3,000,000 → the 4th is blocked (pending amounts count too).
 **C5.5 Pause.** Owner or approver can pause; only the owner unpauses. *Real-world:* **Knight Capital** lost about USD 440 m in 45 minutes in 2012 from a faulty trading deployment with no effective kill switch. A pause button is cheap insurance.
-**C5.6 Expiry.** Mandates and approvals expire (approvals after 24 h, decisions after 900 s), so stale permissions can't be reused.
+**C5.6 Expiry.** Mandates and held approvals expire (held approvals after 24 h). Policy decisions carry a 24 h `valid_until`, but the wallet reads it from the draw request, so today it is only a stopgap; binding it into the decision hash is a known risk with a planned fix (security self-assessment, R4).
 
 ---
 
