@@ -6,6 +6,7 @@ The public demo runs on Render from `main`. Owner: PM.
 |---|---|---|
 | `receivableos-live` | Web service, Docker, free plan, Singapore | https://receivableos-live.onrender.com |
 | `receivableos-sme` | Static site | https://receivableos-sme.onrender.com |
+| `receivableos-credit-risk` | Web service, Docker, free plan, Singapore | https://receivableos-credit-risk.onrender.com |
 
 ## Judge demo (`receivableos-live`)
 
@@ -26,6 +27,22 @@ Environment, set in the Render dashboard and never in the repo:
 The four services and the UI use about 305 MB at rest, which fits the free plan's 512 MB.
 
 The OCR history lives on the container's temporary disk and the mock ledger lives in memory. A restart forgets both, so the happy invoice is a first sighting again. Restart the service before judges try the happy case.
+
+## Credit risk API (`receivableos-credit-risk`)
+
+The same `deploy/Dockerfile`, running policy-ai alone on Render's default port. **Docker Command:**
+
+```
+python -m uvicorn app.main:app --app-dir services/policy-ai --host 0.0.0.0 --port 10000
+```
+
+No environment variables: it holds no keys, and with `LLM_PROVIDER` unset every route is deterministic. It has no login, so anyone with the URL can call it; it stores nothing. Routes: `POST /policy/decide`, `GET /policy/rules`, `POST /policy/mandate/compile`, `POST /policy/explain`, `GET /health`, and the interactive docs at `/docs`.
+
+```
+curl -X POST https://receivableos-credit-risk.onrender.com/policy/decide \
+  -H 'content-type: application/json' \
+  --data @services/policy-ai/fixtures/requests/01_happy.json
+```
 
 ## SME owner mode (`receivableos-sme`)
 
