@@ -10,6 +10,15 @@ invoice -> OCR + fraud check -> registry duplicate check -> policy + credit risk
 
 Built for [FinTechathon 2026](https://fintechathon.g-ican.com/#/en), Agent Wallet track. Submission deadline: **end of 12 Oct 2026**.
 
+## Live demo
+
+| Screen | URL | What it runs |
+|---|---|---|
+| Judge demo (Streamlit) | https://receivableos-live.onrender.com | The whole flow, live: OCR, registry, policy and credit risk, agent wallet, on the mock ledger with no LLM key |
+| SME owner mode | https://receivableos-sme.onrender.com | The owner web app in sample mode: it replays runs recorded from the live stack |
+
+Both redeploy on every push to `main`. The judge demo is on Render's free plan, so after about 15 idle minutes it takes around a minute to wake on the first visit. The live demo remembers every invoice it has seen, so restart it before a fresh run of the happy case. [deploy/RENDER.md](deploy/RENDER.md) says how it is deployed.
+
 ## Team and roles
 
 | Seat | Owns | Where |
@@ -87,7 +96,7 @@ docker compose up -d --force-recreate ocr-ai agent-wallet   # rehearsal reset: f
 docker compose down
 ```
 
-One image (`deploy/Dockerfile`) runs all five containers on the mock ledger, offline OCR and no LLM key. On
+One image (`deploy/Dockerfile`) runs all five containers on the mock ledger, offline OCR and no LLM key. The [live demo](#live-demo) runs the same image on Render as one container ([deploy/RENDER.md](deploy/RENDER.md)). On
 every push to `main`, CD (`.github/workflows/cd.yml`) builds it, runs the demo against the containers and
 publishes `ghcr.io/khawpuneiei/receivableos:<sha>` and `:latest`.
 
