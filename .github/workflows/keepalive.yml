@@ -1,0 +1,37 @@
+name: Keep the judge demos awake
+
+# Render's free plan puts a web service to sleep after 15 idle minutes, and the chain demo then takes about
+# three minutes to come back (it rebuilds its FISCO BCOS chain). During the review window this job pings the two
+# judge demos every ten minutes so a reviewer never meets a cold start. It stops by itself after 31 Oct 2026 so
+# it does not spend the free plan's monthly instance hours once the reviews are over. Render grants 750 free
+# instance hours per workspace per month and suspends every free service when they run out, so this pings only
+# the two judge demos (about 540 hours for the rest of October), never the credit-risk API too.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    name: ping the judge demos
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: ping
+        run: |
+          if [ "$(date -u +%Y%m%d)" -gt 20261031 ]; then
+            echo "review window is over; nothing to do"
+            exit 0
+          fi
+          # Any request counts as traffic. The job never fails, so a sleeping or broken demo shows up in the
+          # log rather than as a failure email every ten minutes.
+          for url in https://receivableos-chain.onrender.com/ https://receivableos-live.onrender.com/; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 240 "$url" || true)
+            echo "$url -> ${code:-no answer}"
+          done
