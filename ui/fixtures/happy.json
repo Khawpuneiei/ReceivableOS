@@ -75,7 +75,21 @@
     "fraud_score": 0.07,
     "fraud_flags": [],
     "doc_hash": "sha256:abababababababababababababababababababababababababababababababab",
-    "invoice_fingerprint": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+    "invoice_fingerprint": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+    "document_evidence": {
+      "subtotal": {
+        "value": "700000.00",
+        "status": "present"
+      },
+      "tax_amount": {
+        "value": "49000.00",
+        "status": "present"
+      },
+      "tax_basis": {
+        "value": "exclusive",
+        "status": "present"
+      }
+    }
   },
   "registry": {
     "invoice_fingerprint": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",

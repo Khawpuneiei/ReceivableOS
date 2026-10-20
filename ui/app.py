@@ -15,6 +15,7 @@ from __future__ import annotations
 import html
 import json
 import os
+import threading
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -45,15 +46,15 @@ DEMO_CASES = (
     ("terms", "Payment terms", "08_terms_mismatch.pdf", "the due date breaks the invoice's own terms"),
 )
 CASES_PER_ROW = 4
+CASE_KEYS = tuple(c[0] for c in DEMO_CASES)
 FIXTURES = HERE / "fixtures"
-ATTACKS = ("a1", "a2", "a3", "a4", "a5", "a6")
+ATTACKS = ("a1", "a2", "a3", "a4", "a5")
 ATTACK_LABELS = {
     "a1": "A1 Injection + payee swap",
     "a2": "A2 Duplicate invoice",
     "a3": "A3 Quote above APR cap",
     "a4": "A4 Draw above limit",
     "a5": "A5 Expired KYB",
-    "a6": "A6 Mandate expired / paused",
 }
 # Top nav, in order: (page file, title, icon, one line for the Home page's "Look closer" links).
 PAGES = (
@@ -62,7 +63,7 @@ PAGES = (
     ("views/decision.py", "Credit decision", ":material/query_stats:", "Advance, price and why"),
     ("views/rule.py", "My rule", ":material/rule:", "Your rule in your words, and what the agent enforces"),
     ("views/ledger.py", "Ledger", ":material/receipt_long:", "Every transaction the wallet recorded"),
-    ("views/security.py", "Security tests", ":material/shield:", "Six attacks, each one blocked"),
+    ("views/security.py", "Security tests", ":material/shield:", "Five attacks, each one blocked"),
 )
 MIN_CONFIDENCE = 0.80
 MAX_FRAUD = 0.30  # policy-ai's hard rule: at or above this the invoice is rejected (root CLAUDE.md)
@@ -264,19 +265,61 @@ def not_reached(view: dict, part: str) -> bool:
     return True
 
 
+@st.cache_resource
+def boot_runs() -> dict:
+    """What the demo invoices already did on this server since it started, shared by every visitor.
+
+    The ledger takes each invoice once per start (a second try is the registry's duplicate block, by design),
+    so a second visitor, or a reload, is shown the run that did it instead of posting the same PDF again.
+    views: case -> view model. repaid: case -> the TX-5 row after Buyer paid. locks: one per case, so a click
+    on a case that is still running waits for its result instead of racing it to the registry."""
+    return {"views": {}, "repaid": {}, "locks": {case: threading.Lock() for case in CASE_KEYS}}
+
+
+def is_duplicate_block(view: dict) -> bool:
+    return bool((view.get("registry") or {}).get("duplicate"))
+
+
+def registered(view: dict) -> bool:
+    """True when TX-1 executed: the invoice is on the ledger, so a second try would only be a duplicate block.
+    A run the wallet refused first (paused, KYB, a node hiccup) is not remembered: the next click runs it."""
+    return any(t.get("step") == "TX-1" and t.get("status") == "executed" for t in view.get("timeline", []))
+
+
+def shared_case(view: dict) -> str | None:
+    """The demo case whose shared run this view is, matched by invoice id and never by a name the visitor
+    typed (an upload called "happy" is not the Happy run)."""
+    invoice_id = (view.get("ocr") or {}).get("invoice_id")
+    for case, run in boot_runs()["views"].items():
+        if invoice_id and (run.get("ocr") or {}).get("invoice_id") == invoice_id:
+            return case
+    return None
+
+
 def run_file(content: bytes, name: str, case: str | None = None) -> str | None:
     """POST one invoice to /flow/run and put the result on screen. Returns a readable error, or None."""
     try:
         raw = orch.Orchestrator().run_flow(content, name)
-        st.session_state.view = orch.to_view(raw, load_fixture("happy"))
+        view = orch.to_view(raw, load_fixture("happy"))
     except orch.ServiceError as exc:
         return f"The flow stopped with an error: {exc.plain}."
     except (orch.Unavailable, orch.Unsupported, ValueError) as exc:
-        return f"Orchestrator unavailable at {orch.base_url()} ({exc})."
+        return f"Orchestrator unavailable ({exc})."
+    st.session_state.view = view
     st.session_state.update(paid=False, approved=False, notice=None, extra_tx=[], case=case or name)
-    st.session_state.ran.add(case or name)
-    st.session_state.live_views[case or name] = st.session_state.view
+    if case in CASE_KEYS and (registered(view) or (case == "duplicate" and is_duplicate_block(view))):
+        boot_runs()["views"].setdefault(case, dict(view))  # the first run of a case is the one everyone sees
     return None
+
+
+def show_earlier_run(case: str) -> None:
+    """The case already ran on this server (this visit or another): show that run, with its Buyer paid row."""
+    runs = boot_runs()
+    repaid = runs["repaid"].get(case)
+    st.session_state.view = {**runs["views"][case], "replayed": True}
+    st.session_state.update(
+        paid=bool(repaid), approved=False, notice=None, extra_tx=[repaid] if repaid else [], case=case
+    )
 
 
 def show_saved_run(case: str, notice: str | None) -> None:
@@ -296,29 +339,49 @@ def case_available(case: str, filename: str) -> bool:
     return (FIXTURES / "runs" / f"{case}.json").exists()
 
 
+def ensure_happy() -> str | None:
+    """Run Happy first when this server hasn't, so Duplicate has something to duplicate. Returns a reason when
+    Happy did not register: Duplicate is then not posted (it would be its fingerprint's first one)"""
+    with boot_runs()["locks"]["happy"]:
+        if "happy" not in boot_runs()["views"]:
+            error = run_file(DEMO_INVOICE.read_bytes(), DEMO_INVOICE.name, "happy")
+            if "happy" not in boot_runs()["views"]:
+                state = load_view().get("state")
+                return (
+                    error
+                    or f"The happy invoice did not register ({state}), so there is nothing to duplicate."
+                )
+    return None
+
+
 def run_case(case: str, filename: str) -> None:
     """Live: run the case's PDF; if the stack fails, show the saved run of the same case instead."""
     if not live():
         show_saved_run(case, None)
         return
-    if case == "duplicate" and "happy" not in st.session_state.ran:
-        run_file(DEMO_INVOICE.read_bytes(), DEMO_INVOICE.name, "happy")  # something to be a duplicate of
-    error = run_file((DEMO_DIR / filename).read_bytes(), filename, case)
-    if error and (FIXTURES / "runs" / f"{case}.json").exists():
-        show_saved_run(case, f"{error} Showing the saved run of this case instead.")
-    elif error:
-        st.session_state.notice = error
+    with boot_runs()["locks"][case]:  # a click on a case that is still running waits for its result
+        if case in boot_runs()["views"]:
+            show_earlier_run(case)
+            return
+        error = ensure_happy() if case == "duplicate" else None
+        error = error or run_file((DEMO_DIR / filename).read_bytes(), filename, case)
+        if error and (FIXTURES / "runs" / f"{case}.json").exists():
+            show_saved_run(case, f"{error} Showing the saved run of this case instead.")
+        elif error:
+            st.session_state.notice = error
+        elif case != "duplicate" and is_duplicate_block(load_view()):
+            st.session_state.notice = (
+                "The registry already holds this invoice from an earlier run that this screen never recorded "
+                "(a rehearsal, or an earlier session of this screen), so it cannot be registered again. "
+                "Restart the UI, orchestrator and ledger together for a clean run."
+            )
 
 
 def run_all() -> None:
     """Judge mode: every available case in order (Happy first, so Duplicate has something to repeat)."""
     board = []
     for case, label, filename, _ in [c for c in DEMO_CASES if case_available(c[0], c[2])]:
-        if live() and case in st.session_state.live_views:
-            # Already ran live this session: re-posting it would only show the registry's duplicate block.
-            st.session_state.update(view=st.session_state.live_views[case], case=case, notice=None)
-        else:
-            run_case(case, filename)
+        run_case(case, filename)  # a case that already ran on this server is shown, not posted again
         view = load_view()
         if st.session_state.case != case:  # it failed and there is no saved run to show instead
             board.append(
@@ -329,6 +392,7 @@ def run_all() -> None:
                     "headline": "Could not run",
                     "sentence": st.session_state.notice or "",
                     "saved": False,
+                    "earlier": False,
                     "view": None,
                 }
             )
@@ -343,6 +407,7 @@ def run_all() -> None:
                 "headline": headline,
                 "sentence": sentence,
                 "saved": saved,
+                "earlier": bool(view.get("replayed")),
                 "view": view,
             }
         )
@@ -363,7 +428,7 @@ def section_scoreboard() -> None:
     st.markdown(f'<div class="tally">{esc(summary)}</div>', unsafe_allow_html=True)
     for r in board:
         colour = story.STATE_COLOUR[r["state"]]
-        tag = " (saved demo)" if r["saved"] else ""
+        tag = " (saved demo)" if r["saved"] else " (run earlier)" if r.get("earlier") else ""
         left, right = st.columns([6, 1], vertical_alignment="center")
         left.markdown(
             row(
@@ -375,7 +440,16 @@ def section_scoreboard() -> None:
             unsafe_allow_html=True,
         )
         if r["view"] and right.button("Show", key=f"show_{r['case']}", width="stretch"):
-            st.session_state.update(view=r["view"], case=r["case"], paid=False, approved=False, extra_tx=[])
+            repaid = (
+                boot_runs()["repaid"].get(r["case"]) if r["view"].get("source") == "orchestrator" else None
+            )
+            st.session_state.update(
+                view=r["view"],
+                case=r["case"],
+                paid=bool(repaid),
+                approved=False,
+                extra_tx=[repaid] if repaid else [],
+            )
             st.rerun()
 
 
@@ -399,15 +473,15 @@ def run_controls() -> None:
     if not live():
         return
     st.caption(
-        "Each invoice can be financed once: running Happy twice is blocked as a duplicate, by design. "
-        "Reset the OCR demo history between rehearsals (services/ocr-ai/README.md)."
+        "The ledger registers each demo invoice once per server start. Click it again, or open this page "
+        "elsewhere, and you see that run again with its real transaction hashes."
     )
     with st.expander("Or upload your own invoice"):
         upload = st.file_uploader("Invoice file", key="upload")
         if upload and st.button("Run flow with this file"):
             error = run_file(upload.getvalue(), upload.name)
             if error:
-                st.session_state.notice = f"{error} Showing the saved demo."
+                st.session_state.notice = f"{error} The screen still shows the previous result."
             st.rerun()
 
 
@@ -416,11 +490,10 @@ def init_state() -> None:
         "attacks": [],
         "paid": False,
         "approved": False,
-        "compiled": True,
+        "compiled_mandate": None,
+        "compiled_text": None,
         "notice": None,
         "extra_tx": [],
-        "ran": set(),
-        "live_views": {},
         "case": None,
         "scoreboard": [],
     }
@@ -439,8 +512,21 @@ def page_head(title: str, view: dict, sub: str | None = None) -> None:
     st.markdown(head, unsafe_allow_html=True)
 
 
+LEDGER_NAMES = {"fisco": "FISCO BCOS", "mock": "mock ledger"}
+
+
+def ledger_pill(view: dict) -> str:
+    """The ledger the run used; before any live run the saved demo's is not shown as if it were this one's."""
+    chain = (view.get("wallet") or {}).get("chain")
+    name = LEDGER_NAMES.get(chain, chain or "unknown")
+    if view.get("source") == "orchestrator":
+        return f"Ledger: {name}"
+    if live() and view.get("source") == "fixtures":
+        return "Ledger: shown after the first run"
+    return f"Ledger: {name} (saved)"
+
+
 def hero(view: dict) -> None:
-    chain = (view.get("wallet") or {}).get("chain") or "unknown"
     inv, d = view.get("ocr") or {}, view.get("policy") or {}
     owner = (inv.get("supplier") or {}).get("name") or "your company"
     amount = fmt.thb(inv.get("amount"), inv.get("currency", "THB")) if inv.get("amount") else "-"
@@ -465,7 +551,7 @@ def hero(view: dict) -> None:
         '<div class="hero"><div class="top"><div class="mark">R</div>'
         '<div><div class="name">ReceivableOS</div>'
         '<div class="tag">Invoice financing for Thai SMEs</div>'
-        f'</div><div class="spacer"></div><span class="pill">Ledger: {esc(chain)}</span></div>'
+        f'</div><div class="spacer"></div><span class="pill">{esc(ledger_pill(view))}</span></div>'
         '<div class="body"><div class="pitch">'
         '<div class="headline">Write the rule once. Your invoices fund themselves.</div>'
         '<div class="lede">An AI agent reads, prices and draws each invoice on-chain, but only inside the '
@@ -489,14 +575,19 @@ def status_banner(view: dict) -> None:
             f"SAVED RUN: {label}, recorded from the live stack on the mock ledger. Nothing was called now."
         )
     elif view.get("source") == "fixtures" and live():
-        st.info(f"SAVED DEMO: nothing has run live yet. Run an invoice below to call {orch.base_url()}.")
+        st.info("SAVED DEMO: nothing has run live yet. Run an invoice below to call the live flow.")
     elif view.get("source") == "fixtures":
         st.info("FIXTURE MODE: saved responses, no backend called.")
     else:
         label = {c[0]: c[1] for c in DEMO_CASES}.get(st.session_state.case, st.session_state.case)
-        st.success(
-            f"LIVE: {label} via the orchestrator at {orch.base_url()} · flow state {view.get('state')}"
-        )
+        if view.get("replayed"):
+            st.success(
+                f"LIVE, run earlier on this server: {label}. The ledger registers each demo invoice once per "
+                f"server start, so this is the run that did it, with its real transaction hashes · "
+                f"flow state {view.get('state')}"
+            )
+        else:
+            st.success(f"LIVE: {label} · flow state {view.get('state')}")
 
 
 def section_flow(view: dict) -> None:
@@ -520,29 +611,50 @@ def section_flow(view: dict) -> None:
     st.markdown(f'<div class="steps">{"".join(cards)}</div>', unsafe_allow_html=True)
 
 
+def exact_pct(value) -> str:
+    """'0.696' -> '69.6%', '0.70' -> '70%': a cap is never rounded, because a rounded cap can read looser."""
+    if value is None:
+        return "-"
+    return f"{(Decimal(str(value)) * 100).normalize():f}%"
+
+
 def section_mandate(view: dict) -> None:
-    text = st.text_area("The SME's rule, in plain language", view["mandate_text"], height=80)
+    sentence = st.session_state.compiled_text or view["mandate_text"]  # the box keeps what was last compiled
+    text = st.text_area("The SME's rule, in plain language", sentence, height=80)
     if st.button("Compile"):
-        st.session_state.compiled = True
         if live():
             try:
-                view["mandate"] = orch.Orchestrator().compile_mandate(text)
-                view["from_fixture"] = [part for part in view.get("from_fixture", []) if part != "mandate"]
+                st.session_state.compiled_mandate = orch.Orchestrator().compile_mandate(text)
+                st.session_state.compiled_text = text
+            except orch.Refused as exc:
+                st.error(f"{exc.plain}. Nothing was compiled; the rule below is unchanged.")
             except (orch.Unavailable, orch.Unsupported) as exc:
                 st.warning(f"Compile not available from the orchestrator ({exc}); showing the saved mandate.")
         elif text.strip() != view["mandate_text"].strip():
             st.warning("Compiling new wording needs the orchestrator. Showing the saved demo mandate.")
-    fixture_label(view, "mandate")
-    if not st.session_state.compiled:
-        return
-    envelope, mandate = view["mandate"], view["mandate"]["mandate"]
+    envelope = st.session_state.compiled_mandate
+    if envelope:
+        st.caption(
+            "Compiled now by the policy service. This shows what the sentence turns into; "
+            "the demo wallet keeps running on its own demo mandate."
+        )
+    else:
+        envelope = view["mandate"]
+        if live() and (view.get("source") == "fixtures" or "mandate" in view.get("from_fixture", [])):
+            st.caption(
+                "Saved: the demo rule as it compiled earlier. Press Compile to run it through policy-ai now."
+            )
+        else:
+            fixture_label(view, "mandate")
+    mandate = envelope["mandate"]
+    currency = mandate.get("allowed_currency") or "THB"
     cells = []
     for key, label, kind in MANDATE_FIELDS:
         value = mandate.get(key)
         shown = (
-            fmt.pct(value, 0)
+            exact_pct(value)
             if kind == "pct"
-            else fmt.thb(value)
+            else fmt.thb(value, currency)
             if kind == "thb"
             else esc(value or "-")[:10]
         )
@@ -551,6 +663,8 @@ def section_mandate(view: dict) -> None:
         origin = f'<span style="color:{colour}">({"from text" if source == "text" else source})</span>'
         cells.append(row(f"<b>{label}</b>: {shown} {origin}", "", colour))
     st.markdown(f'<div class="grid">{"".join(cells)}</div>', unsafe_allow_html=True)
+    for warning in envelope.get("warnings") or []:
+        st.caption(f"Compiler note: {warning}")
     with st.expander("Mandate JSON (wallet field names)"):
         st.json(envelope)
 
@@ -637,10 +751,36 @@ def line_items(inv: dict) -> None:
     )
     try:
         added = sum(Decimal(str(i.get("total"))) for i in items)
+        amount = Decimal(str(inv["amount"]))
     except (InvalidOperation, ValueError):
         return
-    total = fmt.thb(inv["amount"], inv["currency"])
-    st.caption(f"Lines add up to {fmt.thb(added, inv['currency'])}; the invoice total is {total}.")
+
+    def money(value: Decimal) -> str:
+        return fmt.thb(value, inv["currency"])
+
+    split = vat_split(inv)
+    if split and split[0] == added:  # the document's own subtotal and tax: tax is not mistaken for inflation
+        subtotal, tax = split
+        sentence = f"Lines {money(subtotal)} + VAT {money(tax)} = {money(subtotal + tax)}"
+        sentence += "." if subtotal + tax == amount else f", but the invoice total says {money(amount)}."
+        st.caption(sentence)
+    else:
+        st.caption(f"Lines add up to {money(added)}; the invoice total is {money(amount)}.")
+
+
+def vat_split(inv: dict) -> tuple[Decimal, Decimal] | None:
+    """(subtotal, VAT) as OCR read them from the document, or None when either is missing."""
+    evidence = inv.get("document_evidence") or {}
+    found = []
+    for name in ("subtotal", "tax_amount"):
+        field = evidence.get(name) or {}
+        if field.get("status") != "present":
+            return None
+        try:
+            found.append(Decimal(str(field["value"])))
+        except (InvalidOperation, ValueError, KeyError):
+            return None
+    return found[0], found[1]
 
 
 def section_decision(view: dict) -> None:
@@ -715,6 +855,10 @@ def tx_row(t: dict) -> str:
 
 
 def section_chain(view: dict) -> None:
+    if live() and view.get("source") == "fixtures":  # the saved demo's mock: hashes are not this ledger's
+        none_yet = row("No transactions yet: run an invoice on the Home page.", "unknown")
+        st.markdown(none_yet, unsafe_allow_html=True)
+        return
     wallet = view.get("wallet") or {}
     timeline = list(view.get("timeline", []))
     if wallet.get("status") == "pending_approval" and not st.session_state.approved:
@@ -735,8 +879,16 @@ def action(call, step: str, label: str, flag: str) -> None:
     """Approve / Buyer paid: through the orchestrator when live; the fixture otherwise or when unsupported."""
     st.session_state[flag] = True
     if live() and (st.session_state.get("view") or {}).get("source") == "orchestrator":
+        case = shared_case(st.session_state.view)
+        shared = boot_runs()["repaid"] if flag == "paid" and case else {}
         try:
-            st.session_state.extra_tx.append(orch.action_row(call(orch.Orchestrator()), step, label))
+            if case in shared:  # another visit already recorded the payment; settling twice would be refused
+                st.session_state.extra_tx.append(shared[case])
+            else:
+                tx = orch.action_row(call(orch.Orchestrator()), step, label)
+                st.session_state.extra_tx.append(tx)
+                if tx["status"] in ("executed", "settled"):
+                    shared[case] = tx
         except (orch.Unavailable, orch.Unsupported, KeyError) as exc:
             st.session_state.notice = f"{label}: not available from the orchestrator ({exc}); fixture shown."
             if flag == "paid":
@@ -788,19 +940,26 @@ def attack_row_html(a: dict) -> str:
 
 
 def section_attacks() -> None:
-    if st.button("Run all six attacks", key="attack_all", type="primary"):
+    if st.button("Run all five attacks", key="attack_all", type="primary"):
         st.session_state.attacks += [run_attack(case) for case in ATTACKS]
     for start in range(0, len(ATTACKS), 3):
         cols = st.columns(3)
-        for col, case in zip(cols, ATTACKS[start : start + 3], strict=True):
+        for col, case in zip(cols, ATTACKS[start : start + 3], strict=False):
             if col.button(ATTACK_LABELS[case], key=f"attack_{case}", width="stretch"):
                 st.session_state.attacks.append(run_attack(case))
     done = st.session_state.attacks
     if not done:
         return
-    held = sum(a["status"] in STOPPED_STATUSES for a in done)
-    tally = f"{held} of {len(done)} attacks blocked"
-    tally += ". No money moved." if held == len(done) else f". {len(done) - held} got through."
+    # Live, only what the wallet really answered counts; a saved row (orchestrator down) is not tallied.
+    counted = [a for a in done if a.get("label") == "live"] if live() else done
+    held = sum(a["status"] in STOPPED_STATUSES for a in counted)
+    if counted:
+        tally = f"{held} of {len(counted)} attacks blocked"
+        tally += ". No money moved." if held == len(counted) else f". {len(counted) - held} got through."
+    else:
+        tally = "No attack ran live, so nothing is counted: the rows below are saved."
+    if counted and len(counted) < len(done):
+        tally += f" {len(done) - len(counted)} saved row(s) below are not counted."
     st.markdown(f'<div class="tally">{esc(tally)}</div>', unsafe_allow_html=True)
     for a in done:
         st.markdown(attack_row_html(a), unsafe_allow_html=True)

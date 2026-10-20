@@ -3,6 +3,7 @@
 POST /flow/run: invoice -> ocr-ai -> agent-wallet register (TX-1, the ReceivableRegistry duplicate check)
               -> policy-ai -> lender quote -> agent-wallet approve (TX-2) -> agent-wallet execute (TX-4).
 POST /flow/repay: "buyer paid" -> agent-wallet settle (TX-5).
+POST /flow/mandate/compile: the SME's sentence -> policy-ai's validated mandate (shown, never activated).
 
 A decision that is not `approve` stops after policy-ai: the wallet is never asked to approve or pay it.
 The wallet's tokens come from env: the agent token signs register, execute and settle; the risk oracle's token
@@ -20,6 +21,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
+from pydantic import BaseModel, ConfigDict, Field
 
 from shared.money import fee_rate_30d_to_apr
 
@@ -216,6 +218,35 @@ async def flow_run(file: UploadFile = File(...), mandate_id: str = Form(DEFAULT_
         )
     steps["outcome"] = wallet["status"]
     return steps
+
+
+class MandateText(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1, max_length=1000)  # policy-ai's own limit; it still validates the content
+
+
+@app.post("/flow/mandate/compile", dependencies=[Depends(check_caller)])
+async def flow_mandate_compile(body: MandateText) -> dict:
+    """The demo screen's "My rule": compile the sentence with policy-ai and return its envelope. This only
+    shows what the sentence turns into. Nothing is activated on the wallet, so one visitor's wording can never
+    change what the next visitor's invoice is checked against. A sentence policy-ai refuses (422, with the
+    violated limits) keeps its status and detail so the screen can say which; _post would make it a 502."""
+    url = f"{POLICY_URL}/policy/mandate/compile"
+    async with _client() as client:
+        try:
+            r = await client.post(url, json={"text": body.text})
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=502, detail=f"{url} unreachable: {type(exc).__name__}") from None
+    try:
+        payload = r.json()
+    except ValueError:
+        payload = None
+    if r.status_code == 422 and isinstance(payload, dict) and "detail" in payload:
+        raise HTTPException(status_code=422, detail=payload["detail"])
+    if r.status_code >= 400 or not isinstance(payload, dict):
+        raise HTTPException(status_code=502, detail=f"{url} answered {r.status_code}: {r.text[:300]}")
+    return payload
 
 
 @app.post("/flow/repay", dependencies=[Depends(check_caller)])

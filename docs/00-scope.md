@@ -134,7 +134,7 @@ Input: `{ "decision": <4.2 output>, "payee": "0x...", "amount": "524300.00", "cu
 The wallet also exposes `register`, `approve`, `settle`, `mandate/activate` and `audit` endpoints (proposed by the Architect, `docs/01`); their exact shapes are in `shared/schemas.py`.
 
 ### 4.4 Orchestrator (P) — glue, owned by the PM seat
-Lives in `services/orchestrator/`; demo supplier and buyer profiles in `services/orchestrator/samples/profiles.json`. `POST /flow/run` takes an uploaded invoice and a mandate id, calls 4.1 → registry duplicate check → 4.2 → lender quotes → 4.3, and returns every intermediate result for the UI. `POST /flow/repay` simulates "buyer paid" and triggers settlement. Ports: orchestrator 8000, ocr 8001, policy 8002, wallet 8003, UI 3000.
+Lives in `services/orchestrator/`; demo supplier and buyer profiles in `services/orchestrator/samples/profiles.json`. `POST /flow/run` takes an uploaded invoice and a mandate id, calls 4.1 → registry duplicate check → 4.2 → lender quotes → 4.3, and returns every intermediate result for the UI. `POST /flow/repay` simulates "buyer paid" and triggers settlement. `POST /flow/mandate/compile` (JSON `{"text": ...}`) forwards the SME's sentence to policy-ai's `/policy/mandate/compile` for the UI's "My rule" page: it returns the mandate envelope, or policy-ai's 422 with the violated limits, and activates nothing. Ports: orchestrator 8000, ocr 8001, policy 8002, wallet 8003, UI 3000.
 
 The code version of this contract is the Pydantic models in `shared/schemas.py`, owned by P. If this section and that file disagree, `shared/schemas.py` wins and this section gets fixed.
 
