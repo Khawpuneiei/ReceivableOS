@@ -21,7 +21,7 @@ Built for [FinTechathon 2026](https://fintechathon.g-ican.com/#/en), Agent Walle
 | **Security self-assessment** | [docs/submission/02-security-self-assessment.pdf](docs/submission/02-security-self-assessment.pdf): permission tiers and 24 known risks |
 | **Execution evidence** | [docs/submission/03-execution-evidence.pdf](docs/submission/03-execution-evidence.pdf): 41 FISCO BCOS hashes, the 33 deployment and demo ones checked on chain |
 
-**Core principle: LLM output never becomes a transaction.** Models propose typed decisions, deterministic code checks them, and Solidity contracts on FISCO BCOS have the last word.
+**Core principle: LLM output never becomes a transaction.** Models propose typed decisions, deterministic code checks them, and Solidity contracts on FISCO BCOS have the last word. Prompt hardening alone does not protect agents that move money ([IACR ePrint 2025/526](https://eprint.iacr.org/2025/526)), so here the payee, amount and APR limits are enforced in code and on chain, whatever a model says.
 
 **Real FISCO BCOS transactions** from the recorded 4-node run ([all of them](services/agent-wallet/eval/demo_tx_hashes_fisco.md), [chain check: 11 of 11 found](services/agent-wallet/eval/fisco-verification-demo.txt)):
 

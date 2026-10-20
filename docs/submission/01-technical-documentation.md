@@ -435,6 +435,14 @@ payload so an instruction split across fields is caught. An optional English-onl
 The Security Self-Assessment gives the permission tiers and the full known-risk list. This section summarises the
 design.
 
+**Why structure, not prompt hardening.** Researchers at Princeton attacked crypto-moving LLM agents (ElizaOS) by
+injecting instructions into their prompts and stored memory, caused unintended asset transfers, and concluded that
+prompt-based defences are insufficient ("AI Agents in Cryptoland: Practical Attacks and No Silver Bullet", IACR ePrint
+2025/526). Our own numbers agree: the OCR injection detector catches only 27 of 50 unseen paraphrases, and 0 of 10
+payee-redirect paraphrases. Yet in the wallet red team (38 of 38 attacks stopped) no attack paid anyone unauthorized, because detection is not
+what keeps money safe here. The payee is bound on chain at registration, the amount and APR are capped by the mandate in
+code and in `PolicyGuard`, and no model output is ever signed as a transaction.
+
 ### 5.1 Threat model
 
 | Threat | Example |
@@ -569,5 +577,9 @@ draw and an executed TX-5 settlement. CI makes no hosted OCR or LLM calls.
   Thai scans and multilingual layouts have accuracy gaps.
 - **Detector recall.** On the two held-out sets run with the rules frozen beforehand (v3 and v4), the wallet's
   scanner catches 14 of 24 and 12 of 30 attacks; money safety rests on the structural layers, not on detection.
+- **Credit data from one lender only.** The PD model sees one platform's (synthetic) history. Roadmap: train credit
+  features across lenders without pooling raw data, using vertical federated learning (for example WeBank's FATE):
+  buyer payment history at one institution, supplier history at another. The registry already shows the pattern, since
+  lenders can detect double financing from a keyed fingerprint without sharing invoices. Not built in the MVP.
 - **Scope.** No real ERP, bank or e-invoice integration; the receivable token is a simulated claim; Safe or ERC-4337
   smart accounts are the production path on EVM chains, not available natively on FISCO BCOS.
