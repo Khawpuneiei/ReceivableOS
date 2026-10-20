@@ -8,7 +8,7 @@ ReceivableOS takes an SME invoice, verifies it, checks it has not been financed 
 invoice -> OCR + fraud check -> registry duplicate check -> policy + credit risk -> agent wallet -> on-chain tx (FISCO BCOS)
 ```
 
-Built for [FinTechathon 2026](https://fintechathon.g-ican.com/#/en), Agent Wallet track. Submission deadline: **end of 12 Oct 2026**.
+Built for [FinTechathon 2026](https://fintechathon.g-ican.com/#/en), Agent Wallet track. Submission deadline: **end of 20 Oct 2026**.
 
 ## Live demo
 
