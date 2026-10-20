@@ -53,7 +53,7 @@
 | Scoring | Task completion 40%, security & compliance 30%, innovation & interaction 30%; same for all six topics | See the Part 1 table. |
 | Challenge bonus | 0–5 points for on-chain exploration | Earned by the on-chain guard reverts, fingerprint registry and (optionally) a second chain. |
 | Chain | **No chain is named.** The only on-chain rule is that execution evidence must be **real on-chain transaction hashes** | FISCO BCOS stays the default (see §4); a mock ledger alone does not satisfy the rules. |
-| Team | 2–5 full-time students at universities outside China (incl. HK, Macao, Taiwan); at least 60% non-Chinese nationals; one team per person | P to confirm all five members are registered on one team. |
+| Team | 2–5 full-time students at universities outside China (incl. HK, Macao, Taiwan); at least 60% non-Chinese nationals; one team per person | Done: the four members (team KMUTTmaLeaw) are registered on one team; confirmed by the organisers on 20 Oct. |
 | Language | English for submissions, presentations and review | All docs, UI text, deck and video in English. |
 | Deadline | Registration **and** submission: **20 Oct 2026 23:59 Beijing (UTC+8)**; updates allowed until then, none after | Register the team now; submit an early version, then update. |
 | Review | Online review late Oct by WeBank experts and scholars; finalists by 31 Oct; finals 21–23 Nov Shenzhen, in person | The reviewers know FISCO BCOS. |
