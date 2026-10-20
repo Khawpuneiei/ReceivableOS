@@ -16,8 +16,9 @@ Built for [FinTechathon 2026](https://fintechathon.g-ican.com/#/en), Agent Walle
 |---|---|---|
 | Judge demo (Streamlit) | https://receivableos-live.onrender.com | The whole flow, live: OCR, registry, policy and credit risk, agent wallet, on the mock ledger with no LLM key |
 | SME owner mode | https://receivableos-sme.onrender.com | The owner web app in sample mode: it replays runs recorded from the live stack |
+| Credit risk model API | https://receivableos-credit-risk.onrender.com/docs | policy-ai on its own: `POST /policy/decide` returns approve, review or reject with the advance rate, limit, fee and the PD from the LR scorecard. Try it with any file in `services/policy-ai/fixtures/requests/` |
 
-Both redeploy on every push to `main`. The judge demo is on Render's free plan, so after about 15 idle minutes it takes around a minute to wake on the first visit. The live demo remembers every invoice it has seen, so restart it before a fresh run of the happy case. [deploy/RENDER.md](deploy/RENDER.md) says how it is deployed.
+All three redeploy on every push to `main`. The judge demo and the credit risk API are on Render's free plan, so after about 15 idle minutes each takes around a minute to wake on the first visit. The live demo remembers every invoice it has seen, so restart it before a fresh run of the happy case. [deploy/RENDER.md](deploy/RENDER.md) says how it is deployed.
 
 ## Team and roles
 
