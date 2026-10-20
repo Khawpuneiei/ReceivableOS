@@ -10,6 +10,32 @@ invoice -> OCR + fraud check -> registry duplicate check -> policy + credit risk
 
 Built for [FinTechathon 2026](https://fintechathon.g-ican.com/#/en), Agent Wallet track. Submission deadline: **end of 20 Oct 2026**.
 
+## Judges start here
+
+| | |
+|---|---|
+| **Try it live (real chain)** | https://receivableos-chain.onrender.com: upload the happy invoice and watch it get funded on a FISCO BCOS 3.16.4 chain the service builds on boot. First visit after idle takes about 3 minutes. |
+| **Backup (mock ledger)** | https://receivableos-live.onrender.com: the same flow, wakes in about a minute |
+| **SME owner app** | https://receivableos-sme.onrender.com |
+| **Technical documentation** | [docs/submission/01-technical-documentation.pdf](docs/submission/01-technical-documentation.pdf) |
+| **Security self-assessment** | [docs/submission/02-security-self-assessment.pdf](docs/submission/02-security-self-assessment.pdf): permission tiers and 24 known risks |
+| **Execution evidence** | [docs/submission/03-execution-evidence.pdf](docs/submission/03-execution-evidence.pdf): 41 FISCO BCOS hashes, the 33 deployment and demo ones checked on chain |
+
+**Core principle: LLM output never becomes a transaction.** Models propose typed decisions, deterministic code checks them, and Solidity contracts on FISCO BCOS have the last word.
+
+**Real FISCO BCOS transactions** from the recorded 4-node run ([all of them](services/agent-wallet/eval/demo_tx_hashes_fisco.md), [chain check: 11 of 11 found](services/agent-wallet/eval/fisco-verification-demo.txt)):
+
+| Step | Result | Tx hash |
+|---|---|---|
+| TX-1 register invoice | executed | `0xca427c5b215db42d8772ca24d5619809a01dfc69fe382b2e8ce9199e2faecd6d` |
+| TX-2 credit approval | executed | `0x6be10faf53f3027d362f5b6f10f2703dac9ac4cd6be1bb9334e83b4bde0083a1` |
+| TX-4 draw THB 524,300 to the seller | executed | `0x43023ce5e7fdb29f0429e5fa88126adf08d0c4e03199e5b8e28fee8afeec7989` |
+| TX-5 buyer pays, lender settled | executed | `0x2783cd60cb55de4005c26c07257b227b2e019d3a781930947e89ac4ac96a69b0` |
+| Draw at 19.5% APR (mandate cap 12%) | **reverted** `AprAboveMandate` | `0x4f2d22e929adc19e77185e8e5fe8ea87abba6598638b9c6f90d0b29555bcc3b8` |
+| Same invoice re-saved and registered again | **reverted** `DuplicateReceivable` | `0x30a3df21e618d5eab6b032b171736e0fe7e81f0fd36f08392b3ac6c212ff15b8` |
+
+**Red team** ([report](services/agent-wallet/eval/report.md)): 38 of 38 attacks stopped, 0 unauthorized payments, 11 of 11 genuine invoices completed.
+
 ## Live demo
 
 | Screen | URL | What it runs |
@@ -155,7 +181,7 @@ UI_MODE=live ORCHESTRATOR_URL=http://localhost:8000 npm run dev
 
 The browser only calls `/api/...`. The Vite server forwards those calls to the orchestrator and adds `X-Orchestrator-Token` from `.env` on the server side, so the token never reaches the page.
 
-Not wired yet: "Save and sign" on My rule and "Approve this once" for a large draw need orchestrator routes that don't exist yet (`/flow/mandate/compile` and `/flow/confirm/{tx_id}`). The app says so on screen and changes nothing. The orchestrator pays as soon as an invoice passes the rule, so the result page reports money received instead of asking the owner to accept an offer.
+In live mode, My rule compiles the owner's sentence through the orchestrator's `/flow/mandate/compile` route. Not wired yet: "Approve this once" for a large draw needs an orchestrator route that doesn't exist yet (`/flow/confirm/{tx_id}`); the app says so on screen and changes nothing. The orchestrator pays as soon as an invoice passes the rule, so the result page reports money received instead of asking the owner to accept an offer.
 
 Test it with `npm run typecheck && npm test && npm run build` in `ui/web/`. CI and the Docker image don't include it yet, so run it with npm as shown.
 
@@ -169,6 +195,9 @@ Test it with `npm run typecheck && npm test && npm run build` in `ui/web/`. CI a
 | [docs/03-agent-wallet.md](docs/03-agent-wallet.md) | Agent wallet, guard, agent-injection guardrails |
 | [docs/04-policy-ai.md](docs/04-policy-ai.md) | Credit policy, credit risk model |
 | [docs/05-ocr-ai.md](docs/05-ocr-ai.md) | Invoice OCR, OCR injection, fraud detection |
+| [docs/06-controls-and-compliance.md](docs/06-controls-and-compliance.md) | Spending limits, human approval, audit log, KYC/AML and privacy stance |
+| [docs/07-knowledge-map.md](docs/07-knowledge-map.md) | Concepts behind the project, with worked checks |
+| [docs/submission/](docs/submission/) | The three submission documents (PDF and Markdown source) |
 
 Each doc lands by its own PR; see [docs/README.md](docs/README.md). Engineers: read [CLAUDE.md](CLAUDE.md) and your service's `CLAUDE.md` before you start prompting.
 
