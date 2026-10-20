@@ -79,6 +79,20 @@ for _ in $(seq 1 90); do
 done
 log "$up of 4 services up; wallet: $(curl -s http://127.0.0.1:8003/health || true)"
 
+# Optional boot check: SMOKE_TEST=1 runs the happy invoice and the buyer's payment once and logs the outcome. It
+# uses up the happy case until the next restart, so leave it unset on the service judges open.
+if [ "${SMOKE_TEST:-0}" = 1 ]; then
+  token=(-H "X-Orchestrator-Token: $ORCHESTRATOR_TOKEN")
+  run=$(curl -s -m 300 "${token[@]}" -F file=@data/invoices/demo/01_happy.pdf -F mandate_id=mdt_001 \
+    http://127.0.0.1:8000/flow/run || true)
+  log "boot check, flow: $(echo "$run" | python -c 'import json, sys; r = json.load(sys.stdin)
+p, w = r.get("policy") or {}, r.get("wallet") or {}
+print(r.get("outcome"), p.get("decision"), w.get("tx_id"), w.get("status"), w.get("chain_ref"))' 2>&1 | tail -1)"
+  invoice=$(echo "$run" | python -c 'import json, sys; print(json.load(sys.stdin)["ocr"]["invoice_id"])' 2>/dev/null || true)
+  log "boot check, repay: $(curl -s -m 120 "${token[@]}" -F "invoice_id=$invoice" http://127.0.0.1:8000/flow/repay \
+    | head -c 600 || true)"
+fi
+
 # 5. UI on Render's port.
 cd ui
 UI_MODE=live exec streamlit run app.py --server.address 0.0.0.0 --server.port "${PORT:-3000}" --server.headless true
