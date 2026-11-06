@@ -10,6 +10,9 @@ One doc per topic. Each is owned by its author and added by its own PR; links be
 | [03-agent-wallet.md](03-agent-wallet.md) | Agent wallet, policy guard, agent-injection guardrails | Agent AI engineer |
 | [04-policy-ai.md](04-policy-ai.md) | Financing policy, credit risk model | Policy AI engineer |
 | [05-ocr-ai.md](05-ocr-ai.md) | Invoice OCR, OCR injection, fraud detection | OCR AI engineer |
+| [06-controls-and-compliance.md](06-controls-and-compliance.md) | Spending limits, dual control, audit, KYC/AML, privacy | PM |
+| [07-knowledge-map.md](07-knowledge-map.md) | What each role must know, by topic | PM |
+| [08-code-walkthrough.md](08-code-walkthrough.md) | The code, file by file: one invoice end to end, the guard, CI/CD, Docker, state, red-team eval | PM |
 
 Service-level assistant prompts live next to the code: `services/<name>/CLAUDE.md`.
 
